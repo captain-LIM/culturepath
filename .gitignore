@@ -1,0 +1,14 @@
+# 백엔드
+backend/node_modules/
+backend/.env
+
+# 프론트엔드
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.packages
+
+# 공통
+.DS_Store
+*.log
