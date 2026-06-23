@@ -9,9 +9,9 @@ import '../../features/culture_detail/data/region_model.dart';
 import '../../features/culture_detail/presentation/culture_detail_screen.dart';
 import '../../features/region_detail/presentation/region_detail_screen.dart';
 import '../../features/course_builder/presentation/course_builder_screen.dart';
+import '../../features/explore/presentation/explore_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
-// 탐색·만들기·내정보 화면 — 이후 단계에서 구현
 class _PlaceholderScreen extends StatelessWidget {
   final String label;
   const _PlaceholderScreen(this.label);
@@ -57,7 +57,7 @@ final appRouter = GoRouter(
           GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/explore', builder: (context, state) => const _PlaceholderScreen('탐색')),
+          GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/create', builder: (context, state) => const CourseBuilderScreen()),

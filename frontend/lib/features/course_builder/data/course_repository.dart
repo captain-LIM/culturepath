@@ -15,6 +15,13 @@ class CourseRepository {
         .toList();
   }
 
+  Future<List<CourseItem>> getPublicCourses() async {
+    final res = await apiClient.get('/courses/public');
+    return (res.data as List)
+        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<CourseItem> createCourse(CourseItem course) async {
     final res = await apiClient.post('/courses', course.toJson());
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
@@ -22,6 +29,11 @@ class CourseRepository {
 
   Future<CourseItem> updateCourse(CourseItem course) async {
     final res = await apiClient.put('/courses/${course.id}', course.toJson());
+    return CourseItem.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<CourseItem> forkCourse(int courseId) async {
+    final res = await apiClient.post('/courses/$courseId/fork', {});
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }
 

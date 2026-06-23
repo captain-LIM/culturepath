@@ -8,9 +8,8 @@ import 'widgets/course_place_card.dart';
 import 'widgets/track_timeline.dart';
 import 'widgets/place_search_sheet.dart';
 
-// 코스 빌더 상태
 class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
-  _CourseBuilderNotifier() : super(CourseItem.empty());
+  _CourseBuilderNotifier(CourseItem? initial) : super(initial ?? CourseItem.empty());
 
   void updateTitle(String v) => state = state.copyWith(title: v);
   void updateDescription(String v) => state = state.copyWith(description: v);
@@ -40,13 +39,16 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
   }
 }
 
-final _courseBuilderProvider =
-    StateNotifierProvider.autoDispose<_CourseBuilderNotifier, CourseItem>(
-  (ref) => _CourseBuilderNotifier(),
+// family key로 CourseItem?을 사용: null=새 코스, 값=포크/편집
+final courseBuilderProvider = StateNotifierProvider.autoDispose
+    .family<_CourseBuilderNotifier, CourseItem, CourseItem?>(
+  (ref, initial) => _CourseBuilderNotifier(initial),
 );
 
 class CourseBuilderScreen extends ConsumerStatefulWidget {
-  const CourseBuilderScreen({super.key});
+  final CourseItem? initialCourse;
+
+  const CourseBuilderScreen({super.key, this.initialCourse});
 
   @override
   ConsumerState<CourseBuilderScreen> createState() => _CourseBuilderScreenState();
@@ -55,13 +57,21 @@ class CourseBuilderScreen extends ConsumerStatefulWidget {
 class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   int _activeTrack = 0;
   bool _saving = false;
-  final _titleCtrl = TextEditingController();
+  late final TextEditingController _titleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.initialCourse?.title ?? '');
+  }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     super.dispose();
   }
+
+  CourseItem? get _providerKey => widget.initialCourse;
 
   void _openAddPlaceSheet() {
     showModalBottomSheet(
@@ -73,14 +83,14 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       ),
       builder: (_) => PlaceSearchSheet(
         onPlaceSelected: (place) {
-          ref.read(_courseBuilderProvider.notifier).addPlace(_activeTrack, place);
+          ref.read(courseBuilderProvider(_providerKey).notifier).addPlace(_activeTrack, place);
         },
       ),
     );
   }
 
   Future<void> _saveCourse() async {
-    final course = ref.read(_courseBuilderProvider);
+    final course = ref.read(courseBuilderProvider(_providerKey));
     if (course.title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('코스 제목을 입력해주세요.')),
@@ -106,14 +116,14 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loggedIn ? '코스가 저장되었습니다.' : '코스가 임시 저장되었습니다. (게스트)'),
+            content: Text(loggedIn ? '코스가 저장되었습니다.' : '임시 저장되었습니다. (게스트)'),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       await repo.saveGuestCourse(course);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,20 +137,27 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final course = ref.watch(_courseBuilderProvider);
-    final notifier = ref.read(_courseBuilderProvider.notifier);
+    final course = ref.watch(courseBuilderProvider(_providerKey));
+    final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
+    final isFork = course.forkedFrom != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: widget.initialCourse != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: TextField(
           controller: _titleCtrl,
           onChanged: notifier.updateTitle,
-          decoration: const InputDecoration(
-            hintText: '코스 제목을 입력하세요',
-            hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+          decoration: InputDecoration(
+            hintText: isFork ? '포크한 코스 제목' : '코스 제목을 입력하세요',
+            hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
             border: InputBorder.none,
           ),
           style: const TextStyle(
@@ -171,6 +188,8 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (isFork)
+            _ForkBanner(originalTitle: course.forkedFrom!.title, authorId: course.forkedFrom!.authorId),
           TrackTimeline(
             tracks: course.tracks,
             activeTrack: _activeTrack,
@@ -208,7 +227,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                     itemBuilder: (_, i) {
                       final place = course.tracks[_activeTrack].places[i];
                       return CoursePlaceCard(
-                        key: ValueKey(place.contentId + i.toString()),
+                        key: ValueKey('${place.contentId}_$i'),
                         place: place,
                         index: i,
                         onRemove: () => notifier.removePlace(_activeTrack, i),
@@ -242,6 +261,39 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           Text(
             '아래 버튼을 눌러 코스를 구성해보세요',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ForkBanner extends StatelessWidget {
+  final String originalTitle;
+  final String authorId;
+
+  const _ForkBanner({required this.originalTitle, required this.authorId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: AppColors.accentGold.withValues(alpha: 0.12),
+      child: Row(
+        children: [
+          const Icon(Icons.call_split, size: 16, color: AppColors.accentGold),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '포크됨: "$originalTitle"  by $authorId',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.accentGold,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
