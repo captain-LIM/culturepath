@@ -4,6 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/data/culture_model.dart';
+import '../../features/culture_detail/data/region_model.dart';
+import '../../features/culture_detail/presentation/culture_detail_screen.dart';
+import '../../features/region_detail/presentation/region_detail_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 // 탐색·만들기·내정보 화면 — 이후 단계에서 구현
@@ -28,6 +32,23 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+    GoRoute(
+      path: '/cultures/:id',
+      builder: (context, state) {
+        final culture = state.extra as CultureCategory;
+        return CultureDetailScreen(culture: culture);
+      },
+    ),
+    GoRoute(
+      path: '/regions/:code/spots',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return RegionDetailScreen(
+          region: extra['region'] as RegionItem,
+          culture: extra['culture'] as CultureCategory,
+        );
+      },
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => MainShell(navigationShell: shell),
       branches: [

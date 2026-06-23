@@ -4,6 +4,7 @@ const cors = require('cors');
 
 const authRoutes = require('./routes/auth');
 const culturesRoutes = require('./routes/cultures');
+const regionsRoutes = require('./routes/regions');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.get('/health', (req, res) => {
 
 app.use('/auth', authRoutes);
 app.use('/cultures', culturesRoutes);
+app.use('/', regionsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
