@@ -8,6 +8,7 @@ import '../../features/home/data/culture_model.dart';
 import '../../features/culture_detail/data/region_model.dart';
 import '../../features/culture_detail/presentation/culture_detail_screen.dart';
 import '../../features/region_detail/presentation/region_detail_screen.dart';
+import '../../features/course_builder/presentation/course_builder_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 // 탐색·만들기·내정보 화면 — 이후 단계에서 구현
@@ -59,7 +60,7 @@ final appRouter = GoRouter(
           GoRoute(path: '/explore', builder: (context, state) => const _PlaceholderScreen('탐색')),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/create', builder: (context, state) => const _PlaceholderScreen('만들기')),
+          GoRoute(path: '/create', builder: (context, state) => const CourseBuilderScreen()),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/profile', builder: (context, state) => const _PlaceholderScreen('내정보')),

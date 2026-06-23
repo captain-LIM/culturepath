@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  static const _baseUrl = 'http://localhost:3000';
+  static const _baseUrl = 'http://10.0.2.2:3000';
 
   final Dio _dio;
 
@@ -27,6 +27,11 @@ class ApiClient {
 
   Future<Response> post(String path, Map<String, dynamic> data) =>
       _dio.post(path, data: data);
+
+  Future<Response> put(String path, Map<String, dynamic> data) =>
+      _dio.put(path, data: data);
+
+  Future<Response> delete(String path) => _dio.delete(path);
 
   Future<Response> get(String path, {Map<String, dynamic>? params}) =>
       _dio.get(path, queryParameters: params);
