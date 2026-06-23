@@ -1,35 +1,49 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
+import '../../shared/widgets/main_shell.dart';
 
-// 홈 화면은 3단계에서 추가 예정 — 임시 placeholder
-import 'package:flutter/material.dart';
-
-class _PlaceholderHome extends StatelessWidget {
-  const _PlaceholderHome();
+// 탐색·만들기·내정보 화면 — 이후 단계에서 구현
+class _PlaceholderScreen extends StatelessWidget {
+  final String label;
+  const _PlaceholderScreen(this.label);
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('문화여행')),
-      body: const Center(child: Text('홈 화면 — 3단계에서 구현')),
-    );
-  }
+  Widget build(BuildContext context) =>
+      Scaffold(body: Center(child: Text(label, style: const TextStyle(fontSize: 18))));
 }
 
 final appRouter = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/home',
   redirect: (context, state) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    final isLoginRoute = state.matchedLocation == '/login' ||
+    final isAuthRoute = state.matchedLocation == '/login' ||
         state.matchedLocation == '/register';
-    if (token != null && isLoginRoute) return '/home';
+    if (token != null && isAuthRoute) return '/home';
     return null;
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
-    GoRoute(path: '/home', builder: (context, state) => const _PlaceholderHome()),
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) => MainShell(navigationShell: shell),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/explore', builder: (context, state) => const _PlaceholderScreen('탐색')),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/create', builder: (context, state) => const _PlaceholderScreen('만들기')),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/profile', builder: (context, state) => const _PlaceholderScreen('내정보')),
+        ]),
+      ],
+    ),
   ],
 );

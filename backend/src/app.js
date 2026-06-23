@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 
 const authRoutes = require('./routes/auth');
+const culturesRoutes = require('./routes/cultures');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/cultures', culturesRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
