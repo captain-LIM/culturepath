@@ -7,6 +7,7 @@ const culturesRoutes = require('./routes/cultures');
 const regionsRoutes = require('./routes/regions');
 const placesRoutes = require('./routes/places');
 const coursesRoutes = require('./routes/courses');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/cultures', culturesRoutes);
 app.use('/', regionsRoutes);
 app.use('/places', placesRoutes);
 app.use('/courses', coursesRoutes);
+app.use('/ai', aiRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

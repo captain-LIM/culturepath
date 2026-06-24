@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../ai_assistant/presentation/ai_assistant_screen.dart';
 import 'widgets/culture_grid.dart';
 import 'widgets/season_banner.dart';
 
@@ -44,6 +46,8 @@ class HomeScreen extends StatelessWidget {
             ),
             const Spacer(),
             _SearchBar(),
+            const SizedBox(width: 8),
+            _AiChatButton(),
           ],
         ),
       ),
@@ -60,6 +64,38 @@ class HomeScreen extends StatelessWidget {
             fontSize: 17,
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiChatButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProviderScope(child: AiAssistantScreen()),
+        ),
+      ),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Text(
+            'AI',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.accent,
+            ),
           ),
         ),
       ),
