@@ -22,6 +22,26 @@ class CourseRepository {
         .toList();
   }
 
+  Future<List<CourseItem>> getFeed({String sort = 'recent'}) async {
+    final res = await apiClient.get('/courses/feed', params: {'sort': sort});
+    return (res.data as List)
+        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<CourseItem>> getRanking() async {
+    final res = await apiClient.get('/courses/ranking');
+    return (res.data as List)
+        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  // 좋아요 토글 — { liked: bool, likeCount: int } 반환
+  Future<Map<String, dynamic>> toggleLike(int courseId) async {
+    final res = await apiClient.post('/courses/$courseId/like', {});
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<CourseItem> createCourse(CourseItem course) async {
     final res = await apiClient.post('/courses', course.toJson());
     return CourseItem.fromJson(res.data as Map<String, dynamic>);

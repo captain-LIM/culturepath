@@ -54,6 +54,10 @@ class CourseItem {
   final bool isPublic;
   final ForkedFromInfo? forkedFrom;
   final String? authorId;
+  final int likeCount;
+  final int forkCount;
+  final bool isLikedByMe;
+  final int score;
 
   const CourseItem({
     this.id,
@@ -63,6 +67,10 @@ class CourseItem {
     this.isPublic = false,
     this.forkedFrom,
     this.authorId,
+    this.likeCount = 0,
+    this.forkCount = 0,
+    this.isLikedByMe = false,
+    this.score = 0,
   });
 
   factory CourseItem.empty() => const CourseItem(
@@ -81,6 +89,8 @@ class CourseItem {
     List<CourseTrack>? tracks,
     bool? isPublic,
     ForkedFromInfo? forkedFrom,
+    int? likeCount,
+    bool? isLikedByMe,
   }) =>
       CourseItem(
         id: id,
@@ -90,6 +100,10 @@ class CourseItem {
         isPublic: isPublic ?? this.isPublic,
         forkedFrom: forkedFrom ?? this.forkedFrom,
         authorId: authorId,
+        likeCount: likeCount ?? this.likeCount,
+        forkCount: forkCount,
+        isLikedByMe: isLikedByMe ?? this.isLikedByMe,
+        score: score,
       );
 
   Map<String, dynamic> toJson() => {
@@ -113,6 +127,10 @@ class CourseItem {
             ? ForkedFromInfo.fromJson(json['forkedFrom'] as Map<String, dynamic>)
             : null,
         authorId: json['authorId'] as String?,
+        likeCount: (json['likeCount'] as int?) ?? 0,
+        forkCount: (json['forkCount'] as int?) ?? 0,
+        isLikedByMe: (json['isLikedByMe'] as bool?) ?? false,
+        score: (json['score'] as int?) ?? 0,
       );
 
   int get totalPlaces => tracks.fold(0, (sum, t) => sum + t.places.length);
