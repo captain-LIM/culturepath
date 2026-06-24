@@ -10,6 +10,7 @@ import '../../features/culture_detail/presentation/culture_detail_screen.dart';
 import '../../features/region_detail/presentation/region_detail_screen.dart';
 import '../../features/course_builder/presentation/course_builder_screen.dart';
 import '../../features/explore/presentation/explore_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 class _PlaceholderScreen extends StatelessWidget {
@@ -63,7 +64,7 @@ final appRouter = GoRouter(
           GoRoute(path: '/create', builder: (context, state) => const CourseBuilderScreen()),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: '/profile', builder: (context, state) => const _PlaceholderScreen('내정보')),
+          GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
         ]),
       ],
     ),

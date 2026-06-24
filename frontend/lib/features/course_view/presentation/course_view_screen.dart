@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
+import '../../completion/presentation/completion_sheet.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
@@ -20,6 +21,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
   bool _forking = false;
+  bool _completed = false;
 
   @override
   void initState() {
@@ -38,7 +40,6 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     final loggedIn = await repo.isLoggedIn();
 
     if (!loggedIn) {
-      // 게스트: 로컬 복사본 생성
       final forkedLocally = widget.course.copyWith(
         title: '${widget.course.title} (포크)',
         forkedFrom: ForkedFromInfo(
@@ -58,9 +59,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (mounted) _navigateToEdit(forked);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('포크 실패: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('포크 실패: $e')));
       }
     } finally {
       if (mounted) setState(() => _forking = false);
@@ -68,13 +67,42 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   void _navigateToEdit(CourseItem forked) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ProviderScope(
-          child: CourseBuilderScreen(initialCourse: forked),
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: forked)),
+    ));
+  }
+
+  Future<void> _handleComplete() async {
+    if (widget.course.id == null) return;
+
+    final loggedIn = await CourseRepository().isLoggedIn();
+    if (!loggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('로그인 후 완주 인증을 할 수 있습니다.'),
+          behavior: SnackBarBehavior.floating,
         ),
-      ),
+      );
+      return;
+    }
+
+    final success = await showCompletionSheet(
+      context,
+      courseId: widget.course.id!,
+      courseTitle: widget.course.title,
     );
+
+    if (success && mounted) {
+      setState(() => _completed = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('완주 인증이 기록되었습니다! 🎖️'),
+          backgroundColor: AppColors.accentGold,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   @override
@@ -93,14 +121,29 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              // 완주 인증 버튼
+              TextButton.icon(
+                onPressed: _completed ? null : _handleComplete,
+                icon: Icon(
+                  _completed ? Icons.emoji_events : Icons.emoji_events_outlined,
+                  color: _completed ? AppColors.accentGold : Colors.white70,
+                  size: 18,
+                ),
+                label: Text(
+                  _completed ? '완주됨' : '완주 인증',
+                  style: TextStyle(
+                    color: _completed ? AppColors.accentGold : Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 course.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 overflow: TextOverflow.ellipsis,
               ),
               background: Container(
@@ -118,10 +161,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       if (course.authorId != null)
-                        Text(
-                          'by ${course.authorId}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
+                        Text('by ${course.authorId}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -145,10 +186,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
             if (course.description.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  course.description,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5),
-                ),
+                child: Text(course.description,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5)),
               ),
             if (course.forkedFrom != null)
               Padding(
@@ -173,11 +212,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         onPressed: _forking ? null : _handleFork,
         backgroundColor: AppColors.accent,
         icon: _forking
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-              )
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
             : const Icon(Icons.call_split, color: Colors.white),
         label: Text(
           _forking ? '포크 중...' : '이 코스 포크하기',

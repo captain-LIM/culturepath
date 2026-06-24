@@ -202,7 +202,69 @@ async function forkCourse(req, res) {
   return res.status(201).json(enrichCourse(forked, req.user.id));
 }
 
+// ─── 완주 인증 ────────────────────────────────────────────────────────────────
+
+let completionStore = [];
+let completionIdCounter = 1;
+
+// POST /courses/:id/complete
+async function completeCourse(req, res) {
+  const courseId = parseInt(req.params.id);
+  const userId = String(req.user.id);
+  const { note } = req.body;
+
+  const course = courseStore.find(c => c.id === courseId);
+  if (!course) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
+
+  const existing = completionStore.find(c => c.courseId === courseId && c.userId === userId);
+  if (existing) {
+    return res.status(409).json({ message: '이미 완주 인증한 코스입니다.', completion: existing });
+  }
+
+  const completion = {
+    id: completionIdCounter++,
+    courseId,
+    courseTitle: course.title,
+    userId,
+    note: note || '',
+    completedAt: new Date().toISOString(),
+  };
+  completionStore.push(completion);
+  return res.status(201).json(completion);
+}
+
+// GET /users/me/completions
+async function getMyCompletions(req, res) {
+  const userId = String(req.user.id);
+  return res.json(completionStore.filter(c => c.userId === userId).reverse());
+}
+
+// GET /users/me/profile
+async function getMyProfile(req, res) {
+  const userId = String(req.user.id);
+  const completions = completionStore.filter(c => c.userId === userId);
+  const created = courseStore.filter(c => String(c.userId) === userId);
+  const liked = Object.entries(likeStore)
+    .filter(([, set]) => set.has(userId))
+    .map(([cid]) => courseStore.find(c => c.id === parseInt(cid)))
+    .filter(Boolean);
+
+  return res.json({
+    userId,
+    nickname: req.user.email?.split('@')[0] || userId,
+    email: req.user.email || '',
+    stats: {
+      completedCount: completions.length,
+      createdCount: created.length,
+      likedCount: liked.length,
+    },
+    recentCompletions: completions.slice(-5).reverse(),
+    createdCourses: created.slice(-5).reverse().map(c => enrichCourse(c, userId)),
+  });
+}
+
 module.exports = {
   createCourse, getCourses, getCourse, updateCourse, deleteCourse,
   getPublicCourses, forkCourse, getFeed, getRanking, toggleLike,
+  completeCourse, getMyCompletions, getMyProfile,
 };
