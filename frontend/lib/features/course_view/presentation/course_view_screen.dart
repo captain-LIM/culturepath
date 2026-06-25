@@ -111,102 +111,86 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          course.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: _completed ? null : _handleComplete,
+            icon: Icon(
+              _completed ? Icons.emoji_events : Icons.emoji_events_outlined,
+              color: _completed ? AppColors.accentGold : Colors.white70,
+              size: 18,
             ),
-            actions: [
-              // 완주 인증 버튼
-              TextButton.icon(
-                onPressed: _completed ? null : _handleComplete,
-                icon: Icon(
-                  _completed ? Icons.emoji_events : Icons.emoji_events_outlined,
-                  color: _completed ? AppColors.accentGold : Colors.white70,
-                  size: 18,
-                ),
-                label: Text(
-                  _completed ? '완주됨' : '완주 인증',
-                  style: TextStyle(
-                    color: _completed ? AppColors.accentGold : Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                course.title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 48),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (course.authorId != null)
-                        Text('by ${course.authorId}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                    ],
-                  ),
-                ),
+            label: Text(
+              _completed ? '완주됨' : '완주 인증',
+              style: TextStyle(
+                color: _completed ? AppColors.accentGold : Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            bottom: TabBar(
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabCtrl,
+          indicatorColor: AppColors.accentGold,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          tabs: course.tracks
+              .map((t) => Tab(text: 'Track ${t.trackNumber} (${t.places.length}곳)'))
+              .toList(),
+        ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (course.description.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text(
+                course.description,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5),
+              ),
+            ),
+          if (course.authorId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Text(
+                'by ${course.authorId}',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+            ),
+          if (course.forkedFrom != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: ForkBadge(forkedFrom: course.forkedFrom!),
+            ),
+          Expanded(
+            child: TabBarView(
               controller: _tabCtrl,
-              indicatorColor: AppColors.accentGold,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white54,
-              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              tabs: course.tracks
-                  .map((t) => Tab(text: 'Track ${t.trackNumber} (${t.places.length}곳)'))
+              children: course.tracks
+                  .map((t) => SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
+                        child: CourseTrackView(track: t),
+                      ))
                   .toList(),
             ),
           ),
         ],
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (course.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(course.description,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5)),
-              ),
-            if (course.forkedFrom != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: ForkBadge(forkedFrom: course.forkedFrom!),
-              ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabCtrl,
-                children: course.tracks
-                    .map((t) => SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
-                          child: CourseTrackView(track: t),
-                        ))
-                    .toList(),
-              ),
-            ),
-          ],
-        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _forking ? null : _handleFork,
