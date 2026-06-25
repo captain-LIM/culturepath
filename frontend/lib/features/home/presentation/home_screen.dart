@@ -37,7 +37,7 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              '문화여행',
+              '따라가방',
               style: GoogleFonts.notoSerifKr(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,

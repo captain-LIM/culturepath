@@ -14,38 +14,31 @@ class CultureCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: culture.color,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: culture.color.withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: culture.color.withValues(alpha: 0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(culture.emoji, style: const TextStyle(fontSize: 28)),
-            const Spacer(),
+            Text(culture.emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(height: 6),
             Text(
               culture.name,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 height: 1.3,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              culture.description,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 11,
-              ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],

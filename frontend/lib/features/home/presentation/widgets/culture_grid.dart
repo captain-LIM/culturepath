@@ -26,21 +26,23 @@ class CultureGrid extends ConsumerWidget {
           child: Center(child: Text('카테고리를 불러올 수 없습니다.\n$e', textAlign: TextAlign.center)),
         ),
       ),
-      data: (cultures) => SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        sliver: SliverGrid(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => CultureCard(
+      data: (cultures) => SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cultures.length > 10 ? 10 : cultures.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.82,
+            ),
+            itemBuilder: (context, index) => CultureCard(
               culture: cultures[index],
               onTap: () => context.push('/cultures/${cultures[index].id}', extra: cultures[index]),
             ),
-            childCount: cultures.length,
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 1.05,
           ),
         ),
       ),
