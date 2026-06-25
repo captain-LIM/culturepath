@@ -37,7 +37,7 @@ class CultureGrid extends ConsumerWidget {
               crossAxisCount: 5,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 0.82,
+              childAspectRatio: 0.72,
             ),
             itemBuilder: (context, index) => CultureCard(
               culture: cultures[index],

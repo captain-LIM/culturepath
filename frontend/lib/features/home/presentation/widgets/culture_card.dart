@@ -23,12 +23,12 @@ class CultureCard extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(culture.emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(height: 6),
+            Text(culture.emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(height: 4),
             Text(
               culture.name,
               textAlign: TextAlign.center,
