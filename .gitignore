@@ -12,3 +12,6 @@ frontend/.packages
 # 공통
 .DS_Store
 *.log
+
+# 에이전트 설정
+.agents/
