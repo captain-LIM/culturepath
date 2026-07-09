@@ -80,10 +80,18 @@ async function migrateGuest(req, res) {
 
       if (Array.isArray(course.tracks)) {
         for (const track of course.tracks) {
-          await conn.query(
-            'INSERT INTO course_tracks (course_id, sequence, content_id, stay_minutes, memo) VALUES (?, ?, ?, ?, ?)',
-            [courseId, track.sequence, track.contentId, track.stayMinutes || 60, track.memo || '']
-          );
+          const places = track.places || [];
+          for (let i = 0; i < places.length; i++) {
+            const p = places[i];
+            await conn.query(
+              `INSERT INTO course_tracks
+                 (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [courseId, track.trackNumber || 1, i + 1,
+               p.contentId || null, p.title || null, p.address || null,
+               p.category || null, p.region || null]
+            );
+          }
         }
       }
       migratedCount++;
