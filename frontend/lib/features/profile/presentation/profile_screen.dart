@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../course_builder/data/course_repository.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
 
@@ -14,15 +15,11 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<bool>(
-      future: CourseRepository().isLoggedIn(),
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (snap.data != true) return const _GuestView();
-        return const _LoggedInView();
-      },
+    final authAsync = ref.watch(authStateProvider);
+    return authAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, __) => const _GuestView(),
+      data: (isLoggedIn) => isLoggedIn ? const _LoggedInView() : const _GuestView(),
     );
   }
 }
@@ -62,14 +59,9 @@ class _GuestView extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/login'),
+                  onPressed: () => context.push('/login'),
                   child: const Text('로그인하기'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/register'),
-                child: Text('회원가입', style: TextStyle(color: Colors.grey.shade600)),
               ),
             ],
           ),
@@ -106,7 +98,7 @@ class _LoggedInView extends ConsumerWidget {
         ),
         data: (profile) => CustomScrollView(
           slivers: [
-            _buildHeader(profile),
+            _buildHeader(profile, context, ref),
             _buildStats(profile.stats),
             if (profile.recentCompletions.isNotEmpty) ...[
               _sectionTitle('완주한 코스 🎖️'),
@@ -123,7 +115,7 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverToBoxAdapter _buildHeader(UserProfile profile) {
+  SliverToBoxAdapter _buildHeader(UserProfile profile, BuildContext context, WidgetRef ref) {
     return SliverToBoxAdapter(
       child: Container(
         color: Colors.white,
@@ -153,6 +145,15 @@ class _LoggedInView extends ConsumerWidget {
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 ],
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout, color: AppColors.primary),
+              tooltip: '로그아웃',
+              onPressed: () async {
+                await AuthRepository().logout();
+                ref.invalidate(authStateProvider);
+                if (context.mounted) context.go('/login');
+              },
             ),
           ],
         ),

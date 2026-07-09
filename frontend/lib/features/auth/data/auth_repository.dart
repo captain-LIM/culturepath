@@ -1,47 +1,35 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
 
+final authStateProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('auth_token') != null;
+});
+
 class AuthRepository {
-  // 회원가입
-  Future<String> register({
-    required String email,
-    required String password,
-    required String nickname,
-  }) async {
-    final res = await apiClient.post('/auth/register', {
-      'email': email,
-      'password': password,
-      'nickname': nickname,
-    });
+  static const _serverClientId =
+      '793585667481-59trfjaarlkffp2g3u2nacmac3127uh9.apps.googleusercontent.com';
+
+  final _googleSignIn = GoogleSignIn(serverClientId: _serverClientId);
+
+  Future<String> signInWithGoogle() async {
+    final account = await _googleSignIn.signIn();
+    if (account == null) throw Exception('로그인이 취소되었습니다.');
+
+    final auth = await account.authentication;
+    final idToken = auth.idToken;
+    if (idToken == null) throw Exception('인증 토큰을 가져올 수 없습니다.');
+
+    final res = await apiClient.post('/auth/google', {'idToken': idToken});
     final token = res.data['token'] as String;
     await _saveToken(token);
     return token;
   }
 
-  // 로그인
-  Future<String> login({
-    required String email,
-    required String password,
-  }) async {
-    final res = await apiClient.post('/auth/login', {
-      'email': email,
-      'password': password,
-    });
-    final token = res.data['token'] as String;
-    await _saveToken(token);
-    return token;
-  }
-
-  // 게스트 코스 서버 이관
-  Future<int> migrateGuest(List<Map<String, dynamic>> guestCourses) async {
-    final res = await apiClient.post('/auth/migrate-guest', {
-      'guestCourses': guestCourses,
-    });
-    return res.data['migratedCount'] as int;
-  }
-
-  // 로그아웃
   Future<void> logout() async {
+    await _googleSignIn.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
   }
@@ -49,14 +37,6 @@ class AuthRepository {
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token') != null;
-  }
-
-  // 게스트 코스 로컬 저장
-  Future<void> saveGuestCourse(Map<String, dynamic> course) async {
-    final prefs = await SharedPreferences.getInstance();
-    final courses = prefs.getStringList('guest_courses') ?? [];
-    courses.add(course.toString());
-    await prefs.setStringList('guest_courses', courses);
   }
 
   Future<void> _saveToken(String token) async {

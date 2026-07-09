@@ -49,6 +49,9 @@ dependencies:
   # 구글 폰트
   google_fonts: ^6.2.1
 
+  # 구글 로그인
+  google_sign_in: ^6.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

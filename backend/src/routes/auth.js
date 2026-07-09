@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { register, login, migrateGuest } = require('../controllers/authController');
+const { register, login, migrateGuest, googleAuth } = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -35,6 +35,9 @@ router.post(
   validate,
   login
 );
+
+// 구글 로그인
+router.post('/google', googleAuth);
 
 // 게스트 코스 → 서버 마이그레이션 (로그인 필요)
 router.post('/migrate-guest', authMiddleware, migrateGuest);

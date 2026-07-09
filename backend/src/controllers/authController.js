@@ -1,6 +1,13 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const pool = require('../config/db');
+
+const GOOGLE_CLIENT_IDS = [
+  '793585667481-iu2hei6lm8j0askoilc37bl7qos01oms.apps.googleusercontent.com', // Android
+  '793585667481-59trfjaarlkffp2g3u2nacmac3127uh9.apps.googleusercontent.com', // Web
+];
+const googleClient = new OAuth2Client();
 
 function generateToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -108,4 +115,42 @@ async function migrateGuest(req, res) {
   }
 }
 
-module.exports = { register, login, migrateGuest };
+// POST /auth/google
+async function googleAuth(req, res) {
+  const { idToken } = req.body;
+  if (!idToken) return res.status(400).json({ message: 'idToken이 필요합니다.' });
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_IDS,
+    });
+    const payload = ticket.getPayload();
+    const googleId = payload.sub;
+    const email = payload.email;
+    const nickname = payload.given_name || payload.name || email.split('@')[0];
+
+    let [[user]] = await pool.query(
+      'SELECT * FROM users WHERE google_id = ? OR email = ?',
+      [googleId, email]
+    );
+
+    if (!user) {
+      const [result] = await pool.query(
+        'INSERT INTO users (email, nickname, google_id) VALUES (?, ?, ?)',
+        [email, nickname, googleId]
+      );
+      user = { id: result.insertId, email, nickname };
+    } else if (!user.google_id) {
+      await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, user.id]);
+    }
+
+    const token = generateToken(user.id);
+    return res.json({ token, userId: user.id, nickname: user.nickname });
+  } catch (err) {
+    console.error('Google 인증 오류:', err.message);
+    return res.status(401).json({ message: '구글 인증에 실패했습니다.' });
+  }
+}
+
+module.exports = { register, login, migrateGuest, googleAuth };
