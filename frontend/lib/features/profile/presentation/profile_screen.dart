@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../course_builder/data/course_model.dart';
+import '../../course_view/presentation/course_view_screen.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
 
@@ -106,7 +108,7 @@ class _LoggedInView extends ConsumerWidget {
             ],
             if (profile.createdCourses.isNotEmpty) ...[
               _sectionTitle('내가 만든 코스'),
-              _buildCreatedCourses(profile.createdCourses),
+              _buildCreatedCourses(profile.createdCourses, context),
             ],
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
@@ -199,12 +201,17 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverList _buildCreatedCourses(List<dynamic> courses) {
+  SliverList _buildCreatedCourses(List<CourseItem> courses, BuildContext context) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (_, i) {
           final c = courses[i];
-          return Container(
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => CourseViewScreen(course: c)),
+            ),
+            child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -240,6 +247,7 @@ class _LoggedInView extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
           );
         },
         childCount: courses.length,
