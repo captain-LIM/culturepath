@@ -52,6 +52,10 @@ class CourseRepository {
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<void> deleteCourse(int courseId) async {
+    await apiClient.delete('/courses/$courseId');
+  }
+
   Future<CourseItem> forkCourse(int courseId) async {
     final res = await apiClient.post('/courses/$courseId/fork', {});
     return CourseItem.fromJson(res.data as Map<String, dynamic>);

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../course_builder/data/course_model.dart';
+import '../../course_builder/data/course_repository.dart';
 import '../../course_view/presentation/course_view_screen.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
@@ -108,7 +109,7 @@ class _LoggedInView extends ConsumerWidget {
             ],
             if (profile.createdCourses.isNotEmpty) ...[
               _sectionTitle('내가 만든 코스'),
-              _buildCreatedCourses(profile.createdCourses, context),
+              _buildCreatedCourses(profile.createdCourses, context, ref),
             ],
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
@@ -201,7 +202,7 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverList _buildCreatedCourses(List<CourseItem> courses, BuildContext context) {
+  SliverList _buildCreatedCourses(List<CourseItem> courses, BuildContext context, WidgetRef ref) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (_, i) {
@@ -212,42 +213,77 @@ class _LoggedInView extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => CourseViewScreen(course: c)),
             ),
             child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.map_outlined, color: AppColors.primary, size: 20),
                   ),
-                  child: const Icon(Icons.map_outlined, color: AppColors.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(c.title,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 2),
-                      Text('장소 ${c.totalPlaces}곳 · ${c.isPublic ? "공개" : "비공개"}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(c.title,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Text('장소 ${c.totalPlaces}곳 · ${c.isPublic ? "공개" : "비공개"}',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, color: Colors.red.shade300, size: 20),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('코스 삭제'),
+                          content: Text('"${c.title}"을 삭제하시겠습니까?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('취소'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: const Text('삭제'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true && c.id != null) {
+                        try {
+                          await CourseRepository().deleteCourse(c.id!);
+                          ref.invalidate(_profileProvider);
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('삭제에 실패했습니다.')),
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
           );
         },
         childCount: courses.length,
