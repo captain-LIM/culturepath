@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_view/presentation/course_view_screen.dart';
+import '../../home/presentation/search_delegate.dart';
 import 'widgets/feed_course_card.dart';
 
 // 피드 정렬 상태
@@ -59,6 +60,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             backgroundColor: Colors.white,
             elevation: 0,
             expandedHeight: 70,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search, color: AppColors.primary),
+                onPressed: () => showSearch(
+                  context: context,
+                  delegate: CourseSearchDelegate(),
+                ),
+              ),
+            ],
             flexibleSpace: const FlexibleSpaceBar(
               titlePadding: EdgeInsets.fromLTRB(20, 0, 20, 52),
               title: Text(
