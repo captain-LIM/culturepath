@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ai_assistant/presentation/ai_assistant_screen.dart';
+import 'search_delegate.dart';
 import 'widgets/culture_grid.dart';
 import 'widgets/season_banner.dart';
 
@@ -107,7 +108,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () => showSearch(context: context, delegate: CourseSearchDelegate()),
       child: Container(
         height: 38,
         width: 160,
