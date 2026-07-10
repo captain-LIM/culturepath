@@ -69,14 +69,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     delegate: CourseSearchDelegate(),
                   ),
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.search,
-                        color: AppColors.primary, size: 20),
+                        color: AppColors.primary, size: 26),
                   ),
                 ),
               ),
