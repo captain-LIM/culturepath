@@ -292,7 +292,6 @@ class _LoggedInView extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
           );
         },
         childCount: courses.length,
