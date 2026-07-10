@@ -61,11 +61,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             elevation: 0,
             expandedHeight: 70,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.search, color: AppColors.primary),
-                onPressed: () => showSearch(
-                  context: context,
-                  delegate: CourseSearchDelegate(),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () => showSearch(
+                    context: context,
+                    delegate: CourseSearchDelegate(),
+                  ),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.search,
+                        color: AppColors.primary, size: 20),
+                  ),
                 ),
               ),
             ],
