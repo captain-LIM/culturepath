@@ -5,7 +5,9 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "test": "node --import ./test-support/setup.js --test",
+    "test:watch": "node --import ./test-support/setup.js --test --watch"
   },
   "keywords": [],
   "author": "",
