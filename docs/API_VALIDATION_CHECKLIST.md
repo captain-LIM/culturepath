@@ -312,24 +312,32 @@ _type=json  # 백엔드 또는 직접 호출에서 수동으로 추가
 
 Swagger 성공은 인증과 원본 API 동작만 확인한 것이다. 실제 연동 완료 전에는 다음도 확인해야 한다.
 
-- [ ] Node.js 공통 클라이언트에서 세 서비스 모두 호출 성공
-- [ ] `serviceKey` 이중 URL 인코딩 방지
-- [ ] 연결 및 응답 타임아웃 적용
-- [ ] 공공데이터 응답의 `header`, `body`, `items.item` 형태 정규화
-- [ ] `item`이 단일 객체 또는 배열인 경우 모두 처리
-- [ ] 빈 문자열·빈 객체·누락된 `items` 처리
-- [ ] 한글 UTF-8 보존
+- [x] Node.js 공통 클라이언트에서 세 서비스 모두 호출 성공
+- [x] `serviceKey` 이중 URL 인코딩 방지
+- [x] 연결 및 응답 타임아웃 적용
+- [x] 공공데이터 응답의 `header`, `body`, `items.item` 형태 정규화
+- [x] `item`이 단일 객체 또는 배열인 경우 모두 처리
+- [x] 빈 문자열·빈 객체·누락된 `items` 처리
+- [x] 한글 UTF-8 보존
 - [ ] 외부 API 원문을 그대로 Flutter로 넘기지 않고 내부 모델로 변환
-- [ ] 로그에서 `serviceKey`와 전체 요청 URL 마스킹
+- [x] 로그에서 `serviceKey`와 전체 요청 URL 마스킹
 - [ ] 동일 조건 호출 캐시 및 호출량 제한 적용
 - [ ] 외부 API 장애 시 캐시 데이터 또는 명확한 오류 응답 제공
+
+2026-07-22 Node.js 공통 클라이언트 smoke test에서 아래 대표 요청을 각각 1회 실행했다.
+
+- `KorService2/areaCode2`: `resultCode=0000`, 한글 보존 확인
+- `TarRlteTarService1/areaBasedList1`: `resultCode=0000`, 한글 보존 확인
+- `DataLabService/metcoRegnVisitrDDList`: `resultCode=0000`, 한글 보존 확인
+
+테스트 출력에는 서비스키와 전체 요청 URL을 기록하지 않았다. 타임아웃, 최대 1회 제한 재시도, 응답 형태 정규화와 키 인코딩은 실제 호출과 별도로 fixture 기반 단위 테스트에서 검증했다.
 
 ## 8. 다음 실행 순서
 
 핵심 외부 API의 실제 호출 검증은 완료됐다. 다음 작업은 검증 결과를 백엔드 코드로 옮기는 것이다.
 
-1. 공통 HTTP 클라이언트와 환경설정 모듈을 구현한다.
-2. 성공·빈 결과·최상위 오류 객체를 하나의 내부 응답 또는 오류 형식으로 정규화한다.
+1. [x] 공통 HTTP 클라이언트와 환경설정 모듈을 구현한다.
+2. [x] 성공·빈 결과·최상위 오류 객체를 하나의 내부 응답 또는 오류 형식으로 정규화한다.
 3. `searchKeyword2 → 상세 API` 서비스 흐름을 구현한다.
 4. 연관 관광지의 해시 ID와 TourAPI 숫자형 `contentid` 매핑 전략을 정한다.
 5. DataLab의 `areaCode`·`signguCode`를 내부 지역 모델과 매핑한다.
