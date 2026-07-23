@@ -23,6 +23,15 @@ const errorResponses = Object.freeze({
   },
 });
 
+const cacheStatusHeader = Object.freeze({
+  description:
+    '장소 데이터 출처. HIT=유효 캐시, REFRESHED=TourAPI 갱신, STALE=장애 fallback, BYPASS=캐시 우회',
+  schema: {
+    type: 'string',
+    enum: ['HIT', 'REFRESHED', 'STALE', 'BYPASS'],
+  },
+});
+
 module.exports = Object.freeze({
   openapi: '3.0.3',
   info: {
@@ -64,6 +73,7 @@ module.exports = Object.freeze({
           200: {
             description: '장소 배열',
             headers: {
+              'X-Cache-Status': cacheStatusHeader,
               'X-Page-No': { schema: { type: 'integer', minimum: 1 } },
               'X-Num-Of-Rows': { schema: { type: 'integer', minimum: 1 } },
               'X-Total-Count': { schema: { type: 'integer', minimum: 0 } },
@@ -97,6 +107,9 @@ module.exports = Object.freeze({
         responses: {
           200: {
             description: '공통·소개·이미지를 조합한 장소 상세',
+            headers: {
+              'X-Cache-Status': cacheStatusHeader,
+            },
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/PlaceDetail' },
@@ -105,6 +118,9 @@ module.exports = Object.freeze({
           },
           404: {
             description: '장소 없음',
+            headers: {
+              'X-Cache-Status': cacheStatusHeader,
+            },
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ApiError' },

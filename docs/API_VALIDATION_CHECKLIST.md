@@ -321,7 +321,9 @@ Swagger 성공은 인증과 원본 API 동작만 확인한 것이다. 실제 연
 - [x] 한글 UTF-8 보존
 - [x] 외부 API 원문을 그대로 Flutter로 넘기지 않고 내부 모델로 변환
 - [x] 로그에서 `serviceKey`와 전체 요청 URL 마스킹
-- [ ] 동일 조건 호출 캐시 및 호출량 제한 적용
+- [x] 동일 조건 호출 2단계 MySQL 캐시와 프로세스 내 single-flight 적용
+  - fake repository·mock TourAPI 자동 테스트 완료
+  - 실제 MySQL 8 DDL·upsert·인덱스와 다중 인스턴스 중복 호출은 배포 전 별도 검증
 - [x] 내부 `500`과 외부 API `502`·`503`·`504`, 재시도 가능 여부를 구분한 명확한 오류 응답 제공
 
 2026-07-22 Node.js 공통 클라이언트 smoke test에서 아래 대표 요청을 각각 1회 실행했다.

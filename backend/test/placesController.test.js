@@ -65,6 +65,7 @@ test('routes keyword search and preserves the existing Flutter response shape', 
         return {
           items: [place()],
           pagination: { pageNo: 2, numOfRows: 10, totalCount: 31 },
+          cacheStatus: 'HIT',
         };
       },
     },
@@ -82,6 +83,7 @@ test('routes keyword search and preserves the existing Flutter response shape', 
   assert.equal(res.body[0].openTime, '');
   assert.equal(res.body[0].region, '경상남도');
   assert.deepEqual(res.headers, {
+    'X-Cache-Status': 'HIT',
     'X-Page-No': 2,
     'X-Num-Of-Rows': 10,
     'X-Total-Count': 31,
@@ -155,16 +157,27 @@ test('filters the current page by culture without changing the internal model', 
 
 test('returns a compatible place detail and a structured 404', async () => {
   const foundController = createPlacesController({
-    tourApiService: { getPlaceDetail: async () => place({ overview: '개요', images: [] }) },
+    placesService: {
+      getPlaceDetail: async () => ({
+        item: place({ overview: '개요', images: [] }),
+        cacheStatus: 'STALE',
+      }),
+    },
   });
   const found = createResponse();
   await foundController.getPlaceDetail({ params: { id: '1' } }, found);
   assert.equal(found.statusCode, 200);
   assert.equal(found.body.overview, '개요');
   assert.equal(found.body.address, '');
+  assert.equal(found.headers['X-Cache-Status'], 'STALE');
 
   const missingController = createPlacesController({
-    tourApiService: { getPlaceDetail: async () => null },
+    placesService: {
+      getPlaceDetail: async () => ({
+        item: null,
+        cacheStatus: 'BYPASS',
+      }),
+    },
   });
   const missing = createResponse();
   await missingController.getPlaceDetail({ params: { id: '999' } }, missing);
@@ -174,6 +187,7 @@ test('returns a compatible place detail and a structured 404', async () => {
     message: '장소를 찾을 수 없습니다.',
     retryable: false,
   });
+  assert.equal(missing.headers['X-Cache-Status'], 'BYPASS');
 });
 
 test('maps internal external-api failures to stable public errors', () => {

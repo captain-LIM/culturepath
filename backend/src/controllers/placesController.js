@@ -1,4 +1,4 @@
-const tourApiService = require('../services/tourApiService');
+const cachedPlacesService = require('../services/cachedPlacesService');
 const { ExternalApiError } = require('../utils/externalApiError');
 
 // 연관 관광지 API 연동 전 /places/:id/related 전용 시드 데이터
@@ -64,6 +64,17 @@ function setPaginationHeaders(res, pagination, returnedCount) {
   }
 }
 
+function setCacheStatusHeader(res, cacheStatus) {
+  if (!cacheStatus) {
+    return;
+  }
+  if (typeof res.set === 'function') {
+    res.set({ 'X-Cache-Status': cacheStatus });
+    return;
+  }
+  res.setHeader?.('X-Cache-Status', cacheStatus);
+}
+
 function publicError(error) {
   if (!(error instanceof ExternalApiError)) {
     return {
@@ -114,7 +125,10 @@ function publicError(error) {
 }
 
 function createPlacesController(options = {}) {
-  const service = options.tourApiService || tourApiService;
+  const service =
+    options.placesService ||
+    options.tourApiService ||
+    cachedPlacesService;
   const logger = options.logger || console;
 
   async function searchPlaces(req, res) {
@@ -156,6 +170,7 @@ function createPlacesController(options = {}) {
         ? { ...result.pagination, totalCount: filteredItems.length }
         : result.pagination;
 
+      setCacheStatusHeader(res, result.cacheStatus);
       setPaginationHeaders(res, pagination, filteredItems.length);
       return res.json(filteredItems.map(toPublicPlace));
     } catch (error) {
@@ -171,7 +186,13 @@ function createPlacesController(options = {}) {
 
   async function getPlaceDetail(req, res) {
     try {
-      const place = await service.getPlaceDetail({ contentId: req.params?.id });
+      const result = await service.getPlaceDetail({ contentId: req.params?.id });
+      const wrapped =
+        result &&
+        Object.prototype.hasOwnProperty.call(result, 'item') &&
+        Object.prototype.hasOwnProperty.call(result, 'cacheStatus');
+      const place = wrapped ? result.item : result;
+      setCacheStatusHeader(res, wrapped ? result.cacheStatus : null);
       if (!place) {
         return res.status(404).json({
           code: 'PLACE_NOT_FOUND',
@@ -215,6 +236,7 @@ module.exports = {
   getPlaceDetail,
   getRelatedPlaces,
   publicError,
+  setCacheStatusHeader,
   searchPlaces,
   toPublicPlace,
 };
