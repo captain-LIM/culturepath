@@ -5,6 +5,7 @@ require('dotenv').config({ quiet: true });
 const DEFAULTS = Object.freeze({
   mobileOs: 'ETC',
   mobileApp: 'CulturePath',
+  relatedTourBaseYm: '202503',
   timeoutMs: 8000,
   maxRetries: 1,
   retryDelayMs: 200,
@@ -28,6 +29,8 @@ function getExternalApiConfig(env = process.env) {
     apiKey: env.TOUR_API_KEY?.trim() || '',
     mobileOs: env.PUBLIC_DATA_MOBILE_OS?.trim() || DEFAULTS.mobileOs,
     mobileApp: env.PUBLIC_DATA_MOBILE_APP?.trim() || DEFAULTS.mobileApp,
+    relatedTourBaseYm:
+      env.RELATED_TOUR_BASE_YM?.trim() || DEFAULTS.relatedTourBaseYm,
     timeoutMs: parsePositiveInteger(env.EXTERNAL_API_TIMEOUT_MS, DEFAULTS.timeoutMs),
     maxRetries: parseNonNegativeInteger(
       env.EXTERNAL_API_MAX_RETRIES,

@@ -190,6 +190,47 @@ test('returns a compatible place detail and a structured 404', async () => {
   assert.equal(missing.headers['X-Cache-Status'], 'BYPASS');
 });
 
+test('returns related TourAPI place cards with cache status and a structured 404', async () => {
+  const controller = createPlacesController({
+    relatedPlacesService: {
+      getRelatedPlaces: async () => ({
+        items: [place({
+          contentId: '2',
+          title: '연관 장소',
+          address: null,
+        })],
+        pagination: { pageNo: 1, numOfRows: 5, totalCount: 1 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const found = createResponse();
+
+  await controller.getRelatedPlaces({ params: { id: '1' } }, found);
+
+  assert.equal(found.statusCode, 200);
+  assert.equal(found.body[0].contentId, '2');
+  assert.equal(found.body[0].address, '');
+  assert.equal(found.headers['X-Cache-Status'], 'HIT');
+
+  const missingController = createPlacesController({
+    relatedPlacesService: {
+      getRelatedPlaces: async () => null,
+    },
+  });
+  const missing = createResponse();
+  await missingController.getRelatedPlaces(
+    { params: { id: '999' } },
+    missing,
+  );
+  assert.equal(missing.statusCode, 404);
+  assert.deepEqual(missing.body, {
+    code: 'PLACE_NOT_FOUND',
+    message: '장소를 찾을 수 없습니다.',
+    retryable: false,
+  });
+});
+
 test('maps internal external-api failures to stable public errors', () => {
   const cases = [
     ['VALIDATION_ERROR', 400, 'VALIDATION_ERROR', false],

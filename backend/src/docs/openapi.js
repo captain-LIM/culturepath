@@ -131,6 +131,49 @@ module.exports = Object.freeze({
         },
       },
     },
+    '/places/{id}/related': {
+      get: {
+        tags: ['Places'],
+        summary: '연관 방문 장소 조회',
+        description:
+          '차량 이동 기반 연관 관광지 상위 5개를 TourAPI 장소 카드로 안전하게 매핑해 반환합니다.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: '중심 장소의 TourAPI 숫자형 contentId',
+            schema: { type: 'string', pattern: '^\\d+$' },
+          },
+        ],
+        responses: {
+          200: {
+            description: '연관 방문 장소 배열. 매핑되지 않은 후보는 제외됩니다.',
+            headers: {
+              'X-Cache-Status': cacheStatusHeader,
+            },
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  maxItems: 5,
+                  items: { $ref: '#/components/schemas/PlaceSummary' },
+                },
+              },
+            },
+          },
+          404: {
+            description: '중심 장소 없음',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ApiError' },
+              },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
   },
   components: {
     parameters: {

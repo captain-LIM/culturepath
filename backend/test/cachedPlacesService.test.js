@@ -86,6 +86,42 @@ test('returns a fresh query cache without calling TourAPI', async () => {
   assert.equal(upstreamCalls, 0);
 });
 
+test('reuses the generic query cache for a related-place operation', async () => {
+  let fetchCalls = 0;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findQuery: async () => ({
+        ...result([place('7')]),
+        cachedAt: 9_000,
+        expiresAt: 11_000,
+      }),
+    },
+    tourApiService: {},
+  });
+
+  const response = await service.getCachedQuery({
+    operation: 'relatedPlaces',
+    input: { baseYm: '202503', contentId: '100' },
+    fetchUpstream: async () => {
+      fetchCalls += 1;
+      return result();
+    },
+  });
+
+  assert.equal(response.cacheStatus, CACHE_STATUS.HIT);
+  assert.equal(response.items[0].contentId, '7');
+  assert.equal(fetchCalls, 0);
+  await assert.rejects(
+    service.getCachedQuery({
+      operation: 'invalid-operation',
+      fetchUpstream: async () => result(),
+    }),
+    /operation/,
+  );
+});
+
 test('validates empty query options before reading a warm cache', async () => {
   let cacheReads = 0;
   let upstreamCalls = 0;

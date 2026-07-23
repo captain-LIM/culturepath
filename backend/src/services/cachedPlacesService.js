@@ -17,6 +17,8 @@ const CACHE_STATUS = Object.freeze({
   STALE: 'STALE',
 });
 const QUERY_FIELDS = Object.freeze([
+  'baseYm',
+  'contentId',
   'keyword',
   'lDongRegnCd',
   'lDongSignguCd',
@@ -289,6 +291,18 @@ function createCachedPlacesService(options = {}) {
   }
 
   return Object.freeze({
+    async getCachedQuery({ operation, input, fetchUpstream } = {}) {
+      if (
+        typeof operation !== 'string' ||
+        !/^[A-Za-z][A-Za-z0-9]{0,29}$/.test(operation)
+      ) {
+        throw new TypeError('캐시 operation 형식이 올바르지 않습니다.');
+      }
+      if (typeof fetchUpstream !== 'function') {
+        throw new TypeError('캐시 fetchUpstream 함수가 필요합니다.');
+      }
+      return getQuery(operation, input, fetchUpstream);
+    },
     async getAreaBasedPlaces(input) {
       const normalized = normalizeAreaBasedPlaceOptions(input);
       return getQuery(
@@ -323,6 +337,7 @@ module.exports = {
   canonicalQuery,
   createCachedPlacesService,
   createQueryCacheKey,
+  getCachedQuery: input => getDefaultService().getCachedQuery(input),
   getAreaBasedPlaces: input => getDefaultService().getAreaBasedPlaces(input),
   getPlaceDetail: input => getDefaultService().getPlaceDetail(input),
   searchPlacesByKeyword: input =>
