@@ -6,6 +6,9 @@ const {
 const { ExternalApiError } = require('../utils/externalApiError');
 const { normalizeTourPlace } = require('../utils/normalizeTourPlace');
 const {
+  normalizeTourPlaceDetail,
+} = require('../utils/normalizeTourPlaceDetail');
+const {
   normalizePagination,
   requireOneOf,
   requirePattern,
@@ -14,6 +17,7 @@ const {
 
 const TOUR_CONTEXT = Object.freeze({ service: 'tour' });
 const CODE_PATTERN = /^\d+$/;
+const CONTENT_ID_PATTERN = /^\d+$/;
 const LDONG_REGN_CODE_PATTERN = /^\d{2}$/;
 const LDONG_SIGNGU_CODE_PATTERN = /^\d{3}$/;
 const CLASSIFICATION_PATTERNS = Object.freeze({
@@ -124,6 +128,51 @@ function normalizeClassificationItem(item, operation) {
   });
 }
 
+function normalizeLegalDistrictItem(item, operation, parentRegionCode) {
+  const genericCode = String(item?.code || '').trim();
+  const genericName = String(item?.name || '').trim();
+  const lDongRegnCd = String(
+    item?.lDongRegnCd ??
+      item?.ldongregncd ??
+      (parentRegionCode ? parentRegionCode : genericCode),
+  ).trim();
+  const lDongRegnNm = String(
+    item?.lDongRegnNm ?? item?.ldongregnnm ?? (parentRegionCode ? '' : genericName),
+  ).trim();
+  const lDongSignguCd = String(
+    item?.lDongSignguCd ??
+      item?.ldongsigngucd ??
+      (parentRegionCode ? genericCode : ''),
+  ).trim();
+  const lDongSignguNm = String(
+    item?.lDongSignguNm ??
+      item?.ldongsigngunm ??
+      (parentRegionCode ? genericName : ''),
+  ).trim();
+
+  if (
+    !LDONG_REGN_CODE_PATTERN.test(lDongRegnCd) ||
+    (parentRegionCode &&
+      (!LDONG_SIGNGU_CODE_PATTERN.test(lDongSignguCd) || !lDongSignguNm)) ||
+    (!parentRegionCode && !lDongRegnNm)
+  ) {
+    throw new ExternalApiError('TourAPI 법정동 코드 응답이 올바르지 않습니다.', {
+      code: 'INVALID_RESPONSE',
+      service: 'tour',
+      operation,
+    });
+  }
+
+  const rnum = Number(item?.rnum);
+  return Object.freeze({
+    lDongRegnCd,
+    lDongRegnNm: lDongRegnNm || null,
+    lDongSignguCd: lDongSignguCd || null,
+    lDongSignguNm: lDongSignguNm || null,
+    rnum: Number.isFinite(rnum) ? rnum : null,
+  });
+}
+
 function mapPlaceResult(result, operation, normalizePlace, cultureOptions) {
   return {
     ...result,
@@ -137,9 +186,189 @@ function createTourApiService(options = {}) {
   const client =
     options.client || createConfiguredPublicDataClient('tour', options);
   const normalizePlace = options.normalizePlace || normalizeTourPlace;
+  const normalizePlaceDetail =
+    options.normalizePlaceDetail || normalizeTourPlaceDetail;
   const cultureOptions = options.cultureOptions || {};
 
+  function normalizeContentId(contentId, context) {
+    return requirePattern(
+      contentId,
+      'contentId',
+      CONTENT_ID_PATTERN,
+      context,
+    );
+  }
+
+  async function getLegalDistrictCodes({
+    lDongRegnCd,
+    pageNo,
+    numOfRows,
+  } = {}) {
+    const context = operationContext('ldongCode2');
+    const pagination = normalizePagination(pageNo, numOfRows, context);
+    const normalizedRegionCode = requirePattern(
+      lDongRegnCd,
+      'lDongRegnCd',
+      LDONG_REGN_CODE_PATTERN,
+      context,
+      { optional: true },
+    );
+    const result = await client.get(context.operation, {
+      params: {
+        lDongRegnCd: normalizedRegionCode,
+        lDongListYn: 'N',
+      },
+      ...pagination,
+    });
+
+    return {
+      ...result,
+      items: result.items.map(item =>
+        normalizeLegalDistrictItem(
+          item,
+          context.operation,
+          normalizedRegionCode,
+        ),
+      ),
+    };
+  }
+
+  function getCommonDetail({ contentId } = {}) {
+    const context = operationContext('detailCommon2');
+    const normalizedContentId = normalizeContentId(contentId, context);
+    return client.get(context.operation, {
+      params: { contentId: normalizedContentId },
+      pageNo: 1,
+      numOfRows: 1,
+    });
+  }
+
+  function getIntroDetail({ contentId, contentTypeId } = {}) {
+    const context = operationContext('detailIntro2');
+    const normalizedContentId = normalizeContentId(contentId, context);
+    const normalizedContentTypeId = requirePattern(
+      contentTypeId,
+      'contentTypeId',
+      CODE_PATTERN,
+      context,
+    );
+    return client.get(context.operation, {
+      params: {
+        contentId: normalizedContentId,
+        contentTypeId: normalizedContentTypeId,
+      },
+      pageNo: 1,
+      numOfRows: 1,
+    });
+  }
+
+  function getInfoDetail({
+    contentId,
+    contentTypeId,
+    pageNo,
+    numOfRows,
+  } = {}) {
+    const context = operationContext('detailInfo2');
+    const pagination = normalizePagination(pageNo, numOfRows, context);
+    const normalizedContentId = normalizeContentId(contentId, context);
+    const normalizedContentTypeId = requirePattern(
+      contentTypeId,
+      'contentTypeId',
+      CODE_PATTERN,
+      context,
+    );
+    return client.get(context.operation, {
+      params: {
+        contentId: normalizedContentId,
+        contentTypeId: normalizedContentTypeId,
+      },
+      ...pagination,
+    });
+  }
+
+  function getDetailImages({
+    contentId,
+    imageYN = 'Y',
+    pageNo,
+    numOfRows,
+  } = {}) {
+    const context = operationContext('detailImage2');
+    const pagination = normalizePagination(pageNo, numOfRows, context);
+    const normalizedContentId = normalizeContentId(contentId, context);
+    return client.get(context.operation, {
+      params: {
+        contentId: normalizedContentId,
+        imageYN: requireOneOf(imageYN, 'imageYN', ['Y', 'N'], context),
+      },
+      ...pagination,
+    });
+  }
+
+  async function getPlaceDetail({
+    contentId,
+    includeInfo = false,
+    imageRows = 20,
+  } = {}) {
+    const context = operationContext('detailCommon2');
+    const requestedContentId = normalizeContentId(contentId, context);
+    const commonResult = await getCommonDetail({ contentId: requestedContentId });
+    const commonItem = commonResult.items[0];
+    if (!commonItem) {
+      return null;
+    }
+
+    const responseContentId = String(
+      commonItem.contentid ?? commonItem.contentId ?? '',
+    ).trim();
+    const contentTypeId = String(
+      commonItem.contenttypeid ?? commonItem.contentTypeId ?? '',
+    ).trim();
+    if (
+      !CONTENT_ID_PATTERN.test(responseContentId) ||
+      responseContentId !== requestedContentId ||
+      !CODE_PATTERN.test(contentTypeId)
+    ) {
+      throw new ExternalApiError(
+        'TourAPI 공통 상세 응답의 식별자가 올바르지 않습니다.',
+        { code: 'INVALID_RESPONSE', ...context },
+      );
+    }
+
+    const introPromise = getIntroDetail({
+      contentId: responseContentId,
+      contentTypeId,
+    });
+    const imagePromise = getDetailImages({
+      contentId: responseContentId,
+      numOfRows: imageRows,
+    });
+    const infoPromise = includeInfo
+      ? getInfoDetail({ contentId: responseContentId, contentTypeId })
+      : Promise.resolve({ items: [] });
+    const [introResult, imageResult, infoResult] = await Promise.all([
+      introPromise,
+      imagePromise,
+      infoPromise,
+    ]);
+
+    return normalizePlaceDetail(
+      {
+        commonItem,
+        introItem: introResult.items[0] || null,
+        imageItems: imageResult.items,
+        infoItems: infoResult.items,
+      },
+      { ...cultureOptions, operation: 'detailCommon2' },
+    );
+  }
+
   return Object.freeze({
+    getCommonDetail,
+    getDetailImages,
+    getInfoDetail,
+    getIntroDetail,
+    getLegalDistrictCodes,
+    getPlaceDetail,
     getAreaCodes({ areaCode, pageNo, numOfRows } = {}) {
       const context = operationContext('areaCode2');
       const pagination = normalizePagination(pageNo, numOfRows, context);
@@ -297,6 +526,30 @@ function getClassificationCodes(options) {
   return getDefaultService().getClassificationCodes(options);
 }
 
+function getLegalDistrictCodes(options) {
+  return getDefaultService().getLegalDistrictCodes(options);
+}
+
+function getCommonDetail(options) {
+  return getDefaultService().getCommonDetail(options);
+}
+
+function getIntroDetail(options) {
+  return getDefaultService().getIntroDetail(options);
+}
+
+function getInfoDetail(options) {
+  return getDefaultService().getInfoDetail(options);
+}
+
+function getDetailImages(options) {
+  return getDefaultService().getDetailImages(options);
+}
+
+function getPlaceDetail(options) {
+  return getDefaultService().getPlaceDetail(options);
+}
+
 function getAreaBasedPlaces(options) {
   return getDefaultService().getAreaBasedPlaces(options);
 }
@@ -307,6 +560,12 @@ function searchPlacesByKeyword(options) {
 
 module.exports = {
   createTourApiService,
+  getCommonDetail,
+  getDetailImages,
+  getInfoDetail,
+  getIntroDetail,
+  getLegalDistrictCodes,
+  getPlaceDetail,
   getAreaBasedPlaces,
   getAreaCodes,
   getClassificationCodes,

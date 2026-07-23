@@ -1,4 +1,7 @@
-// 전체 장소 풀 — DB/TourAPI(OpenAPI) 연동 후 교체
+const tourApiService = require('../services/tourApiService');
+const { ExternalApiError } = require('../utils/externalApiError');
+
+// 연관 관광지 API 연동 전 /places/:id/related 전용 시드 데이터
 const ALL_PLACES = [
   { contentId: 'gn001', title: '하슬라아트월드', address: '강릉시 강동면 율곡로 1441', tel: '033-644-9411', openTime: '09:00~18:00', category: '미술·갤러리', areaCode: 'gangneung', region: '강릉' },
   { contentId: 'gn002', title: '안목해변 커피거리', address: '강릉시 창해로14번길', tel: '', openTime: '상시', category: '커피·카페', areaCode: 'gangneung', region: '강릉' },
@@ -34,35 +37,165 @@ const ALL_PLACES = [
   { contentId: 'mp002', title: '국립해양문화재연구소', address: '목포시 남농로 136', tel: '061-270-2000', openTime: '09:00~18:00', category: '문화유산', areaCode: 'mokpo', region: '목포' },
 ];
 
-// GET /places/search?q=&culture=&region=
-async function searchPlaces(req, res) {
-  const { q = '', culture = '', region = '' } = req.query;
-
-  let places = ALL_PLACES;
-
-  if (q) {
-    const query = q.toLowerCase();
-    places = places.filter(p =>
-      p.title.toLowerCase().includes(query) ||
-      p.address.toLowerCase().includes(query)
-    );
-  }
-  if (culture) {
-    places = places.filter(p => p.category.includes(culture));
-  }
-  if (region) {
-    places = places.filter(p => p.areaCode === region);
-  }
-
-  return res.json(places.slice(0, 20));
+function toPublicPlace(place) {
+  return {
+    ...place,
+    address: place.address || '',
+    tel: place.tel || '',
+    openTime: place.openTime || '',
+    category: place.category || '기타',
+    region: place.regionName || null,
+  };
 }
 
-// GET /places/:id
-async function getPlaceDetail(req, res) {
-  const place = ALL_PLACES.find(p => p.contentId === req.params.id);
-  if (!place) return res.status(404).json({ message: '장소를 찾을 수 없습니다.' });
-  return res.json(place);
+function setPaginationHeaders(res, pagination, returnedCount) {
+  const values = {
+    'X-Page-No': pagination?.pageNo ?? 1,
+    'X-Num-Of-Rows': pagination?.numOfRows ?? returnedCount,
+    'X-Total-Count': pagination?.totalCount ?? returnedCount,
+  };
+
+  if (typeof res.set === 'function') {
+    res.set(values);
+    return;
+  }
+  for (const [name, value] of Object.entries(values)) {
+    res.setHeader?.(name, String(value));
+  }
 }
+
+function publicError(error) {
+  if (!(error instanceof ExternalApiError)) {
+    return {
+      status: 500,
+      body: {
+        code: 'INTERNAL_ERROR',
+        message: '서버 오류가 발생했습니다.',
+        retryable: false,
+      },
+    };
+  }
+
+  if (error.code === 'VALIDATION_ERROR') {
+    return {
+      status: 400,
+      body: { code: error.code, message: error.message, retryable: false },
+    };
+  }
+  if (error.code === 'CONFIG_ERROR') {
+    return {
+      status: 503,
+      body: {
+        code: 'TOUR_API_UNAVAILABLE',
+        message: '관광정보 서비스를 사용할 수 없습니다.',
+        retryable: false,
+      },
+    };
+  }
+  if (error.code === 'TIMEOUT') {
+    return {
+      status: 504,
+      body: {
+        code: 'EXTERNAL_API_TIMEOUT',
+        message: '관광정보 응답 시간이 초과되었습니다.',
+        retryable: true,
+      },
+    };
+  }
+
+  return {
+    status: 502,
+    body: {
+      code: 'EXTERNAL_API_ERROR',
+      message: '관광정보를 불러오지 못했습니다.',
+      retryable: error.retryable === true,
+    },
+  };
+}
+
+function createPlacesController(options = {}) {
+  const service = options.tourApiService || tourApiService;
+  const logger = options.logger || console;
+
+  async function searchPlaces(req, res) {
+    try {
+      const query = String(req.query?.q || '').trim();
+      const culture = String(req.query?.culture || '').trim();
+      const lDongRegnCd = req.query?.lDongRegnCd;
+      const lDongSignguCd = req.query?.lDongSignguCd;
+      if (!query && !lDongRegnCd) {
+        throw new ExternalApiError('q 또는 lDongRegnCd가 필요합니다.', {
+          code: 'VALIDATION_ERROR',
+          service: 'tour',
+          operation: 'placesSearch',
+        });
+      }
+      if (query && query.length < 2) {
+        throw new ExternalApiError('q는 2자 이상이어야 합니다.', {
+          code: 'VALIDATION_ERROR',
+          service: 'tour',
+          operation: 'placesSearch',
+        });
+      }
+
+      const request = {
+        lDongRegnCd,
+        lDongSignguCd,
+        contentTypeId: req.query?.contentTypeId,
+        arrange: req.query?.arrange,
+        pageNo: req.query?.pageNo,
+        numOfRows: req.query?.numOfRows,
+      };
+      const result = query
+        ? await service.searchPlacesByKeyword({ ...request, keyword: query })
+        : await service.getAreaBasedPlaces(request);
+      const filteredItems = culture
+        ? result.items.filter(place => place.cultures.includes(culture))
+        : result.items;
+      const pagination = culture
+        ? { ...result.pagination, totalCount: filteredItems.length }
+        : result.pagination;
+
+      setPaginationHeaders(res, pagination, filteredItems.length);
+      return res.json(filteredItems.map(toPublicPlace));
+    } catch (error) {
+      const response = publicError(error);
+      if (response.status === 500) {
+        logger?.error?.('장소 검색 처리에 실패했습니다.', {
+          errorName: error?.name || 'Error',
+        });
+      }
+      return res.status(response.status).json(response.body);
+    }
+  }
+
+  async function getPlaceDetail(req, res) {
+    try {
+      const place = await service.getPlaceDetail({ contentId: req.params?.id });
+      if (!place) {
+        return res.status(404).json({
+          code: 'PLACE_NOT_FOUND',
+          message: '장소를 찾을 수 없습니다.',
+          retryable: false,
+        });
+      }
+      return res.json(toPublicPlace(place));
+    } catch (error) {
+      const response = publicError(error);
+      if (response.status === 500) {
+        logger?.error?.('장소 상세 처리에 실패했습니다.', {
+          errorName: error?.name || 'Error',
+        });
+      }
+      return res.status(response.status).json(response.body);
+    }
+  }
+
+  return Object.freeze({ getPlaceDetail, searchPlaces });
+}
+
+const defaultController = createPlacesController();
+const { getPlaceDetail, searchPlaces } = defaultController;
 
 // GET /places/:id/related
 async function getRelatedPlaces(req, res) {
@@ -77,4 +210,11 @@ async function getRelatedPlaces(req, res) {
   return res.json(related);
 }
 
-module.exports = { searchPlaces, getPlaceDetail, getRelatedPlaces };
+module.exports = {
+  createPlacesController,
+  getPlaceDetail,
+  getRelatedPlaces,
+  publicError,
+  searchPlaces,
+  toPublicPlace,
+};

@@ -4,12 +4,59 @@ const { classifyTourPlace } = require('../config/cultureCategoryMap');
 const { createPlaceSummary } = require('../models/placeSummary');
 const { ExternalApiError } = require('./externalApiError');
 
+const HTML_ENTITIES = Object.freeze({
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  lt: '<',
+  nbsp: ' ',
+  quot: '"',
+});
+
+function decodeHtmlEntities(value) {
+  let decoded = String(value);
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    const previous = decoded;
+    const next = decoded.replace(
+      /&(#(?:x[0-9a-f]+|\d+)|amp|apos|gt|lt|nbsp|quot);/gi,
+      (match, entity) => {
+        const normalized = entity.toLowerCase();
+        if (normalized[0] !== '#') {
+          return HTML_ENTITIES[normalized] ?? match;
+        }
+
+        const hexadecimal = normalized[1] === 'x';
+        const codePoint = Number.parseInt(
+          normalized.slice(hexadecimal ? 2 : 1),
+          hexadecimal ? 16 : 10,
+        );
+        if (
+          !Number.isInteger(codePoint) ||
+          codePoint < 0 ||
+          codePoint > 0x10ffff ||
+          (codePoint >= 0xd800 && codePoint <= 0xdfff)
+        ) {
+          return match;
+        }
+        return String.fromCodePoint(codePoint);
+      },
+    );
+    decoded = next;
+    if (next === previous) {
+      break;
+    }
+  }
+
+  return decoded;
+}
+
 function normalizeNullableString(value) {
   if (value === undefined || value === null) {
     return null;
   }
 
-  const normalized = String(value)
+  const normalized = decodeHtmlEntities(value)
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -131,8 +178,10 @@ function normalizeTourPlace(item, options = {}) {
 }
 
 module.exports = {
+  decodeHtmlEntities,
   normalizeCoordinate,
   normalizeHttpUrl,
+  normalizeNullableString,
   normalizeTourPlace,
   normalizeTourTimestamp,
 };

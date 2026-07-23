@@ -66,7 +66,7 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 | 구분 | 현재 상태 | 목표 상태 | 내가 해야 할 일 |
 | --- | --- | --- | --- |
-| 관광지 데이터 | `placesController.js`의 하드코딩 배열 | TourAPI + MySQL 캐시 | 실제 API 호출과 정규화로 교체 |
+| 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 장소 캐시와 연관 관광지 실데이터 연결 |
 | 지역·문화 데이터 | `regionsController.js`의 시드 맵 | 장소 밀도 + 방문자 데이터 + 큐레이션 | 점수 계산용 데이터 공급 |
 | 장소 이미지 | Flutter에서 이미지 준비 중 표시 | `detailImage2` 이미지 노출 | 이미지 필드와 fallback 규칙 정의 |
 | 벡터 검색 | Mock 문서 + Supabase TODO | Qdrant Cloud | Qdrant 클라이언트와 인덱싱 구현 |
@@ -185,7 +185,7 @@ backend/src/
 ### 1단계 — 코드·분류 기준
 
 - [x] `areaCode2`: 기존 관광 지역 코드 확보(목록·검색 필터에서는 폐기 예정)
-- [ ] `ldongCode2`: 목록·검색에 사용할 현행 법정동 지역 코드 확보
+- [x] `ldongCode2`: 코드 조회 모드와 정규화 구현·fixture 검증 (`lDongListYn=N` live 재검증은 타임아웃으로 보류)
 - [x] `lclsSystmCode2`: 신분류체계 코드 확보
 - [x] 내부 문화 카테고리 10종과 신분류체계 코드 매핑표 작성
 - [x] 매핑되지 않는 장소와 복수 문화에 해당하는 장소의 처리 규칙 정의
@@ -199,10 +199,10 @@ backend/src/
 
 ### 3단계 — 상세·이미지
 
-- [ ] `detailCommon2`: 이름, 주소, 좌표, 개요 등
-- [ ] `detailIntro2`: 콘텐츠 유형별 운영 정보
-- [ ] `detailInfo2`: 반복 상세정보가 필요한 유형 처리
-- [ ] `detailImage2`: 대표·추가 이미지
+- [x] `detailCommon2`: 이름, 주소, 좌표, 개요 등
+- [x] `detailIntro2`: 콘텐츠 유형별 운영 정보
+- [x] `detailInfo2`: 선택 호출 메서드와 반복 상세정보 정규화
+- [x] `detailImage2`: 대표·추가 이미지
 - [ ] 이미지가 없는 장소의 디자인 fallback 정의
 
 ### 첫 번째 수직 기능 목표

@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const openApiDocument = require('./docs/openapi');
 
 const authRoutes = require('./routes/auth');
 const culturesRoutes = require('./routes/cultures');
@@ -12,8 +14,13 @@ const usersRoutes = require('./routes/users');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['X-Page-No', 'X-Num-Of-Rows', 'X-Total-Count'],
+}));
 app.use(express.json());
+
+app.get('/openapi.json', (req, res) => res.json(openApiDocument));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', env: process.env.NODE_ENV });
