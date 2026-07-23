@@ -74,3 +74,40 @@ CREATE TABLE IF NOT EXISTS course_completions (
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE
 );
+
+-- ─── TourAPI 장소 캐시 ────────────────────────────────────────────────────────
+-- 목록 요약과 상세 JSON을 분리해 목록 갱신이 기존 상세정보를 지우지 않게 한다.
+
+CREATE TABLE IF NOT EXISTS places_cache (
+  content_id          VARCHAR(100) PRIMARY KEY,
+  content_type_id     VARCHAR(20) DEFAULT NULL,
+  title               VARCHAR(255) NOT NULL,
+  l_dong_regn_cd      VARCHAR(2) DEFAULT NULL,
+  l_dong_signgu_cd    VARCHAR(3) DEFAULT NULL,
+  cultures_json       JSON NOT NULL,
+  summary_json        JSON NOT NULL,
+  detail_json         JSON DEFAULT NULL,
+  source_updated_at   VARCHAR(35) DEFAULT NULL,
+  summary_cached_at   DATETIME(3) NOT NULL,
+  summary_expires_at  DATETIME(3) NOT NULL,
+  detail_cached_at    DATETIME(3) DEFAULT NULL,
+  detail_expires_at   DATETIME(3) DEFAULT NULL,
+  updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_places_cache_region (l_dong_regn_cd, l_dong_signgu_cd),
+  INDEX idx_places_cache_summary_expiry (summary_expires_at),
+  INDEX idx_places_cache_detail_expiry (detail_expires_at)
+);
+
+-- 검색 조건과 결과 contentId 순서를 보존한다. 인증키와 외부 요청 URL은 저장하지 않는다.
+
+CREATE TABLE IF NOT EXISTS place_query_cache (
+  cache_key         CHAR(64) PRIMARY KEY,
+  operation         VARCHAR(30) NOT NULL,
+  request_json      JSON NOT NULL,
+  content_ids_json  JSON NOT NULL,
+  pagination_json   JSON NOT NULL,
+  cached_at         DATETIME(3) NOT NULL,
+  expires_at        DATETIME(3) NOT NULL,
+  updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_place_query_cache_expiry (expires_at)
+);

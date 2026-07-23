@@ -66,14 +66,14 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 | 구분 | 현재 상태 | 목표 상태 | 내가 해야 할 일 |
 | --- | --- | --- | --- |
-| 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 장소 캐시와 연관 관광지 실데이터 연결 |
+| 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 장소 캐시 구현 중, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 실DB 검증과 연관 관광지 실데이터 연결 |
 | 지역·문화 데이터 | `regionsController.js`의 시드 맵 | 장소 밀도 + 방문자 데이터 + 큐레이션 | 점수 계산용 데이터 공급 |
 | 장소 이미지 | Flutter에서 이미지 준비 중 표시 | `detailImage2` 이미지 노출 | 이미지 필드와 fallback 규칙 정의 |
 | 벡터 검색 | Mock 문서 + Supabase TODO | Qdrant Cloud | Qdrant 클라이언트와 인덱싱 구현 |
 | LLM | Anthropic SDK 또는 Mock | OpenRouter | 호출부와 환경변수 교체 |
 | AI API | `POST /ai/chat` | `POST /ai/transform` | 구조화된 코스 변형 계약 구현 |
 | AI 화면 | 일반 채팅 문자열 표시 | 코스 변경 diff 미리보기 | 새 UX·응답 모델 설계 |
-| DB | `places_cache`, AI 이력 테이블 없음 | 캐시·세션·메시지 저장 | 수민님과 스키마 합의 후 연결 |
+| DB | `places_cache`·`place_query_cache` 스키마와 저장소 구현, AI 이력 테이블 없음 | 캐시·세션·메시지 저장 | 수민님과 스키마 공유 후 MySQL 8 통합 검증 |
 | 디자인 | 기본 컬러·폰트와 화면 구현 존재 | 통일된 Figma 원본·상태 명세 | 기존 UI 감사 후 개선안 전달 |
 
 ### 2.3 반드시 바로잡을 명칭
@@ -299,22 +299,32 @@ backend/src/
 
 수민님은 일반 MySQL 구조와 CRUD를 담당하고, 나는 캐시에 들어갈 외부 데이터 필드와 갱신 로직을 담당한다. 테이블을 혼자 확정하지 말고 먼저 스키마를 공유한다.
 
-### 최소 필요 필드
+### 확정된 저장 구조
 
 ```text
 places_cache
 - content_id (PK)
 - content_type_id
-- area_code
-- sigungu_code
 - title
-- normalized_json
-- lcls_systm
-- image_url
+- l_dong_regn_cd
+- l_dong_signgu_cd
+- cultures_json
+- summary_json
+- detail_json
 - source_updated_at
-- cached_at
-- expires_at
+- summary_cached_at / summary_expires_at
+- detail_cached_at / detail_expires_at
+
+place_query_cache
+- cache_key (정규화된 공개 검색 조건의 SHA-256)
+- operation
+- request_json
+- content_ids_json
+- pagination_json
+- cached_at / expires_at
 ```
+
+목록 갱신이 기존 상세 JSON을 지우지 않도록 요약과 상세의 저장·만료 시각을 분리한다. 검색 결과는 장소 요약 upsert와 같은 트랜잭션에서 저장한다.
 
 ### 캐시 동작
 
@@ -328,17 +338,23 @@ places_cache
 7. 외부 장애 시 허용 범위 안에서 오래된 캐시 반환
 ```
 
+기본 fresh TTL은 24시간이고 stale은 저장 시점부터 7일 미만일 때만 허용한다. MySQL 장애는 TourAPI 직통으로 우회하고 30초 동안 DB 재접속을 억제한다. 동일 프로세스의 같은 키 갱신은 single-flight로 합친다. 공개 body는 유지하고 `X-Cache-Status` 헤더로 상태를 표시한다.
+
 ### 완료 기준
 
-- [ ] 같은 장소의 반복 조회가 불필요한 외부 호출을 만들지 않는다.
-- [ ] 캐시 만료 후 새 데이터로 갱신된다.
-- [ ] 외부 API 장애 시 기존 데이터로 핵심 화면을 유지할 수 있다.
-- [ ] 캐시를 삭제해도 TourAPI에서 다시 만들 수 있다.
+- [x] 같은 장소·검색 조건의 반복 조회가 불필요한 외부 호출을 만들지 않는다.
+- [x] 캐시 만료 후 새 데이터로 갱신된다.
+- [x] 외부 API 장애 시 허용 기간 안의 기존 데이터로 핵심 화면을 유지할 수 있다.
+- [x] MySQL 장애 시 TourAPI 직통으로 공개 API를 유지한다.
+- [ ] 실제 MySQL 8에서 DDL·upsert·트랜잭션·인덱스를 통합 검증한다.
+- [ ] 캐시를 삭제해도 TourAPI에서 다시 만들 수 있는지 통합 환경에서 확인한다.
+
+구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 이번 자동 테스트는 fake repository와 mock TourAPI를 사용했고 Docker/MySQL과 live TourAPI는 실행하지 않았다.
 
 ## A-9. 내부 API 교체 순서
 
-- [ ] `GET /places/search`: 하드코딩 검색을 TourAPI/캐시 검색으로 교체
-- [ ] `GET /places/:id`: 공통·소개·이미지 상세 결합
+- [x] `GET /places/search`: 하드코딩 검색을 TourAPI/캐시 검색으로 교체
+- [x] `GET /places/:id`: 공통·소개·이미지 상세 결합
 - [ ] `GET /places/:id/related`: 연관 관광지 데이터 연결
 - [ ] `GET /regions/:code/spots?culture=`: 지역×문화 필터 적용
 - [ ] `GET /cultures/:id/regions`: 장소 밀도·방문자 추이 반영
@@ -352,7 +368,7 @@ places_cache
 - [x] 페이지 크기 상한 설정
 - [x] 사용자 입력을 그대로 외부 쿼리에 전달하지 않도록 길이·형식 검증
 - [x] 서비스키 마스킹
-- [ ] 동일 요청 중복 호출 방지
+- [x] 동일 프로세스의 동일 요청 중복 호출 방지
 - [ ] 개발 환경에서 과도한 전체 데이터 수집 금지
 - [ ] 배치 수집 중 일부 실패가 전체 작업을 망치지 않도록 재개 지점 기록
 - [ ] 공공데이터 이미지 이용조건과 출처 표기 필요 여부 확인
@@ -913,11 +929,12 @@ User Request: 사용자의 원문
 
 ## Phase 2 — 캐시·연관·지역점수
 
-- [ ] `places_cache`
+- [x] `places_cache`·`place_query_cache` 구현과 fake repository 테스트
 - [ ] 연관 관광지
 - [ ] 방문자 추이
 - [ ] 지역 문화점수 초기 버전
-- [ ] 캐시 장애 fallback
+- [x] TourAPI stale fallback과 MySQL fail-open
+- [ ] 실제 MySQL 8 통합 검증
 
 **완료 결과:** 핵심 탐색이 외부 API 상태에 과도하게 의존하지 않는다.
 

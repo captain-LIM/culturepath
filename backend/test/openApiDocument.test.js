@@ -15,9 +15,14 @@ test('documents the implemented public place routes and compatibility contract',
     'array',
   );
   assert.ok(search.responses[200].headers['X-Total-Count']);
+  assert.ok(search.responses[200].headers['X-Cache-Status']);
   assert.ok(search.responses[400]);
   assert.ok(search.responses[500]);
   assert.ok(search.responses[504]);
+  assert.ok(
+    openApiDocument.paths['/places/{id}']
+      .get.responses[200].headers['X-Cache-Status'],
+  );
 
   const serialized = JSON.stringify(openApiDocument);
   assert.doesNotMatch(serialized, /serviceKey|TOUR_API_KEY|OPENROUTER_API_KEY/);

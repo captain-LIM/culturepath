@@ -15,7 +15,12 @@ const usersRoutes = require('./routes/users');
 const app = express();
 
 app.use(cors({
-  exposedHeaders: ['X-Page-No', 'X-Num-Of-Rows', 'X-Total-Count'],
+  exposedHeaders: [
+    'X-Cache-Status',
+    'X-Page-No',
+    'X-Num-Of-Rows',
+    'X-Total-Count',
+  ],
 }));
 app.use(express.json());
 

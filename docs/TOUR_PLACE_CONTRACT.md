@@ -108,6 +108,14 @@
 - 장소가 없으면 `404 PLACE_NOT_FOUND`를 반환한다.
 - 기본 상세 응답은 `PlaceDetail`에 기존 Flutter 호환 필드 `region`과 빈 문자열 변환을 적용한다.
 
+### 캐시 상태
+
+- 검색과 상세 응답 body는 캐시 적용 전 계약을 그대로 유지한다.
+- 성공 응답은 `X-Cache-Status` 헤더로 `HIT`, `REFRESHED`, `STALE`, `BYPASS` 중 하나를 제공한다.
+- `STALE`은 TourAPI 검증 오류가 아닌 장애가 발생했고 저장 후 7일 미만인 기존 데이터가 있을 때만 사용한다.
+- MySQL 장애는 TourAPI 직통으로 우회하며, 상세 404는 캐시하지 않는다.
+- 상세 정책은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다.
+
 ### 오류 계약
 
 ```json

@@ -182,6 +182,80 @@ function mapPlaceResult(result, operation, normalizePlace, cultureOptions) {
   };
 }
 
+function normalizeAreaBasedPlaceOptions({
+  lDongRegnCd,
+  lDongSignguCd,
+  contentTypeId,
+  lclsSystm1,
+  lclsSystm2,
+  lclsSystm3,
+  arrange = 'A',
+  pageNo,
+  numOfRows,
+} = {}) {
+  const context = operationContext('areaBasedList2');
+  return Object.freeze({
+    ...normalizeLegalDistrictParams(
+      { lDongRegnCd, lDongSignguCd },
+      context,
+      { requireRegion: true },
+    ),
+    contentTypeId: normalizeOptionalCode(
+      contentTypeId,
+      'contentTypeId',
+      context,
+    ),
+    ...normalizeClassificationParams(
+      { lclsSystm1, lclsSystm2, lclsSystm3 },
+      context,
+    ),
+    arrange: requireOneOf(arrange, 'arrange', SORT_OPTIONS, context),
+    ...normalizePagination(pageNo, numOfRows, context),
+  });
+}
+
+function normalizeKeywordPlaceOptions({
+  keyword,
+  lDongRegnCd,
+  lDongSignguCd,
+  contentTypeId,
+  lclsSystm1,
+  lclsSystm2,
+  lclsSystm3,
+  arrange = 'A',
+  pageNo,
+  numOfRows,
+} = {}) {
+  const context = operationContext('searchKeyword2');
+  requireStringParams({ keyword }, ['keyword'], context);
+  const normalizedKeyword = String(keyword).trim();
+  if (normalizedKeyword.length > 100) {
+    throw new ExternalApiError('keyword는 100자를 초과할 수 없습니다.', {
+      code: 'VALIDATION_ERROR',
+      ...context,
+    });
+  }
+
+  return Object.freeze({
+    keyword: normalizedKeyword,
+    ...normalizeLegalDistrictParams(
+      { lDongRegnCd, lDongSignguCd },
+      context,
+    ),
+    contentTypeId: normalizeOptionalCode(
+      contentTypeId,
+      'contentTypeId',
+      context,
+    ),
+    ...normalizeClassificationParams(
+      { lclsSystm1, lclsSystm2, lclsSystm3 },
+      context,
+    ),
+    arrange: requireOneOf(arrange, 'arrange', SORT_OPTIONS, context),
+    ...normalizePagination(pageNo, numOfRows, context),
+  });
+}
+
 function createTourApiService(options = {}) {
   const client =
     options.client || createConfiguredPublicDataClient('tour', options);
@@ -410,41 +484,14 @@ function createTourApiService(options = {}) {
       };
     },
 
-    async getAreaBasedPlaces({
-      lDongRegnCd,
-      lDongSignguCd,
-      contentTypeId,
-      lclsSystm1,
-      lclsSystm2,
-      lclsSystm3,
-      arrange = 'A',
-      pageNo,
-      numOfRows,
-    } = {}) {
+    async getAreaBasedPlaces(input = {}) {
       const context = operationContext('areaBasedList2');
-      const pagination = normalizePagination(pageNo, numOfRows, context);
-      const legalDistrictParams = normalizeLegalDistrictParams(
-        { lDongRegnCd, lDongSignguCd },
-        context,
-        { requireRegion: true },
-      );
-      const classificationParams = normalizeClassificationParams(
-        { lclsSystm1, lclsSystm2, lclsSystm3 },
-        context,
-      );
-      const params = {
-        ...legalDistrictParams,
-        contentTypeId: normalizeOptionalCode(
-          contentTypeId,
-          'contentTypeId',
-          context,
-        ),
-        ...classificationParams,
-        arrange: requireOneOf(arrange, 'arrange', SORT_OPTIONS, context),
-      };
+      const normalized = normalizeAreaBasedPlaceOptions(input);
+      const { pageNo, numOfRows, ...params } = normalized;
       const result = await client.get(context.operation, {
         params,
-        ...pagination,
+        pageNo,
+        numOfRows,
       });
       return mapPlaceResult(
         result,
@@ -454,50 +501,14 @@ function createTourApiService(options = {}) {
       );
     },
 
-    async searchPlacesByKeyword({
-      keyword,
-      lDongRegnCd,
-      lDongSignguCd,
-      contentTypeId,
-      lclsSystm1,
-      lclsSystm2,
-      lclsSystm3,
-      arrange = 'A',
-      pageNo,
-      numOfRows,
-    } = {}) {
+    async searchPlacesByKeyword(input = {}) {
       const context = operationContext('searchKeyword2');
-      requireStringParams({ keyword }, ['keyword'], context);
-      const normalizedKeyword = String(keyword).trim();
-      if (normalizedKeyword.length > 100) {
-        throw new ExternalApiError('keyword는 100자를 초과할 수 없습니다.', {
-          code: 'VALIDATION_ERROR',
-          ...context,
-        });
-      }
-
-      const pagination = normalizePagination(pageNo, numOfRows, context);
-      const legalDistrictParams = normalizeLegalDistrictParams(
-        { lDongRegnCd, lDongSignguCd },
-        context,
-      );
-      const classificationParams = normalizeClassificationParams(
-        { lclsSystm1, lclsSystm2, lclsSystm3 },
-        context,
-      );
+      const normalized = normalizeKeywordPlaceOptions(input);
+      const { pageNo, numOfRows, ...params } = normalized;
       const result = await client.get(context.operation, {
-        params: {
-          keyword: normalizedKeyword,
-          ...legalDistrictParams,
-          contentTypeId: normalizeOptionalCode(
-            contentTypeId,
-            'contentTypeId',
-            context,
-          ),
-          ...classificationParams,
-          arrange: requireOneOf(arrange, 'arrange', SORT_OPTIONS, context),
-        },
-        ...pagination,
+        params,
+        pageNo,
+        numOfRows,
       });
       return mapPlaceResult(
         result,
@@ -569,5 +580,7 @@ module.exports = {
   getAreaBasedPlaces,
   getAreaCodes,
   getClassificationCodes,
+  normalizeAreaBasedPlaceOptions,
+  normalizeKeywordPlaceOptions,
   searchPlacesByKeyword,
 };
