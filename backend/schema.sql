@@ -111,3 +111,17 @@ CREATE TABLE IF NOT EXISTS place_query_cache (
   updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_place_query_cache_expiry (expires_at)
 );
+
+-- ─── DataLab 지역 방문자 캐시 ─────────────────────────────────────────────────
+-- 기준일·비교일별 정규화 응답을 보존한다. 인증키와 전체 요청 URL은 저장하지 않는다.
+
+CREATE TABLE IF NOT EXISTS data_lab_query_cache (
+  cache_key       CHAR(64) PRIMARY KEY,
+  operation       VARCHAR(30) NOT NULL,
+  request_json    JSON NOT NULL,
+  response_json   JSON NOT NULL,
+  cached_at       DATETIME(3) NOT NULL,
+  expires_at      DATETIME(3) NOT NULL,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_data_lab_query_cache_expiry (expires_at)
+);

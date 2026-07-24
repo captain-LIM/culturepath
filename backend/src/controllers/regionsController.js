@@ -1,51 +1,4 @@
-// DB 연동 전 시드 데이터
-// region_culture 테이블 연동 후 DB 조회로 교체
-
-const REGION_CULTURE_MAP = {
-  1:  [ // 독립서점·책방
-    { areaCode: 'gangneung', name: '강릉', description: '안목해변 책방거리·북스테이 성지', spotCount: 14, score: 92 },
-    { areaCode: 'jeonju',    name: '전주', description: '한옥마을 골목 독립서점 밀집', spotCount: 11, score: 87 },
-    { areaCode: 'seoul',     name: '서울', description: '홍대·연남·망원 동네 책방 밀집지', spotCount: 28, score: 80 },
-  ],
-  2:  [ // 문학
-    { areaCode: 'tongyeong', name: '통영', description: '박경리·청마 유치환의 흔적', spotCount: 9, score: 95 },
-    { areaCode: 'gangneung', name: '강릉', description: '허균·허난설헌 문학의 고장', spotCount: 7, score: 88 },
-    { areaCode: 'hadong',    name: '하동', description: '최참판댁·박경리 토지의 배경지', spotCount: 6, score: 83 },
-  ],
-  3:  [ // 음악
-    { areaCode: 'tongyeong', name: '통영', description: '윤이상·통영국제음악당', spotCount: 5, score: 94 },
-    { areaCode: 'chuncheon', name: '춘천', description: '인디뮤직·공연문화 거점', spotCount: 4, score: 76 },
-  ],
-  4:  [ // 전통주·양조장
-    { areaCode: 'jeonju',    name: '전주', description: '막걸리 골목·전통주 공방', spotCount: 8, score: 91 },
-    { areaCode: 'andong',    name: '안동', description: '안동소주·전통 양조장 투어', spotCount: 6, score: 89 },
-  ],
-  5:  [ // 로컬 미식
-    { areaCode: 'jeonju',    name: '전주', description: '전통시장·비빔밥·막걸리 골목', spotCount: 16, score: 96 },
-    { areaCode: 'tongyeong', name: '통영', description: '통영 꿀빵·굴 요리·중앙시장', spotCount: 11, score: 88 },
-    { areaCode: 'gangneung', name: '강릉', description: '초당 순두부·오죽헌 시장', spotCount: 9, score: 82 },
-  ],
-  6:  [ // 공예·공방
-    { areaCode: 'jeonju',    name: '전주', description: '한옥마을 공방·한지·부채 체험', spotCount: 13, score: 93 },
-    { areaCode: 'tongyeong', name: '통영', description: '나전칠기·소반 공예 전통', spotCount: 7, score: 85 },
-  ],
-  7:  [ // 근대 문화유산
-    { areaCode: 'pohang',    name: '포항', description: '산업도시 근대 문화유산·제철 역사', spotCount: 8, score: 87 },
-    { areaCode: 'gunsan',    name: '군산', description: '일제강점기 근대 건축물 밀집', spotCount: 12, score: 92 },
-    { areaCode: 'mokpo',     name: '목포', description: '구도심 근대역사문화공간', spotCount: 10, score: 89 },
-  ],
-  8:  [ // 미술·갤러리
-    { areaCode: 'pohang',    name: '포항', description: '포항시립미술관·로컬 갤러리 씬', spotCount: 6, score: 84 },
-    { areaCode: 'seoul',     name: '서울', description: '성수·을지로 소규모 갤러리', spotCount: 20, score: 78 },
-  ],
-  9:  [ // 영화·애니메이션
-    { areaCode: 'chuncheon', name: '춘천', description: '애니메이션박물관·로봇체험관', spotCount: 5, score: 90 },
-  ],
-  10: [ // 커피·카페
-    { areaCode: 'gangneung', name: '강릉', description: '안목해변 커피거리·카페 성지', spotCount: 18, score: 97 },
-    { areaCode: 'jeonju',    name: '전주', description: '한옥 감성 카페 골목', spotCount: 12, score: 85 },
-  ],
-};
+const regionScoreService = require('../services/regionScoreService');
 
 const SPOT_MAP = {
   gangneung: [
@@ -102,18 +55,49 @@ const SPOT_MAP = {
   ],
 };
 
-// GET /cultures/:id/regions
-async function getRegionsByCulture(req, res) {
-  const cultureId = parseInt(req.params.id);
-  const regions = REGION_CULTURE_MAP[cultureId];
+function setRegionDataStatusHeader(res, status) {
+  if (!status) {
+    return;
+  }
+  if (typeof res.set === 'function') {
+    res.set({ 'X-Region-Data-Status': status });
+    return;
+  }
+  res.setHeader?.('X-Region-Data-Status', status);
+}
 
-  if (!regions) {
-    return res.status(404).json({ message: '해당 문화 카테고리를 찾을 수 없습니다.' });
+function createRegionsController(options = {}) {
+  const service = options.regionScoreService || regionScoreService;
+  const logger = options.logger || console;
+
+  async function getRegionsByCulture(req, res) {
+    const rawCultureId = String(req.params?.id || '').trim();
+    if (!/^\d+$/.test(rawCultureId)) {
+      return res.status(404).json({
+        message: '해당 문화 카테고리를 찾을 수 없습니다.',
+      });
+    }
+
+    try {
+      const result = await service.getRegionsByCulture(Number(rawCultureId));
+      if (!result) {
+        return res.status(404).json({
+          message: '해당 문화 카테고리를 찾을 수 없습니다.',
+        });
+      }
+      setRegionDataStatusHeader(res, result.dataStatus);
+      return res.json(result.items);
+    } catch (error) {
+      logger?.error?.('문화별 지역점수 처리에 실패했습니다.', {
+        errorName: error?.name || 'Error',
+      });
+      return res.status(500).json({
+        message: '지역 정보를 불러올 수 없습니다.',
+      });
+    }
   }
 
-  // score 내림차순 정렬
-  const sorted = [...regions].sort((a, b) => b.score - a.score);
-  return res.json(sorted);
+  return Object.freeze({ getRegionsByCulture });
 }
 
 // GET /regions/:code/spots?culture=
@@ -134,4 +118,11 @@ async function getSpotsByRegion(req, res) {
   return res.json(filtered.length > 0 ? filtered : spots);
 }
 
-module.exports = { getRegionsByCulture, getSpotsByRegion };
+const { getRegionsByCulture } = createRegionsController();
+
+module.exports = {
+  createRegionsController,
+  getRegionsByCulture,
+  getSpotsByRegion,
+  setRegionDataStatusHeader,
+};

@@ -19,6 +19,7 @@ app.use(cors({
     'X-Cache-Status',
     'X-Page-No',
     'X-Num-Of-Rows',
+    'X-Region-Data-Status',
     'X-Total-Count',
   ],
 }));

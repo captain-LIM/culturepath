@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  PAGINATION_METADATA,
   normalizeItems,
   normalizePublicDataResponse,
 } = require('../src/utils/normalizePublicDataResponse');
@@ -37,6 +38,18 @@ test('normalizes a successful public data response', () => {
     items: [{ code: '1', name: '서울' }],
     pagination: { pageNo: 1, numOfRows: 10, totalCount: 17 },
   });
+  assert.deepEqual(result.pagination[PAGINATION_METADATA], {
+    pageNoProvided: true,
+    pageNoValid: true,
+    numOfRowsProvided: true,
+    numOfRowsValid: true,
+    totalCountProvided: true,
+    totalCountValid: true,
+  });
+  assert.equal(
+    JSON.stringify(result.pagination),
+    '{"pageNo":1,"numOfRows":10,"totalCount":17}',
+  );
 });
 
 test('rejects business errors in normal and gateway error envelopes', () => {
