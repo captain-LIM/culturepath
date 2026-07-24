@@ -56,8 +56,8 @@ test('related-tour representative method enforces region parameters', async () =
     signguCd: '11530',
   });
 
-  assert.throws(
-    () => service.getAreaBasedRelatedPlaces({ baseYm: '202503', areaCd: '11' }),
+  await assert.rejects(
+    service.getAreaBasedRelatedPlaces({ baseYm: '202503', areaCd: '11' }),
     error => error.code === 'VALIDATION_ERROR',
   );
 });
