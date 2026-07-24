@@ -46,7 +46,7 @@ CulturePath(문화여행·따라가방)는 2명이 함께 개발한다.
 ### 외부 API 연동
 
 - 한국관광공사 TourAPI 4.0의 인증, 호출 및 응답 가공 로직 구현
-- `keywordSearch2`, `areaBasedList2`, `locationBasedList2`, `detailCommon2`, `detailIntro2`, `detailImage2` 등 관광정보 API 연동
+- `searchKeyword2`, `areaBasedList2`, `locationBasedList2`, `detailCommon2`, `detailIntro2`, `detailImage2` 등 관광정보 API 연동
 - 관광빅데이터(데이터랩), 연관 관광지, 무장애 여행, 반려동물 동반여행 및 다국어 API의 단계별 연동
 - API 서비스키와 환경변수를 클라이언트에 노출하지 않고 백엔드에서 관리
 - 외부 API의 호출 제한, 오류, 타임아웃 및 재시도 정책 설계

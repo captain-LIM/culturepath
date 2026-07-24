@@ -2,6 +2,8 @@
 
 const { ExternalApiError } = require('./externalApiError');
 
+const PAGINATION_METADATA = Symbol('publicDataPaginationMetadata');
+
 function normalizeItems(itemsContainer) {
   if (
     itemsContainer === undefined ||
@@ -36,6 +38,16 @@ function normalizeItems(itemsContainer) {
 function normalizeCount(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isIntegerCount(value, minimum) {
+  return (
+    value !== undefined &&
+    value !== null &&
+    String(value).trim() !== '' &&
+    Number.isInteger(Number(value)) &&
+    Number(value) >= minimum
+  );
 }
 
 function readServiceError(payload) {
@@ -103,6 +115,26 @@ function normalizePublicDataResponse(payload, context = {}) {
   }
 
   const items = normalizeItems(body.items);
+  const pagination = {
+    pageNo: normalizeCount(body.pageNo, 1),
+    numOfRows: normalizeCount(body.numOfRows, items.length),
+    totalCount: normalizeCount(body.totalCount, items.length),
+  };
+  Object.defineProperty(pagination, PAGINATION_METADATA, {
+    configurable: false,
+    enumerable: false,
+    value: Object.freeze({
+      pageNoProvided: Object.prototype.hasOwnProperty.call(body, 'pageNo'),
+      pageNoValid: isIntegerCount(body.pageNo, 1),
+      numOfRowsProvided:
+        Object.prototype.hasOwnProperty.call(body, 'numOfRows'),
+      numOfRowsValid: isIntegerCount(body.numOfRows, 1),
+      totalCountProvided:
+        Object.prototype.hasOwnProperty.call(body, 'totalCount'),
+      totalCountValid: isIntegerCount(body.totalCount, 0),
+    }),
+    writable: false,
+  });
 
   return {
     header: {
@@ -110,12 +142,12 @@ function normalizePublicDataResponse(payload, context = {}) {
       resultMsg,
     },
     items,
-    pagination: {
-      pageNo: normalizeCount(body.pageNo, 1),
-      numOfRows: normalizeCount(body.numOfRows, items.length),
-      totalCount: normalizeCount(body.totalCount, items.length),
-    },
+    pagination,
   };
 }
 
-module.exports = { normalizeItems, normalizePublicDataResponse };
+module.exports = {
+  PAGINATION_METADATA,
+  normalizeItems,
+  normalizePublicDataResponse,
+};

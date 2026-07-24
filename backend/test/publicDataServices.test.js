@@ -77,12 +77,17 @@ test('DataLab representative method validates and forwards the date range', asyn
     endYmd: '20210513',
   });
 
-  assert.throws(
-    () =>
-      service.getMetropolitanVisitors({
-        startYmd: '20210514',
-        endYmd: '20210513',
-      }),
+  await service.getLocalVisitors({
+    startYmd: '20210513',
+    endYmd: '20210513',
+  });
+  assert.equal(fake.calls[1].operation, 'locgoRegnVisitrDDList');
+
+  await assert.rejects(
+    service.getMetropolitanVisitors({
+      startYmd: '20210514',
+      endYmd: '20210513',
+    }),
     error => error.code === 'VALIDATION_ERROR',
   );
 });

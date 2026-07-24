@@ -32,6 +32,15 @@ const cacheStatusHeader = Object.freeze({
   },
 });
 
+const regionDataStatusHeader = Object.freeze({
+  description:
+    '지역점수 데이터 출처. HIT=유효 캐시, REFRESHED=DataLab 갱신, STALE=장애 fallback, BYPASS=DB 우회 실데이터, CURATED=큐레이션 fallback',
+  schema: {
+    type: 'string',
+    enum: ['HIT', 'REFRESHED', 'STALE', 'BYPASS', 'CURATED'],
+  },
+});
+
 module.exports = Object.freeze({
   openapi: '3.0.3',
   info: {
@@ -41,8 +50,60 @@ module.exports = Object.freeze({
       'CulturePath 공개 API 계약입니다. 외부 TourAPI 인증키는 Backend에서만 사용합니다.',
   },
   servers: [{ url: '/', description: '현재 CulturePath Backend' }],
-  tags: [{ name: 'Places', description: '관광 장소 검색과 상세조회' }],
+  tags: [
+    { name: 'Regions', description: '문화별 지역 탐색과 지역점수' },
+    { name: 'Places', description: '관광 장소 검색과 상세조회' },
+  ],
   paths: {
+    '/cultures/{id}/regions': {
+      get: {
+        tags: ['Regions'],
+        summary: '문화별 유명 지역 조회',
+        description:
+          '초기 장소 밀도·DataLab 외지인 방문 추이·큐레이션을 40:30:30으로 조합해 기존 지역 카드 형식으로 반환합니다.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: '문화 카테고리 숫자형 ID',
+            schema: { type: 'integer', minimum: 1 },
+          },
+        ],
+        responses: {
+          200: {
+            description: '점수 내림차순 지역 카드 배열',
+            headers: {
+              'X-Region-Data-Status': regionDataStatusHeader,
+            },
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/RegionItem' },
+                },
+              },
+            },
+          },
+          404: {
+            description: '문화 카테고리 없음',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MessageError' },
+              },
+            },
+          },
+          500: {
+            description: '예상하지 못한 지역점수 처리 오류',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MessageError' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/places/search': {
       get: {
         tags: ['Places'],
@@ -211,6 +272,42 @@ module.exports = Object.freeze({
       },
     },
     schemas: {
+      MessageError: {
+        type: 'object',
+        required: ['message'],
+        properties: {
+          message: { type: 'string' },
+        },
+      },
+      RegionItem: {
+        type: 'object',
+        required: [
+          'areaCode',
+          'name',
+          'description',
+          'spotCount',
+          'score',
+        ],
+        properties: {
+          areaCode: { type: 'string', example: 'tongyeong' },
+          name: { type: 'string', example: '통영' },
+          description: {
+            type: 'string',
+            example: '박경리·청마 유치환의 흔적',
+          },
+          spotCount: {
+            type: 'integer',
+            minimum: 0,
+            description: '초기 큐레이션 장소 수. 전국 TourAPI 적재 완료 전까지 잠정값',
+          },
+          score: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 100,
+            description: '초기 문화 적합도 점수',
+          },
+        },
+      },
       ApiError: {
         type: 'object',
         required: ['code', 'message', 'retryable'],

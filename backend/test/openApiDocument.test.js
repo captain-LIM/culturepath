@@ -38,3 +38,29 @@ test('documents the implemented public place routes and compatibility contract',
   const serialized = JSON.stringify(openApiDocument);
   assert.doesNotMatch(serialized, /serviceKey|TOUR_API_KEY|OPENROUTER_API_KEY/);
 });
+
+test('documents the backward-compatible DataLab region score contract', () => {
+  const regions = openApiDocument.paths['/cultures/{id}/regions'].get;
+  const response = regions.responses[200];
+  const schema = openApiDocument.components.schemas.RegionItem;
+
+  assert.equal(
+    response.content['application/json'].schema.type,
+    'array',
+  );
+  assert.deepEqual(schema.required, [
+    'areaCode',
+    'name',
+    'description',
+    'spotCount',
+    'score',
+  ]);
+  assert.equal(schema.properties.score.type, 'integer');
+  assert.equal(schema.properties.score.maximum, 100);
+  assert.deepEqual(
+    response.headers['X-Region-Data-Status'].schema.enum,
+    ['HIT', 'REFRESHED', 'STALE', 'BYPASS', 'CURATED'],
+  );
+  assert.ok(regions.responses[404]);
+  assert.ok(regions.responses[500]);
+});
