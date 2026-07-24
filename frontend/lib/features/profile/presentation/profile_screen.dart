@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    EasyLocalization.of(context);
     final authAsync = ref.watch(authStateProvider);
     return authAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -34,6 +36,7 @@ class _GuestView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
@@ -52,10 +55,10 @@ class _GuestView extends StatelessWidget {
                 child: const Icon(Icons.person_outline, size: 40, color: AppColors.primary),
               ),
               const SizedBox(height: 20),
-              const Text('내 정보',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Text('profile_title'.tr(),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
               const SizedBox(height: 8),
-              Text('로그인하면 완주 기록, 만든 코스,\n좋아요한 코스를 확인할 수 있어요.',
+              Text('profile_guest_desc'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5)),
               const SizedBox(height: 28),
@@ -63,9 +66,11 @@ class _GuestView extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => context.push('/login'),
-                  child: const Text('로그인하기'),
+                  child: Text('login_button'.tr()),
                 ),
               ),
+              const SizedBox(height: 24),
+              _LanguageSelector(),
             ],
           ),
         ),
@@ -81,6 +86,7 @@ class _LoggedInView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    EasyLocalization.of(context);
     final profileAsync = ref.watch(_profileProvider);
 
     return Scaffold(
@@ -93,22 +99,23 @@ class _LoggedInView extends ConsumerWidget {
             children: [
               Icon(Icons.cloud_off, size: 40, color: Colors.grey.shade400),
               const SizedBox(height: 12),
-              Text('프로필을 불러올 수 없습니다.', style: TextStyle(color: Colors.grey.shade500)),
+              Text('profile_error'.tr(), style: TextStyle(color: Colors.grey.shade500)),
               const SizedBox(height: 12),
-              TextButton(onPressed: () => ref.invalidate(_profileProvider), child: const Text('다시 시도')),
+              TextButton(onPressed: () => ref.invalidate(_profileProvider), child: Text('retry'.tr())),
             ],
           ),
         ),
         data: (profile) => CustomScrollView(
           slivers: [
             _buildHeader(profile, context, ref),
+            _buildLanguageSelectorSliver(context),
             _buildStats(profile.stats),
             if (profile.recentCompletions.isNotEmpty) ...[
-              _sectionTitle('완주한 코스 🎖️'),
+              _sectionTitle('completed_courses'.tr()),
               _buildCompletions(profile.recentCompletions),
             ],
             if (profile.createdCourses.isNotEmpty) ...[
-              _sectionTitle('내가 만든 코스'),
+              _sectionTitle('created_courses'.tr()),
               _buildCreatedCourses(profile.createdCourses, context, ref),
             ],
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
@@ -151,7 +158,7 @@ class _LoggedInView extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.logout, color: AppColors.primary),
-              tooltip: '로그아웃',
+              tooltip: 'logout'.tr(),
               onPressed: () async {
                 await AuthRepository().logout();
                 ref.invalidate(authStateProvider);
@@ -164,6 +171,17 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
+  SliverToBoxAdapter _buildLanguageSelectorSliver(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Container(
+        color: Colors.white,
+        margin: const EdgeInsets.only(top: 1),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+        child: _LanguageSelector(),
+      ),
+    );
+  }
+
   SliverToBoxAdapter _buildStats(ProfileStats stats) {
     return SliverToBoxAdapter(
       child: Container(
@@ -172,11 +190,11 @@ class _LoggedInView extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Row(
           children: [
-            _StatItem('완주', '${stats.completedCount}개', Icons.emoji_events, AppColors.accentGold),
+            _StatItem('stat_completed'.tr(), '${stats.completedCount}개', Icons.emoji_events, AppColors.accentGold),
             _Divider(),
-            _StatItem('만든 코스', '${stats.createdCount}개', Icons.edit_note, AppColors.primary),
+            _StatItem('stat_created'.tr(), '${stats.createdCount}개', Icons.edit_note, AppColors.primary),
             _Divider(),
-            _StatItem('좋아요', '${stats.likedCount}개', Icons.favorite, Colors.red),
+            _StatItem('stat_liked'.tr(), '${stats.likedCount}개', Icons.favorite, Colors.red),
           ],
         ),
       ),
@@ -207,6 +225,7 @@ class _LoggedInView extends ConsumerWidget {
       delegate: SliverChildBuilderDelegate(
         (_, i) {
           final c = courses[i];
+          final visibility = c.isPublic ? 'public'.tr() : 'private'.tr();
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
@@ -245,8 +264,13 @@ class _LoggedInView extends ConsumerWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 2),
-                                Text('장소 ${c.totalPlaces}곳 · ${c.isPublic ? "공개" : "비공개"}',
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                                Text(
+                                  'course_place_info'.tr(namedArgs: {
+                                    'n': c.totalPlaces.toString(),
+                                    'visibility': visibility,
+                                  }),
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                ),
                               ],
                             ),
                           ),
@@ -261,17 +285,17 @@ class _LoggedInView extends ConsumerWidget {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (dialogCtx) => AlertDialog(
-                          title: const Text('코스 삭제'),
-                          content: Text('"${c.title}"을 삭제하시겠습니까?'),
+                          title: Text('delete_course'.tr()),
+                          content: Text('delete_confirm'.tr(namedArgs: {'title': c.title})),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dialogCtx, false),
-                              child: const Text('취소'),
+                              child: Text('cancel'.tr()),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(dialogCtx, true),
                               style: TextButton.styleFrom(foregroundColor: Colors.red),
-                              child: const Text('삭제'),
+                              child: Text('delete'.tr()),
                             ),
                           ],
                         ),
@@ -283,7 +307,7 @@ class _LoggedInView extends ConsumerWidget {
                         } catch (_) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('삭제에 실패했습니다.')),
+                              SnackBar(content: Text('delete_failed'.tr())),
                             );
                           }
                         }
@@ -296,6 +320,58 @@ class _LoggedInView extends ConsumerWidget {
         },
         childCount: courses.length,
       ),
+    );
+  }
+}
+
+// ─── 언어 선택기 ──────────────────────────────────────────────────────────────
+
+class _LanguageSelector extends StatelessWidget {
+  static const _langs = [
+    ('ko', 'language_ko'),
+    ('en', 'language_en'),
+    ('ja', 'language_ja'),
+    ('zh', 'language_zh'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'language_setting'.tr(),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: _langs.map((l) {
+            final isSelected = context.locale.languageCode == l.$1;
+            return GestureDetector(
+              onTap: () => context.setLocale(Locale(l.$1)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  l.$2.tr(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
@@ -373,7 +449,7 @@ class _CompletionCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis)
                 else
                   Text(
-                    '${record.completedAt.year}.${record.completedAt.month.toString().padLeft(2, '0')}.${record.completedAt.day.toString().padLeft(2, '0')} 완주',
+                    '${record.completedAt.year}.${record.completedAt.month.toString().padLeft(2, '0')}.${record.completedAt.day.toString().padLeft(2, '0')} ${'stat_completed'.tr()}',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
                   ),
               ],
@@ -385,7 +461,7 @@ class _CompletionCard extends StatelessWidget {
               color: AppColors.accentGold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text('완주', style: TextStyle(fontSize: 10, color: AppColors.accentGold, fontWeight: FontWeight.bold)),
+            child: Text('stat_completed'.tr(), style: const TextStyle(fontSize: 10, color: AppColors.accentGold, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

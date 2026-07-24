@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('로그인 실패: $e'),
+            content: Text('login_failed'.tr(namedArgs: {'error': e.toString()})),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -65,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                '따라가방',
+                'app_name'.tr(),
                 style: GoogleFonts.notoSerifKr(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
@@ -74,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                '취향으로 떠나는 나만의 문화여행 코스',
+                'app_tagline'.tr(),
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
               const Spacer(flex: 2),
@@ -109,8 +110,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Text(
-                              'Google로 계속하기',
+                            Text(
+                              'login_google'.tr(),
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -125,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               TextButton(
                 onPressed: () => context.go('/home'),
                 child: Text(
-                  '게스트로 둘러보기',
+                  'login_guest'.tr(),
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 ),
               ),

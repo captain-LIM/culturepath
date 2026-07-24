@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -41,11 +42,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
     if (!loggedIn) {
       final forkedLocally = widget.course.copyWith(
-        title: '${widget.course.title} (포크)',
+        title: '${widget.course.title} ${'fork_suffix'.tr()}',
         forkedFrom: ForkedFromInfo(
           courseId: widget.course.id ?? 0,
           title: widget.course.title,
-          authorId: widget.course.authorId ?? '알 수 없음',
+          authorId: widget.course.authorId ?? 'unknown_author'.tr(),
         ),
       );
       if (!mounted) return;
@@ -59,7 +60,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (mounted) _navigateToEdit(forked);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('포크 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('fork_failed'.tr(namedArgs: {'error': e.toString()}))));
       }
     } finally {
       if (mounted) setState(() => _forking = false);
@@ -78,8 +79,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     final loggedIn = await CourseRepository().isLoggedIn();
     if (!loggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('로그인 후 완주 인증을 할 수 있습니다.'),
+        SnackBar(
+          content: Text('login_required_complete'.tr()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -96,7 +97,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       setState(() => _completed = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('완주 인증이 기록되었습니다! 🎖️'),
+          content: Text('completion_saved'.tr()),
           backgroundColor: AppColors.accentGold,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -135,7 +136,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               size: 18,
             ),
             label: Text(
-              _completed ? '완주됨' : '완주 인증',
+              _completed ? 'completed_badge'.tr() : 'complete_course'.tr(),
               style: TextStyle(
                 color: _completed ? AppColors.accentGold : Colors.white70,
                 fontSize: 12,
@@ -151,7 +152,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           unselectedLabelColor: Colors.white54,
           labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           tabs: course.tracks
-              .map((t) => Tab(text: 'Track ${t.trackNumber} (${t.places.length}곳)'))
+              .map((t) => Tab(text: 'Track ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})'))
               .toList(),
         ),
       ),
@@ -199,7 +200,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
             : const Icon(Icons.call_split, color: Colors.white),
         label: Text(
-          _forking ? '포크 중...' : '이 코스 포크하기',
+          _forking ? 'forking'.tr() : 'fork_course'.tr(),
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),

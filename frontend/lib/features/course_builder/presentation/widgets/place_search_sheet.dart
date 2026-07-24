@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/place_item.dart';
@@ -64,7 +65,7 @@ class _PlaceSearchSheetState extends State<PlaceSearchSheet> {
                             children: [
                               Icon(Icons.search_off, size: 40, color: Colors.grey.shade400),
                               const SizedBox(height: 8),
-                              Text('검색 결과가 없습니다',
+                              Text('place_no_results'.tr(),
                                   style: TextStyle(color: Colors.grey.shade500)),
                             ],
                           ),
@@ -102,8 +103,8 @@ class _PlaceSearchSheetState extends State<PlaceSearchSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            '장소 추가',
+          Text(
+            'place_search_title'.tr(),
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
         ],
@@ -118,7 +119,7 @@ class _PlaceSearchSheetState extends State<PlaceSearchSheet> {
         controller: _searchCtrl,
         autofocus: true,
         decoration: InputDecoration(
-          hintText: '장소 이름, 주소로 검색',
+          hintText: 'place_search_hint'.tr(),
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
           prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
           suffixIcon: _searchCtrl.text.isNotEmpty

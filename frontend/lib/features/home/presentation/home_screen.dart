@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -21,7 +23,7 @@ class HomeScreen extends StatelessWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
             const SliverToBoxAdapter(child: SeasonBanner()),
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
-            _buildSectionTitle('문화로 여행 시작하기'),
+            _buildSectionTitle('home_section'.tr()),
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
             const CultureGrid(),
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
@@ -38,7 +40,7 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              '따라가방',
+              'app_name'.tr(),
               style: GoogleFonts.notoSerifKr(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -122,9 +124,12 @@ class _SearchBar extends StatelessWidget {
           children: [
             const Icon(Icons.search, size: 16, color: Color(0xFF9E9E9E)),
             const SizedBox(width: 6),
-            Text(
-              '지역, 문화 검색',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+            Expanded(
+              child: Text(
+                'search_hint'.tr(),
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

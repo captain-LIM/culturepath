@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
@@ -9,7 +10,7 @@ class CourseSearchDelegate extends SearchDelegate<void> {
   List<CourseItem>? _allCourses;
 
   @override
-  String get searchFieldLabel => '제목, 지역, 작성자 검색';
+  String get searchFieldLabel => tr('search_field_label');
 
   @override
   TextStyle get searchFieldStyle =>
@@ -60,7 +61,7 @@ class CourseSearchDelegate extends SearchDelegate<void> {
           children: [
             Icon(Icons.search, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text('검색어를 입력해 주세요',
+            Text('search_enter_query'.tr(),
                 style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
           ],
         ),
@@ -75,7 +76,7 @@ class CourseSearchDelegate extends SearchDelegate<void> {
         }
         if (snap.hasError) {
           return Center(
-              child: Text('불러오기 실패',
+              child: Text('search_load_failed'.tr(),
                   style: TextStyle(color: Colors.grey.shade500)));
         }
 
@@ -88,7 +89,7 @@ class CourseSearchDelegate extends SearchDelegate<void> {
               children: [
                 Icon(Icons.search_off, size: 48, color: Colors.grey.shade300),
                 const SizedBox(height: 12),
-                Text('"$query" 검색 결과가 없습니다.',
+                Text('search_no_results'.tr(namedArgs: {'query': query}),
                     style:
                         TextStyle(color: Colors.grey.shade400, fontSize: 14)),
               ],

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../profile/data/profile_repository.dart';
@@ -58,7 +59,7 @@ class _CompletionSheetState extends State<_CompletionSheet>
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        final msg = e.toString().contains('409') ? '이미 완주 인증한 코스입니다.' : '저장 실패: 서버를 확인하세요.';
+        final msg = e.toString().contains('409') ? 'already_completed'.tr() : 'save_failed'.tr();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         Navigator.pop(context, false);
       }
@@ -102,10 +103,10 @@ class _CompletionSheetState extends State<_CompletionSheet>
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.emoji_events, color: AppColors.accentGold, size: 36),
-                  SizedBox(height: 2),
-                  Text('완주!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.accentGold)),
+                children: [
+                  const Icon(Icons.emoji_events, color: AppColors.accentGold, size: 36),
+                  const SizedBox(height: 2),
+                  Text('completion_stamp'.tr(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.accentGold)),
                 ],
               ),
             ),
@@ -118,7 +119,7 @@ class _CompletionSheetState extends State<_CompletionSheet>
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
           const SizedBox(height: 4),
-          Text('이 코스를 완주하셨군요! 🎉', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+          Text('completion_message'.tr(), style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
           const SizedBox(height: 20),
 
           // 소감 입력
@@ -126,7 +127,7 @@ class _CompletionSheetState extends State<_CompletionSheet>
             controller: _noteCtrl,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: '완주 소감을 남겨보세요 (선택)',
+              hintText: 'completion_note_hint'.tr(),
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
               filled: true,
               fillColor: AppColors.background,
@@ -151,7 +152,7 @@ class _CompletionSheetState extends State<_CompletionSheet>
               ),
               child: _saving
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('완주 기록하기', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  : Text('save_completion'.tr(), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             ),
           ),
         ],

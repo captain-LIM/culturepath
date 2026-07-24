@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../data/culture_model.dart';
 
@@ -30,7 +31,7 @@ class CultureCard extends StatelessWidget {
             Text(culture.emoji, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 4),
             Text(
-              culture.name,
+              'culture_${culture.id}_name'.tr(),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,

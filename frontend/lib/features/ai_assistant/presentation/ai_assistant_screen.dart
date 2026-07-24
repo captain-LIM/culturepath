@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -12,7 +13,7 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
       : super([
           ChatMessage(
             role: 'assistant',
-            content: '안녕하세요! 문화여행 AI 어시스턴트입니다.\n취향에 맞는 문화 코스를 추천해드릴게요. 어떤 여행을 원하시나요?',
+            content: tr('ai_welcome'),
             timestamp: DateTime.now(),
           ),
         ]);
@@ -41,7 +42,7 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
         ...state.where((m) => !m.isLoading),
         ChatMessage(
           role: 'assistant',
-          content: '응답 생성에 실패했습니다. 서버 연결을 확인하고 다시 시도해주세요.',
+          content: tr('ai_error'),
           timestamp: DateTime.now(),
         ),
       ];
@@ -54,7 +55,7 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
     state = [
       ChatMessage(
         role: 'assistant',
-        content: '안녕하세요! 문화여행 AI 어시스턴트입니다.\n취향에 맞는 문화 코스를 추천해드릴게요. 어떤 여행을 원하시나요?',
+        content: tr('ai_welcome'),
         timestamp: DateTime.now(),
       ),
     ];
@@ -68,12 +69,12 @@ final _chatProvider =
 
 // ─── 빠른 질문 목록 ──────────────────────────────────────────────────────────
 
-const _quickPrompts = [
-  '강릉 책방 코스 추천해줘',
-  '전주 전통주 여행 어디가 좋아?',
-  '통영 문학 기행 코스 짜줘',
-  '혼자 여행하기 좋은 문화 도시는?',
-  '근대 문화유산 감상 코스 알려줘',
+List<String> _quickPrompts() => [
+  tr('ai_quick_1'),
+  tr('ai_quick_2'),
+  tr('ai_quick_3'),
+  tr('ai_quick_4'),
+  tr('ai_quick_5'),
 ];
 
 // ─── 화면 ────────────────────────────────────────────────────────────────────
@@ -117,6 +118,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     final messages = ref.watch(_chatProvider);
     final notifier = ref.read(_chatProvider.notifier);
 
@@ -148,13 +150,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AI 여행 어시스턴트',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                Text('문화 코스 추천 · 여행 상담',
-                    style: TextStyle(fontSize: 10, color: Colors.grey)),
+                Text('ai_title'.tr(),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                Text('ai_subtitle'.tr(),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
               ],
             ),
           ],
@@ -162,7 +164,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.grey),
-            tooltip: '대화 초기화',
+            tooltip: 'ai_reset'.tr(),
             onPressed: () {
               notifier.clear();
             },
@@ -179,7 +181,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               itemBuilder: (_, i) {
                 if (showQuickPrompts && i == messages.length) {
                   return _QuickPromptChips(
-                    prompts: _quickPrompts,
+                    prompts: _quickPrompts(),
                     onTap: _send,
                   );
                 }
@@ -212,7 +214,7 @@ class _QuickPromptChips extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('빠른 질문',
+          Text('ai_quick_prompts'.tr(),
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Wrap(
@@ -271,7 +273,7 @@ class _InputBar extends StatelessWidget {
               textInputAction: TextInputAction.send,
               maxLines: null,
               decoration: InputDecoration(
-                hintText: '문화 여행에 대해 질문하세요...',
+                hintText: 'ai_input_hint'.tr(),
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 filled: true,
                 fillColor: AppColors.background,

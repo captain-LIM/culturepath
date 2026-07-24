@@ -1,15 +1,16 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class SeasonBanner extends StatelessWidget {
   const SeasonBanner({super.key});
 
-  String get _seasonLabel {
+  String _seasonKey() {
     final month = DateTime.now().month;
-    if (month >= 3 && month <= 5) return '봄 여행';
-    if (month >= 6 && month <= 8) return '여름 여행';
-    if (month >= 9 && month <= 11) return '가을 여행';
-    return '겨울 여행';
+    if (month >= 3 && month <= 5) return 'season_spring';
+    if (month >= 6 && month <= 8) return 'season_summer';
+    if (month >= 9 && month <= 11) return 'season_autumn';
+    return 'season_winter';
   }
 
   String get _seasonEmoji {
@@ -22,6 +23,7 @@ class SeasonBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -46,21 +48,21 @@ class SeasonBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '$_seasonEmoji $_seasonLabel 추천',
+                    '$_seasonEmoji ${_seasonKey().tr()} ${'banner_recommend'.tr()}',
                     style: const TextStyle(color: AppColors.accentGold, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  '책방 골목에서 시작하는\n나만의 문화 코스',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, height: 1.4),
+                Text(
+                  'banner_desc'.tr(),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, height: 1.4),
                 ),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () {},
                   child: Row(
                     children: [
-                      const Text('코스 보기', style: TextStyle(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('banner_cta'.tr(), style: const TextStyle(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(width: 4),
                       const Icon(Icons.arrow_forward_ios, color: AppColors.accentGold, size: 12),
                     ],

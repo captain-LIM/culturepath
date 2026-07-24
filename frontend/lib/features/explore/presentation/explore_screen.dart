@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -50,6 +51,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: NestedScrollView(
@@ -81,11 +83,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ),
               ),
             ],
-            flexibleSpace: const FlexibleSpaceBar(
-              titlePadding: EdgeInsets.fromLTRB(20, 0, 20, 52),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.fromLTRB(20, 0, 20, 52),
               title: Text(
-                '탐색',
-                style: TextStyle(
+                'explore_title'.tr(),
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primary,
@@ -99,9 +101,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               indicatorColor: AppColors.accent,
               indicatorWeight: 2.5,
               labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              tabs: const [
-                Tab(text: '피드'),
-                Tab(text: '랭킹'),
+              tabs: [
+                Tab(text: 'tab_feed'.tr()),
+                Tab(text: 'tab_ranking'.tr()),
               ],
             ),
           ),
@@ -137,7 +139,7 @@ class _FeedTab extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                Text('최신순', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                Text('sort_recent'.tr(), style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 const SizedBox(width: 4),
                 Switch(
                   value: sort == 'popular',
@@ -146,12 +148,12 @@ class _FeedTab extends ConsumerWidget {
                   activeColor: AppColors.accent,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                Text('인기순', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                Text('sort_popular'.tr(), style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => ref.invalidate(feedProvider(sort)),
                   icon: const Icon(Icons.refresh, size: 14),
-                  label: const Text('새로고침', style: TextStyle(fontSize: 12)),
+                  label: Text('refresh'.tr(), style: const TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: Colors.grey),
                 ),
               ],
@@ -164,16 +166,16 @@ class _FeedTab extends ConsumerWidget {
           ),
           error: (e, _) => SliverToBoxAdapter(
             child: _ErrorState(
-              message: '피드를 불러올 수 없습니다.\n백엔드 서버가 실행 중인지 확인하세요.',
+              message: 'feed_error'.tr(),
               onRetry: () => ref.invalidate(feedProvider(sort)),
             ),
           ),
           data: (courses) => courses.isEmpty
-              ? const SliverToBoxAdapter(
+              ? SliverToBoxAdapter(
                   child: Center(
                     child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Text('공개된 코스가 없습니다.'),
+                      padding: const EdgeInsets.all(40),
+                      child: Text('no_courses'.tr()),
                     ),
                   ),
                 )
@@ -208,7 +210,7 @@ class _RankingTab extends ConsumerWidget {
     return rankingAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorState(
-        message: '랭킹을 불러올 수 없습니다.',
+        message: 'ranking_error'.tr(),
         onRetry: () => ref.invalidate(rankingProvider),
       ),
       data: (courses) => CustomScrollView(
@@ -220,12 +222,12 @@ class _RankingTab extends ConsumerWidget {
                 children: [
                   const Icon(Icons.emoji_events, size: 18, color: AppColors.accentGold),
                   const SizedBox(width: 6),
-                  const Text(
-                    'TOP 코스 랭킹',
+                  Text(
+                    'ranking_title'.tr(),
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
                   ),
                   const SizedBox(width: 8),
-                  Text('좋아요·포크 기반 점수순',
+                  Text('ranking_subtitle'.tr(),
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                 ],
               ),
@@ -318,7 +320,7 @@ class _RankingRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'by ${course.authorId ?? "-"}  · 점수 ${course.score}',
+                    '${'by_author'.tr(namedArgs: {'author': course.authorId ?? "-"})}  · ${'score'.tr(namedArgs: {'score': course.score.toString()})}',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ],
@@ -379,7 +381,7 @@ class _ErrorState extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
             const SizedBox(height: 16),
-            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+            TextButton(onPressed: onRetry, child: Text('retry'.tr())),
           ],
         ),
       ),

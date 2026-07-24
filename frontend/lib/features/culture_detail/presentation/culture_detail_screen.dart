@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ class CultureDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    EasyLocalization.of(context);
     final regionsAsync = ref.watch(regionsProvider(culture.id));
 
     return Scaffold(
@@ -31,7 +33,7 @@ class CultureDetailScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                '${culture.name} 여행으로 유명한 지역',
+                'culture_detail_subtitle'.tr(namedArgs: {'name': 'culture_${culture.id}_name'.tr()}),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -46,7 +48,7 @@ class CultureDetailScreen extends ConsumerWidget {
               child: SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
             ),
             error: (e, _) => SliverToBoxAdapter(
-              child: Center(child: Text('지역 정보를 불러올 수 없습니다.\n$e', textAlign: TextAlign.center)),
+              child: Center(child: Text('culture_detail_error'.tr(), textAlign: TextAlign.center)),
             ),
             data: (regions) => SliverList(
               delegate: SliverChildBuilderDelegate(
@@ -79,7 +81,7 @@ class CultureDetailScreen extends ConsumerWidget {
       ),
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
-          culture.name,
+          'culture_${culture.id}_name'.tr(),
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         background: Container(

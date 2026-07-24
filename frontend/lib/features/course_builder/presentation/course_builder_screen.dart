@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -93,13 +94,13 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     final course = ref.read(courseBuilderProvider(_providerKey));
     if (course.title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('코스 제목을 입력해주세요.')),
+        SnackBar(content: Text('course_title_required'.tr())),
       );
       return;
     }
     if (course.totalPlaces == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('장소를 최소 1개 이상 추가해주세요.')),
+        SnackBar(content: Text('place_required'.tr())),
       );
       return;
     }
@@ -116,7 +117,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loggedIn ? '코스가 저장되었습니다.' : '임시 저장되었습니다. (게스트)'),
+            content: Text(loggedIn ? 'course_saved'.tr() : 'course_saved_guest'.tr()),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -127,7 +128,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       await repo.saveGuestCourse(course);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('오프라인 저장되었습니다.')),
+          SnackBar(content: Text('course_saved_offline'.tr())),
         );
       }
     } finally {
@@ -137,6 +138,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    EasyLocalization.of(context);
     final course = ref.watch(courseBuilderProvider(_providerKey));
     final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
     final isFork = course.forkedFrom != null;
@@ -156,7 +158,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           controller: _titleCtrl,
           onChanged: notifier.updateTitle,
           decoration: InputDecoration(
-            hintText: isFork ? '포크한 코스 제목' : '코스 제목을 입력하세요',
+            hintText: isFork ? 'course_title_hint_fork'.tr() : 'course_title_hint'.tr(),
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
             border: InputBorder.none,
           ),
@@ -178,8 +180,8 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 )
               : TextButton(
                   onPressed: _saveCourse,
-                  child: const Text(
-                    '저장',
+                  child: Text(
+                    'save'.tr(),
                     style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
@@ -210,7 +212,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  '${course.tracks[_activeTrack].places.length}곳',
+                  'place_count'.tr(namedArgs: {'n': course.tracks[_activeTrack].places.length.toString()}),
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
               ],
@@ -241,7 +243,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
         onPressed: _openAddPlaceSheet,
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('장소 추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text('add_place'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -254,12 +256,12 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           Icon(Icons.map_outlined, size: 56, color: Colors.grey.shade300),
           const SizedBox(height: 12),
           Text(
-            'Track ${_activeTrack + 1}에 장소를 추가하세요',
+            'track_empty_hint'.tr(namedArgs: {'n': (_activeTrack + 1).toString()}),
             style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
           ),
           const SizedBox(height: 6),
           Text(
-            '아래 버튼을 눌러 코스를 구성해보세요',
+            'track_empty_sub'.tr(),
             style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
         ],
@@ -286,7 +288,7 @@ class _ForkBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '포크됨: "$originalTitle"  by $authorId',
+              'forked_from'.tr(namedArgs: {'title': originalTitle, 'author': authorId}),
               style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.accentGold,

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ class CultureGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    EasyLocalization.of(context);
     final culturesAsync = ref.watch(culturesProvider);
 
     return culturesAsync.when(
@@ -23,7 +25,7 @@ class CultureGrid extends ConsumerWidget {
       error: (e, _) => SliverToBoxAdapter(
         child: SizedBox(
           height: 200,
-          child: Center(child: Text('카테고리를 불러올 수 없습니다.\n$e', textAlign: TextAlign.center)),
+          child: Center(child: Text('culture_load_error'.tr(), textAlign: TextAlign.center)),
         ),
       ),
       data: (cultures) => SliverToBoxAdapter(
