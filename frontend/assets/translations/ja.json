@@ -35,6 +35,7 @@
   "profile_guest_desc": "ログインすると完走記録、作成コース、\nいいねしたコースを確認できます。",
   "login_button": "ログイン",
   "profile_error": "プロフィールを読み込めません。",
+  "my_badges": "文化バッジ",
   "completed_courses": "完走コース 🎖️",
   "created_courses": "作成コース",
   "stat_completed": "完走",

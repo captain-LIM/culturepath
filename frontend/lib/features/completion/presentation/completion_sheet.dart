@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../profile/data/profile_repository.dart';
 
-Future<bool> showCompletionSheet(BuildContext context, {required int courseId, required String courseTitle}) async {
+Future<bool> showCompletionSheet(BuildContext context, {required int courseId, required String courseTitle, String? culture}) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _CompletionSheet(courseId: courseId, courseTitle: courseTitle),
+    builder: (_) => _CompletionSheet(courseId: courseId, courseTitle: courseTitle, culture: culture),
   );
   return result ?? false;
 }
@@ -16,8 +16,9 @@ Future<bool> showCompletionSheet(BuildContext context, {required int courseId, r
 class _CompletionSheet extends StatefulWidget {
   final int courseId;
   final String courseTitle;
+  final String? culture;
 
-  const _CompletionSheet({required this.courseId, required this.courseTitle});
+  const _CompletionSheet({required this.courseId, required this.courseTitle, this.culture});
 
   @override
   State<_CompletionSheet> createState() => _CompletionSheetState();
@@ -55,7 +56,7 @@ class _CompletionSheetState extends State<_CompletionSheet>
   Future<void> _submit() async {
     setState(() => _saving = true);
     try {
-      await ProfileRepository().completeCourse(widget.courseId, note: _noteCtrl.text);
+      await ProfileRepository().completeCourse(widget.courseId, note: _noteCtrl.text, culture: widget.culture);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -120,6 +121,21 @@ class _CompletionSheetState extends State<_CompletionSheet>
           ),
           const SizedBox(height: 4),
           Text('completion_message'.tr(), style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+          if (widget.culture != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.accentGold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                '🏅 ${widget.culture} 배지 획득!',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.accentGold),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
 
           // 소감 입력

@@ -35,6 +35,7 @@
   "profile_guest_desc": "登录后可查看完成记录、\n创建的路线和点赞的路线。",
   "login_button": "登录",
   "profile_error": "无法加载个人资料。",
+  "my_badges": "文化徽章",
   "completed_courses": "完成的路线 🎖️",
   "created_courses": "我创建的路线",
   "stat_completed": "完成",

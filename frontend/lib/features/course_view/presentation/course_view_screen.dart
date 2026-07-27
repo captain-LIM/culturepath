@@ -82,6 +82,19 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     ));
   }
 
+  String? _primaryCulture() {
+    final counts = <String, int>{};
+    for (final track in widget.course.tracks) {
+      for (final place in track.places) {
+        if (place.category.isNotEmpty) {
+          counts[place.category] = (counts[place.category] ?? 0) + 1;
+        }
+      }
+    }
+    if (counts.isEmpty) return null;
+    return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
   Future<void> _handleComplete() async {
     if (widget.course.id == null) return;
 
@@ -100,6 +113,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       context,
       courseId: widget.course.id!,
       courseTitle: widget.course.title,
+      culture: _primaryCulture(),
     );
 
     if (success && mounted) {

@@ -7,8 +7,11 @@ class ProfileRepository {
     return UserProfile.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<CompletionRecord> completeCourse(int courseId, {String note = ''}) async {
-    final res = await apiClient.post('/courses/$courseId/complete', {'note': note});
+  Future<CompletionRecord> completeCourse(int courseId, {String note = '', String? culture}) async {
+    final res = await apiClient.post('/courses/$courseId/complete', {
+      'note': note,
+      if (culture != null) 'culture': culture,
+    });
     return CompletionRecord.fromJson(res.data as Map<String, dynamic>);
   }
 

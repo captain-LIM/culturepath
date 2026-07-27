@@ -110,6 +110,8 @@ class _LoggedInView extends ConsumerWidget {
             _buildHeader(profile, context, ref),
             _buildLanguageSelectorSliver(context),
             _buildStats(profile.stats),
+            _sectionTitle('my_badges'.tr()),
+            _buildBadgeGrid(profile.badges),
             if (profile.recentCompletions.isNotEmpty) ...[
               _sectionTitle('completed_courses'.tr()),
               _buildCompletions(profile.recentCompletions),
@@ -207,6 +209,28 @@ class _LoggedInView extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
         child: Text(title,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
+      ),
+    );
+  }
+
+  static const _allBadges = [
+    ('독립서점·책방', '📚'), ('문학', '✍️'), ('음악', '🎵'), ('전통주·양조장', '🍶'),
+    ('로컬 미식', '🍽️'), ('공예·공방', '🎨'), ('근대 문화유산', '🏛️'),
+    ('미술·갤러리', '🖼️'), ('영화·애니메이션', '🎬'), ('커피·카페', '☕'),
+  ];
+
+  SliverToBoxAdapter _buildBadgeGrid(Map<String, int> badges) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _allBadges.map((b) {
+            final count = badges[b.$1] ?? 0;
+            return _BadgeChip(name: b.$1, emoji: b.$2, count: count);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -404,6 +428,63 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Container(width: 1, height: 36, color: Colors.grey.shade200);
+}
+
+class _BadgeChip extends StatelessWidget {
+  final String name;
+  final String emoji;
+  final int count;
+
+  const _BadgeChip({required this.name, required this.emoji, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final earned = count > 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: earned ? AppColors.accentGold.withValues(alpha: 0.12) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: earned ? AppColors.accentGold.withValues(alpha: 0.5) : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            emoji,
+            style: TextStyle(fontSize: 14, color: earned ? null : const Color(0x00000000)),
+          ),
+          if (!earned)
+            const Text('❓', style: TextStyle(fontSize: 14)),
+          const SizedBox(width: 4),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: earned ? FontWeight.bold : FontWeight.normal,
+              color: earned ? AppColors.accentGold : Colors.grey.shade400,
+            ),
+          ),
+          if (earned && count > 1) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.accentGold,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _CompletionCard extends StatelessWidget {

@@ -320,7 +320,7 @@ async function toggleLike(req, res) {
 async function completeCourse(req, res) {
   const courseId = parseInt(req.params.id);
   const userId = req.user.id;
-  const { note } = req.body;
+  const { note, culture } = req.body;
   try {
     const [[course]] = await pool.query('SELECT id FROM courses WHERE id = ?', [courseId]);
     if (!course) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
@@ -331,12 +331,12 @@ async function completeCourse(req, res) {
     if (existing) return res.status(409).json({ message: '이미 완주 인증한 코스입니다.' });
 
     const [result] = await pool.query(
-      'INSERT INTO course_completions (course_id, user_id, note) VALUES (?, ?, ?)',
-      [courseId, userId, note || '']
+      'INSERT INTO course_completions (course_id, user_id, note, culture) VALUES (?, ?, ?, ?)',
+      [courseId, userId, note || '', culture || null]
     );
 
     const [[completion]] = await pool.query(
-      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.id = ?`,
@@ -383,13 +383,22 @@ async function getMyProfile(req, res) {
     );
 
     const [recentCompletions] = await pool.query(
-      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.user_id = ?
        ORDER BY cc.completed_at DESC LIMIT 5`,
       [userId]
     );
+
+    const [badgeRows] = await pool.query(
+      `SELECT culture, COUNT(*) as cnt
+       FROM course_completions
+       WHERE user_id = ? AND culture IS NOT NULL
+       GROUP BY culture`,
+      [userId]
+    );
+    const badges = Object.fromEntries(badgeRows.map(r => [r.culture, r.cnt]));
 
     const createdCourses = await queryCourses(
       'c.user_id = ?', [userId], userId, 'c.created_at DESC', 5
@@ -401,6 +410,7 @@ async function getMyProfile(req, res) {
       email: user.email,
       stats: { completedCount, createdCount, likedCount },
       recentCompletions,
+      badges,
       createdCourses,
     });
   } catch (err) {

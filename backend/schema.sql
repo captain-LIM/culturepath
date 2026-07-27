@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS course_completions (
   course_id    INT NOT NULL,
   user_id      INT NOT NULL,
   note         TEXT,
+  culture      VARCHAR(30) DEFAULT NULL,
   completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_completion (course_id, user_id),
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,

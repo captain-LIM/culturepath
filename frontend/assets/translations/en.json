@@ -35,6 +35,7 @@
   "profile_guest_desc": "Log in to see your completion records,\ncreated courses, and liked courses.",
   "login_button": "Log In",
   "profile_error": "Unable to load profile.",
+  "my_badges": "Culture Badges",
   "completed_courses": "Completed Courses 🎖️",
   "created_courses": "My Courses",
   "stat_completed": "Completed",

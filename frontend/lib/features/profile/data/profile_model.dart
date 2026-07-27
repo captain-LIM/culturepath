@@ -5,6 +5,7 @@ class CompletionRecord {
   final int courseId;
   final String courseTitle;
   final String note;
+  final String? culture;
   final DateTime completedAt;
 
   const CompletionRecord({
@@ -12,6 +13,7 @@ class CompletionRecord {
     required this.courseId,
     required this.courseTitle,
     required this.note,
+    this.culture,
     required this.completedAt,
   });
 
@@ -20,6 +22,7 @@ class CompletionRecord {
         courseId: json['courseId'] as int,
         courseTitle: json['courseTitle'] as String,
         note: (json['note'] as String?) ?? '',
+        culture: json['culture'] as String?,
         completedAt: DateTime.parse(json['completedAt'] as String),
       );
 }
@@ -48,6 +51,7 @@ class UserProfile {
   final String email;
   final ProfileStats stats;
   final List<CompletionRecord> recentCompletions;
+  final Map<String, int> badges;
   final List<CourseItem> createdCourses;
 
   const UserProfile({
@@ -56,6 +60,7 @@ class UserProfile {
     required this.email,
     required this.stats,
     required this.recentCompletions,
+    required this.badges,
     required this.createdCourses,
   });
 
@@ -67,6 +72,8 @@ class UserProfile {
         recentCompletions: (json['recentCompletions'] as List)
             .map((j) => CompletionRecord.fromJson(j as Map<String, dynamic>))
             .toList(),
+        badges: (json['badges'] as Map<String, dynamic>? ?? {})
+            .map((k, v) => MapEntry(k, (v as num).toInt())),
         createdCourses: (json['createdCourses'] as List)
             .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
             .toList(),
