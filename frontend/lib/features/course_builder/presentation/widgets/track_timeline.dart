@@ -49,7 +49,7 @@ class TrackTimeline extends StatelessWidget {
           child: Column(
             children: [
               Text(
-                'Track ${index + 1}',
+                'Day ${index + 1}',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,

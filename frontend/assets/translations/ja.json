@@ -76,7 +76,7 @@
   "course_title_hint": "コースタイトルを入力",
   "course_title_hint_fork": "フォークしたコースのタイトル",
   "save": "保存",
-  "track_empty_hint": "Track {n}に場所を追加してください",
+  "track_empty_hint": "Day {n}に場所を追加してください",
   "track_empty_sub": "下のボタンからコースを作りましょう",
   "add_place": "場所を追加",
   "course_title_required": "コースタイトルを入力してください。",

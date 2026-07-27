@@ -54,6 +54,15 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       return;
     }
 
+    if (widget.course.id == null) {
+      final forkedLocally = widget.course.copyWith(
+        title: '${widget.course.title} ${'fork_suffix'.tr()}',
+      );
+      if (!mounted) return;
+      _navigateToEdit(forkedLocally);
+      return;
+    }
+
     setState(() => _forking = true);
     try {
       final forked = await repo.forkCourse(widget.course.id!);
@@ -152,7 +161,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           unselectedLabelColor: Colors.white54,
           labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           tabs: course.tracks
-              .map((t) => Tab(text: 'Track ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})'))
+              .map((t) => Tab(text: 'Day ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})'))
               .toList(),
         ),
       ),

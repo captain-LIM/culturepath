@@ -76,7 +76,7 @@
   "course_title_hint": "Enter course title",
   "course_title_hint_fork": "Forked course title",
   "save": "Save",
-  "track_empty_hint": "Add places to Track {n}",
+  "track_empty_hint": "Add places to Day {n}",
   "track_empty_sub": "Tap the button below to build your course",
   "add_place": "Add Place",
   "course_title_required": "Please enter a course title.",

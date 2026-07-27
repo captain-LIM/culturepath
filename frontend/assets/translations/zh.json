@@ -76,7 +76,7 @@
   "course_title_hint": "请输入路线标题",
   "course_title_hint_fork": "分叉路线标题",
   "save": "保存",
-  "track_empty_hint": "请在Track {n}中添加地点",
+  "track_empty_hint": "请在Day {n}中添加地点",
   "track_empty_sub": "点击下方按钮来规划您的路线",
   "add_place": "添加地点",
   "course_title_required": "请输入路线标题。",

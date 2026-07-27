@@ -203,7 +203,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             child: Row(
               children: [
                 Text(
-                  'Track ${_activeTrack + 1}',
+                  'Day ${_activeTrack + 1}',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
