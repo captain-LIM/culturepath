@@ -336,7 +336,7 @@ async function completeCourse(req, res) {
     );
 
     const [[completion]] = await pool.query(
-      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id as courseId, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.id = ?`,
@@ -352,7 +352,7 @@ async function completeCourse(req, res) {
 async function getMyCompletions(req, res) {
   try {
     const [completions] = await pool.query(
-      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id as courseId, c.title as courseTitle, cc.note, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.user_id = ?
@@ -383,7 +383,7 @@ async function getMyProfile(req, res) {
     );
 
     const [recentCompletions] = await pool.query(
-      `SELECT cc.id, cc.course_id, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id as courseId, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.user_id = ?
