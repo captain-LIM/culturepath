@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/home/data/culture_model.dart';
+import '../../../features/region_detail/presentation/region_detail_screen.dart';
 import '../data/region_model.dart';
 import '../data/regions_repository.dart';
 import 'widgets/region_card.dart';
 
 final regionsProvider =
     FutureProvider.family<List<RegionItem>, int>((ref, cultureId) {
+  ref.keepAlive();
   return RegionsRepository().getRegionsByCulture(cultureId);
 });
 
@@ -50,19 +52,25 @@ class CultureDetailScreen extends ConsumerWidget {
             error: (e, _) => SliverToBoxAdapter(
               child: Center(child: Text('culture_detail_error'.tr(), textAlign: TextAlign.center)),
             ),
-            data: (regions) => SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => RegionCard(
-                  region: regions[index],
-                  rank: index + 1,
-                  onTap: () => context.push(
-                    '/regions/${regions[index].areaCode}/spots',
-                    extra: {'region': regions[index], 'culture': culture},
+            data: (regions) {
+              // 지역 목록이 뜨는 즉시 각 지역의 장소 데이터를 백그라운드에서 미리 로드
+              for (final region in regions) {
+                ref.read(spotsProvider((areaCode: region.areaCode, culture: culture.name)));
+              }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => RegionCard(
+                    region: regions[index],
+                    rank: index + 1,
+                    onTap: () => context.push(
+                      '/regions/${regions[index].areaCode}/spots',
+                      extra: {'region': regions[index], 'culture': culture},
+                    ),
                   ),
+                  childCount: regions.length,
                 ),
-                childCount: regions.length,
-              ),
-            ),
+              );
+            },
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],

@@ -8,7 +8,10 @@ import '../data/spots_repository.dart';
 import 'widgets/spot_card.dart';
 
 final spotsProvider = FutureProvider.family<List<SpotItem>, ({String areaCode, String? culture})>(
-  (ref, args) => SpotsRepository().getSpotsByRegion(args.areaCode, culture: args.culture),
+  (ref, args) {
+    ref.keepAlive();
+    return SpotsRepository().getSpotsByRegion(args.areaCode, culture: args.culture);
+  },
 );
 
 class RegionDetailScreen extends ConsumerWidget {
