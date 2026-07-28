@@ -21,4 +21,8 @@ class ProfileRepository {
         .map((j) => CompletionRecord.fromJson(j as Map<String, dynamic>))
         .toList();
   }
+
+  Future<void> deleteCompletion(int id) async {
+    await apiClient.delete('/users/me/completions/$id');
+  }
 }

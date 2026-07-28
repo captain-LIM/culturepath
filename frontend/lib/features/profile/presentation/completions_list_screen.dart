@@ -63,10 +63,19 @@ class CompletionsListScreen extends ConsumerWidget {
                   ],
                 ),
               )
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                itemCount: completions.length,
-                itemBuilder: (_, i) => _CompletionTile(record: completions[i]),
+            : RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(_completionsProvider);
+                  await ref.read(_completionsProvider.future);
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  itemCount: completions.length,
+                  itemBuilder: (_, i) => _CompletionTile(
+                    record: completions[i],
+                    onDeleted: () => ref.invalidate(_completionsProvider),
+                  ),
+                ),
               ),
       ),
     );
@@ -75,7 +84,8 @@ class CompletionsListScreen extends ConsumerWidget {
 
 class _CompletionTile extends StatefulWidget {
   final CompletionRecord record;
-  const _CompletionTile({required this.record});
+  final VoidCallback onDeleted;
+  const _CompletionTile({required this.record, required this.onDeleted});
 
   @override
   State<_CompletionTile> createState() => _CompletionTileState();
@@ -83,9 +93,10 @@ class _CompletionTile extends StatefulWidget {
 
 class _CompletionTileState extends State<_CompletionTile> {
   bool _loading = false;
+  bool _deleting = false;
 
   Future<void> _openCourse() async {
-    if (_loading) return;
+    if (_loading || _deleting) return;
     setState(() => _loading = true);
     try {
       final course = await CourseRepository().getCourse(widget.record.courseId);
@@ -105,6 +116,50 @@ class _CompletionTileState extends State<_CompletionTile> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    if (_loading || _deleting) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('delete_completion'.tr()),
+        content: Text('delete_completion_confirm'.tr()),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('cancel'.tr())),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('delete'.tr(), style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      await ProfileRepository().deleteCompletion(widget.record.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('completion_deleted'.tr()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        widget.onDeleted();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('delete_failed'.tr()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
     }
   }
 
@@ -128,7 +183,7 @@ class _CompletionTileState extends State<_CompletionTile> {
           borderRadius: BorderRadius.circular(12),
           onTap: _openCourse,
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(14, 14, 4, 14),
             child: Row(
               children: [
                 Container(
@@ -196,14 +251,37 @@ class _CompletionTileState extends State<_CompletionTile> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                _loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      )
-                    : Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    ),
+                  )
+                else if (_deleting)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
+                    ),
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline, color: Colors.grey.shade400, size: 20),
+                        tooltip: 'delete_completion'.tr(),
+                        onPressed: _confirmDelete,
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

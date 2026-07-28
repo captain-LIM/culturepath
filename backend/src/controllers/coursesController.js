@@ -366,6 +366,22 @@ async function getMyCompletions(req, res) {
   }
 }
 
+async function deleteCompletion(req, res) {
+  const userId = req.user.id;
+  const completionId = parseInt(req.params.id, 10);
+  try {
+    const [result] = await pool.query(
+      'DELETE FROM course_completions WHERE id = ? AND user_id = ?',
+      [completionId, userId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: '기록을 찾을 수 없습니다.' });
+    return res.json({ message: '삭제되었습니다.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '서버 오류' });
+  }
+}
+
 async function getMyLikedCourses(req, res) {
   const userId = req.user.id;
   try {
@@ -438,5 +454,5 @@ async function getMyProfile(req, res) {
 module.exports = {
   getPublicCourses, getFeed, getRanking,
   createCourse, getCourses, getCourse, updateCourse, deleteCourse,
-  forkCourse, toggleLike, completeCourse, getMyCompletions, getMyProfile, getMyLikedCourses,
+  forkCourse, toggleLike, completeCourse, getMyCompletions, deleteCompletion, getMyProfile, getMyLikedCourses,
 };

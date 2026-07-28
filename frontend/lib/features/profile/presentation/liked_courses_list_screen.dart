@@ -58,7 +58,10 @@ class LikedCoursesListScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: courses.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (ctx, i) => _CourseTile(course: courses[i]),
+                  itemBuilder: (ctx, i) => _CourseTile(
+                    course: courses[i],
+                    onUnliked: () => ref.invalidate(_likedCoursesProvider),
+                  ),
                 ),
               ),
       ),
@@ -68,24 +71,63 @@ class LikedCoursesListScreen extends ConsumerWidget {
 
 class _CourseTile extends StatefulWidget {
   final CourseItem course;
-  const _CourseTile({required this.course});
+  final VoidCallback onUnliked;
+  const _CourseTile({required this.course, required this.onUnliked});
 
   @override
   State<_CourseTile> createState() => _CourseTileState();
 }
 
 class _CourseTileState extends State<_CourseTile> {
-  bool _loading = false;
+  bool _opening = false;
+  bool _unliking = false;
 
   Future<void> _open() async {
-    setState(() => _loading = true);
+    if (_opening || _unliking) return;
+    setState(() => _opening = true);
     if (mounted) {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => CourseViewScreen(course: widget.course)),
       );
     }
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() => _opening = false);
+  }
+
+  Future<void> _confirmUnlike() async {
+    if (_opening || _unliking) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('unlike_course'.tr()),
+        content: Text('unlike_confirm'.tr()),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('cancel'.tr())),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('unlike_course'.tr(), style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _unliking = true);
+    try {
+      await CourseRepository().toggleLike(widget.course.id!);
+      if (mounted) widget.onUnliked();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('delete_failed'.tr()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _unliking = false);
+    }
   }
 
   @override
@@ -96,9 +138,9 @@ class _CourseTileState extends State<_CourseTile> {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: _loading ? null : _open,
+        onTap: _open,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.fromLTRB(20, 14, 4, 14),
           child: Row(
             children: [
               Expanded(
@@ -134,24 +176,38 @@ class _CourseTileState extends State<_CourseTile> {
                   ],
                 ),
               ),
-              if (_loading)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              if (_unliking)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
+                  ),
+                )
+              else if (_opening)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 )
               else
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.favorite, size: 14, color: Colors.red.shade400),
-                    const SizedBox(width: 3),
                     Text(
                       '${course.likeCount}',
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                     ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey.shade300),
+                    IconButton(
+                      icon: const Icon(Icons.favorite, color: Colors.red, size: 20),
+                      tooltip: 'unlike_course'.tr(),
+                      onPressed: _confirmUnlike,
+                      splashRadius: 20,
+                    ),
                   ],
                 ),
             ],
