@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../course_builder/data/course_model.dart';
-import '../../course_builder/data/course_repository.dart';
-import '../../course_view/presentation/course_view_screen.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
 import 'completions_list_screen.dart';
+import 'created_courses_list_screen.dart';
 
 final _profileProvider = FutureProvider.autoDispose<UserProfile>(
   (ref) => ProfileRepository().getMyProfile(),
@@ -113,10 +111,6 @@ class _LoggedInView extends ConsumerWidget {
             _buildStats(profile.stats, context),
             _sectionTitle('my_badges'.tr()),
             _buildBadgeGrid(profile.badges),
-            if (profile.createdCourses.isNotEmpty) ...[
-              _sectionTitle('created_courses'.tr()),
-              _buildCreatedCourses(profile.createdCourses, context, ref),
-            ],
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
         ),
@@ -198,7 +192,14 @@ class _LoggedInView extends ConsumerWidget {
               ),
             ),
             _Divider(),
-            _StatItem('stat_created'.tr(), '${stats.createdCount}개', Icons.edit_note, AppColors.primary),
+            _StatItem(
+              'stat_created'.tr(), '${stats.createdCount}개',
+              Icons.edit_note, AppColors.primary,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CreatedCoursesListScreen()),
+              ),
+            ),
             _Divider(),
             _StatItem('stat_liked'.tr(), '${stats.likedCount}개', Icons.favorite, Colors.red),
           ],
@@ -239,108 +240,6 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverList _buildCreatedCourses(List<CourseItem> courses, BuildContext context, WidgetRef ref) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (_, i) {
-          final c = courses[i];
-          final visibility = c.isPublic ? 'public'.tr() : 'private'.tr();
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => CourseViewScreen(course: c)),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.map_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(c.title,
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'course_place_info'.tr(namedArgs: {
-                                    'n': c.totalPlaces.toString(),
-                                    'visibility': visibility,
-                                  }),
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                    icon: Icon(Icons.delete_outline, color: Colors.red.shade300, size: 20),
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (dialogCtx) => AlertDialog(
-                          title: Text('delete_course'.tr()),
-                          content: Text('delete_confirm'.tr(namedArgs: {'title': c.title})),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogCtx, false),
-                              child: Text('cancel'.tr()),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogCtx, true),
-                              style: TextButton.styleFrom(foregroundColor: Colors.red),
-                              child: Text('delete'.tr()),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true && c.id != null) {
-                        try {
-                          await CourseRepository().deleteCourse(c.id!);
-                          ref.invalidate(_profileProvider);
-                        } catch (_) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('delete_failed'.tr())),
-                            );
-                          }
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-          );
-        },
-        childCount: courses.length,
-      ),
-    );
-  }
 }
 
 // ─── 언어 선택기 ──────────────────────────────────────────────────────────────
@@ -406,30 +305,28 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inner = Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              if (onTap != null) ...[
-                const SizedBox(width: 2),
-                Icon(Icons.arrow_forward_ios, size: 9, color: Colors.grey.shade400),
-              ],
+    final content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 22),
+        const SizedBox(height: 6),
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            if (onTap != null) ...[
+              const SizedBox(width: 2),
+              Icon(Icons.arrow_forward_ios, size: 9, color: Colors.grey.shade400),
             ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
-    if (onTap != null) {
-      return GestureDetector(onTap: onTap, child: inner);
-    }
-    return inner;
+    return Expanded(
+      child: onTap != null ? GestureDetector(onTap: onTap, child: content) : content,
+    );
   }
 }
 

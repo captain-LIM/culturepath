@@ -38,6 +38,7 @@
   "my_badges": "文化バッジ",
   "completed_courses": "完走コース 🎖️",
   "no_completions": "完走したコースがありません。",
+  "no_created_courses": "作成したコースがありません。",
   "course_load_failed": "コース情報を読み込めません。",
   "created_courses": "作成コース",
   "stat_completed": "完走",

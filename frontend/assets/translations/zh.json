@@ -38,6 +38,7 @@
   "my_badges": "文化徽章",
   "completed_courses": "完成的路线 🎖️",
   "no_completions": "暂无完成的路线。",
+  "no_created_courses": "暂无创建的路线。",
   "course_load_failed": "无法加载路线信息。",
   "created_courses": "我创建的路线",
   "stat_completed": "完成",
