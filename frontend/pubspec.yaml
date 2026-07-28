@@ -55,6 +55,9 @@ dependencies:
   # 구글 로그인
   google_sign_in: ^6.2.2
 
+  # 공유
+  share_plus: ^10.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

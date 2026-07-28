@@ -46,6 +46,7 @@
   "stat_created": "만든 코스",
   "stat_liked": "좋아요",
   "logout": "로그아웃",
+  "share_course": "코스 공유",
   "edit_course": "코스 수정",
   "delete_course": "코스 삭제",
   "delete_confirm": "\"{title}\"을 삭제하시겠습니까?",

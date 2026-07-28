@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -7,7 +8,10 @@ import '../../features/home/data/culture_model.dart';
 import '../../features/culture_detail/data/region_model.dart';
 import '../../features/culture_detail/presentation/culture_detail_screen.dart';
 import '../../features/region_detail/presentation/region_detail_screen.dart';
+import '../../features/course_builder/data/course_model.dart';
+import '../../features/course_builder/data/course_repository.dart';
 import '../../features/course_builder/presentation/course_builder_screen.dart';
+import '../../features/course_view/presentation/course_view_screen.dart';
 import '../../features/explore/presentation/explore_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../shared/widgets/main_shell.dart';
@@ -39,6 +43,14 @@ final appRouter = GoRouter(
         );
       },
     ),
+    GoRoute(
+      path: '/courses/:id',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) return const _ErrorScreen();
+        return _CourseDeepLinkScreen(courseId: id);
+      },
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => MainShell(navigationShell: shell),
       branches: [
@@ -58,3 +70,36 @@ final appRouter = GoRouter(
     ),
   ],
 );
+
+class _CourseDeepLinkScreen extends ConsumerWidget {
+  final int courseId;
+  const _CourseDeepLinkScreen({required this.courseId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final courseAsync = ref.watch(_deepLinkCourseProvider(courseId));
+    return courseAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('코스를 불러올 수 없습니다.\n$e')),
+      ),
+      data: (course) => CourseViewScreen(course: course),
+    );
+  }
+}
+
+final _deepLinkCourseProvider = FutureProvider.autoDispose.family<CourseItem, int>(
+  (ref, id) => CourseRepository().getCourse(id),
+);
+
+class _ErrorScreen extends StatelessWidget {
+  const _ErrorScreen();
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('잘못된 링크입니다.')),
+      );
+}

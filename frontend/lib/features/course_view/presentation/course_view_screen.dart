@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
@@ -84,6 +85,28 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     ));
   }
 
+  void _shareCourse() {
+    final course = widget.course;
+    final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
+    final buffer = StringBuffer()
+      ..writeln('📍 ${course.title}')
+      ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
+    if (course.description.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln(course.description);
+    }
+    if (course.id != null) {
+      buffer
+        ..writeln()
+        ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
+    }
+    SharePlus.instance.share(ShareParams(
+      text: buffer.toString(),
+      subject: course.title,
+    ));
+  }
+
   Future<void> _handleEdit() async {
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: widget.course)),
@@ -160,6 +183,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
+            tooltip: 'share_course'.tr(),
+            onPressed: _shareCourse,
+          ),
           if (widget.isOwner || course.isOwner)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.white),

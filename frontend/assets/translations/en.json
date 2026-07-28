@@ -46,6 +46,7 @@
   "stat_created": "Created",
   "stat_liked": "Liked",
   "logout": "Log Out",
+  "share_course": "Share Course",
   "edit_course": "Edit Course",
   "delete_course": "Delete Course",
   "delete_confirm": "Delete \"{title}\"?",

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/services/cache_service.dart';
 import 'place_item.dart';
 import 'course_model.dart';
 
@@ -16,24 +17,60 @@ class CourseRepository {
   }
 
   Future<List<CourseItem>> getPublicCourses() async {
-    final res = await apiClient.get('/courses/public');
-    return (res.data as List)
-        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
-        .toList();
+    const key = 'public_courses';
+    try {
+      final res = await apiClient.get('/courses/public');
+      await CacheService.set(key, jsonEncode(res.data));
+      return (res.data as List)
+          .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      final cached = await CacheService.getStale(key);
+      if (cached != null) {
+        return (jsonDecode(cached) as List)
+            .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   Future<List<CourseItem>> getFeed({String sort = 'recent'}) async {
-    final res = await apiClient.get('/courses/feed', params: {'sort': sort});
-    return (res.data as List)
-        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
-        .toList();
+    final key = 'feed_$sort';
+    try {
+      final res = await apiClient.get('/courses/feed', params: {'sort': sort});
+      await CacheService.set(key, jsonEncode(res.data));
+      return (res.data as List)
+          .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      final cached = await CacheService.getStale(key);
+      if (cached != null) {
+        return (jsonDecode(cached) as List)
+            .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   Future<List<CourseItem>> getRanking() async {
-    final res = await apiClient.get('/courses/ranking');
-    return (res.data as List)
-        .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
-        .toList();
+    const key = 'ranking';
+    try {
+      final res = await apiClient.get('/courses/ranking');
+      await CacheService.set(key, jsonEncode(res.data));
+      return (res.data as List)
+          .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      final cached = await CacheService.getStale(key);
+      if (cached != null) {
+        return (jsonDecode(cached) as List)
+            .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   // 좋아요 토글 — { liked: bool, likeCount: int } 반환
