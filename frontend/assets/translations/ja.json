@@ -37,6 +37,8 @@
   "profile_error": "プロフィールを読み込めません。",
   "my_badges": "文化バッジ",
   "completed_courses": "完走コース 🎖️",
+  "no_completions": "完走したコースがありません。",
+  "course_load_failed": "コース情報を読み込めません。",
   "created_courses": "作成コース",
   "stat_completed": "完走",
   "stat_created": "作成",

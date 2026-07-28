@@ -9,6 +9,7 @@ import '../../course_builder/data/course_repository.dart';
 import '../../course_view/presentation/course_view_screen.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
+import 'completions_list_screen.dart';
 
 final _profileProvider = FutureProvider.autoDispose<UserProfile>(
   (ref) => ProfileRepository().getMyProfile(),
@@ -23,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final authAsync = ref.watch(authStateProvider);
     return authAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (_, __) => const _GuestView(),
+      error: (_, stack) => const _GuestView(),
       data: (isLoggedIn) => isLoggedIn ? const _LoggedInView() : const _GuestView(),
     );
   }
@@ -109,13 +110,9 @@ class _LoggedInView extends ConsumerWidget {
           slivers: [
             _buildHeader(profile, context, ref),
             _buildLanguageSelectorSliver(context),
-            _buildStats(profile.stats),
+            _buildStats(profile.stats, context),
             _sectionTitle('my_badges'.tr()),
             _buildBadgeGrid(profile.badges),
-            if (profile.recentCompletions.isNotEmpty) ...[
-              _sectionTitle('completed_courses'.tr()),
-              _buildCompletions(profile.recentCompletions),
-            ],
             if (profile.createdCourses.isNotEmpty) ...[
               _sectionTitle('created_courses'.tr()),
               _buildCreatedCourses(profile.createdCourses, context, ref),
@@ -184,7 +181,7 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverToBoxAdapter _buildStats(ProfileStats stats) {
+  SliverToBoxAdapter _buildStats(ProfileStats stats, BuildContext context) {
     return SliverToBoxAdapter(
       child: Container(
         color: Colors.white,
@@ -192,7 +189,14 @@ class _LoggedInView extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Row(
           children: [
-            _StatItem('stat_completed'.tr(), '${stats.completedCount}개', Icons.emoji_events, AppColors.accentGold),
+            _StatItem(
+              'stat_completed'.tr(), '${stats.completedCount}개',
+              Icons.emoji_events, AppColors.accentGold,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CompletionsListScreen()),
+              ),
+            ),
             _Divider(),
             _StatItem('stat_created'.tr(), '${stats.createdCount}개', Icons.edit_note, AppColors.primary),
             _Divider(),
@@ -231,15 +235,6 @@ class _LoggedInView extends ConsumerWidget {
             return _BadgeChip(name: b.$1, emoji: b.$2, count: count);
           }).toList(),
         ),
-      ),
-    );
-  }
-
-  SliverList _buildCompletions(List<CompletionRecord> completions) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (_, i) => _CompletionCard(record: completions[i]),
-        childCount: completions.length,
       ),
     );
   }
@@ -405,22 +400,36 @@ class _StatItem extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
-  const _StatItem(this.label, this.value, this.icon, this.color);
+  const _StatItem(this.label, this.value, this.icon, this.color, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    final inner = Expanded(
       child: Column(
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+              if (onTap != null) ...[
+                const SizedBox(width: 2),
+                Icon(Icons.arrow_forward_ios, size: 9, color: Colors.grey.shade400),
+              ],
+            ],
+          ),
         ],
       ),
     );
+    if (onTap != null) {
+      return GestureDetector(onTap: onTap, child: inner);
+    }
+    return inner;
   }
 }
 
@@ -487,65 +496,3 @@ class _BadgeChip extends StatelessWidget {
   }
 }
 
-class _CompletionCard extends StatelessWidget {
-  final CompletionRecord record;
-
-  const _CompletionCard({required this.record});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.accentGold.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.emoji_events, color: AppColors.accentGold, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(record.courseTitle,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                if (record.note.isNotEmpty)
-                  Text(record.note,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis)
-                else
-                  Text(
-                    '${record.completedAt.year}.${record.completedAt.month.toString().padLeft(2, '0')}.${record.completedAt.day.toString().padLeft(2, '0')} ${'stat_completed'.tr()}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
-                  ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.accentGold.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('stat_completed'.tr(), style: const TextStyle(fontSize: 10, color: AppColors.accentGold, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-}

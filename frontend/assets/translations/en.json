@@ -37,6 +37,8 @@
   "profile_error": "Unable to load profile.",
   "my_badges": "Culture Badges",
   "completed_courses": "Completed Courses 🎖️",
+  "no_completions": "No completed courses yet.",
+  "course_load_failed": "Could not load course info.",
   "created_courses": "My Courses",
   "stat_completed": "Completed",
   "stat_created": "Created",

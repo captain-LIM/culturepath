@@ -89,6 +89,11 @@ class CourseRepository {
         .toList();
   }
 
+  Future<CourseItem> getCourse(int id) async {
+    final res = await apiClient.get('/courses/$id');
+    return CourseItem.fromJson(res.data as Map<String, dynamic>);
+  }
+
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token') != null;
