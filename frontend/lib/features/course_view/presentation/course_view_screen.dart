@@ -86,22 +86,30 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   Future<void> _shareCourse() async {
-    final course = widget.course;
-    final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
-    final buffer = StringBuffer()
-      ..writeln('📍 ${course.title}')
-      ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
-    if (course.description.isNotEmpty) {
-      buffer
-        ..writeln()
-        ..writeln(course.description);
+    try {
+      final course = widget.course;
+      final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
+      final buffer = StringBuffer()
+        ..writeln('📍 ${course.title}')
+        ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
+      if (course.description.isNotEmpty) {
+        buffer
+          ..writeln()
+          ..writeln(course.description);
+      }
+      if (course.id != null) {
+        buffer
+          ..writeln()
+          ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
+      }
+      await Share.share(buffer.toString().trim(), subject: course.title);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('공유 실패: $e'), behavior: SnackBarBehavior.floating),
+        );
+      }
     }
-    if (course.id != null) {
-      buffer
-        ..writeln()
-        ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
-    }
-    await Share.share(buffer.toString(), subject: course.title);
   }
 
   Future<void> _handleEdit() async {
@@ -183,7 +191,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
             tooltip: 'share_course'.tr(),
-            onPressed: _shareCourse,
+            onPressed: () => _shareCourse(),
           ),
           if (widget.isOwner || course.isOwner)
             IconButton(
