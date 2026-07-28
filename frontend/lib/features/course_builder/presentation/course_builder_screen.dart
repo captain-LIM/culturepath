@@ -110,7 +110,11 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     try {
       final loggedIn = await repo.isLoggedIn();
       if (loggedIn) {
-        await repo.createCourse(course);
+        if (course.id != null) {
+          await repo.updateCourse(course);
+        } else {
+          await repo.createCourse(course);
+        }
       } else {
         await repo.saveGuestCourse(course);
       }
@@ -123,6 +127,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
+        if (course.id != null) Navigator.of(context).pop();
       }
     } catch (_) {
       await repo.saveGuestCourse(course);

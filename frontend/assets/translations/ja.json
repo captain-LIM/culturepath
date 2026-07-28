@@ -46,6 +46,7 @@
   "stat_created": "作成",
   "stat_liked": "いいね",
   "logout": "ログアウト",
+  "edit_course": "コース編集",
   "delete_course": "コース削除",
   "delete_confirm": "「{title}」を削除しますか？",
   "cancel": "キャンセル",

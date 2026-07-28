@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
+import '../../course_builder/presentation/course_builder_screen.dart';
 import '../../course_view/presentation/course_view_screen.dart';
 
 final _myCoursesProvider = FutureProvider.autoDispose<List<CourseItem>>(
@@ -67,7 +68,7 @@ class CreatedCoursesListScreen extends ConsumerWidget {
                 itemCount: courses.length,
                 itemBuilder: (_, i) => _CourseTile(
                   course: courses[i],
-                  onDeleted: () => ref.invalidate(_myCoursesProvider),
+                  onChanged: () => ref.invalidate(_myCoursesProvider),
                 ),
               ),
       ),
@@ -77,9 +78,9 @@ class CreatedCoursesListScreen extends ConsumerWidget {
 
 class _CourseTile extends StatefulWidget {
   final CourseItem course;
-  final VoidCallback onDeleted;
+  final VoidCallback onChanged;
 
-  const _CourseTile({required this.course, required this.onDeleted});
+  const _CourseTile({required this.course, required this.onChanged});
 
   @override
   State<_CourseTile> createState() => _CourseTileState();
@@ -87,6 +88,16 @@ class _CourseTile extends StatefulWidget {
 
 class _CourseTileState extends State<_CourseTile> {
   bool _deleting = false;
+
+  Future<void> _edit() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CourseBuilderScreen(initialCourse: widget.course),
+      ),
+    );
+    widget.onChanged();
+  }
 
   Future<void> _delete() async {
     final confirm = await showDialog<bool>(
@@ -112,7 +123,7 @@ class _CourseTileState extends State<_CourseTile> {
     setState(() => _deleting = true);
     try {
       await CourseRepository().deleteCourse(widget.course.id!);
-      widget.onDeleted();
+      widget.onChanged();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -193,19 +204,26 @@ class _CourseTileState extends State<_CourseTile> {
               ),
             ),
           ),
-          _deleting
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red.shade300),
-                  ),
-                )
-              : IconButton(
-                  icon: Icon(Icons.delete_outline, color: Colors.red.shade300, size: 20),
-                  onPressed: _delete,
-                ),
+          if (_deleting)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red.shade300),
+              ),
+            )
+          else ...[
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: AppColors.primary.withValues(alpha: 0.6), size: 20),
+              onPressed: _edit,
+              tooltip: 'edit_course'.tr(),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.red.shade300, size: 20),
+              onPressed: _delete,
+            ),
+          ],
         ],
       ),
     );

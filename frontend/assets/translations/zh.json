@@ -46,6 +46,7 @@
   "stat_created": "创建",
   "stat_liked": "点赞",
   "logout": "退出登录",
+  "edit_course": "编辑路线",
   "delete_course": "删除路线",
   "delete_confirm": "确定删除「{title}」吗？",
   "cancel": "取消",
