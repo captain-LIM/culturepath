@@ -153,4 +153,66 @@ async function chat(messages) {
   };
 }
 
-module.exports = { chat, routeQuery, retrieveContext, buildAugmentedPrompt };
+// ── 코스 AI 편집 ─────────────────────────────────────────────────────────────
+
+const COURSE_EDIT_SYSTEM_PROMPT = `당신은 문화여행 코스를 사용자 요청에 따라 수정하는 AI입니다.
+
+규칙:
+1. 반드시 순수 JSON만 출력 (마크다운 코드 블록 없이)
+2. 코스 구조(tracks 배열, trackNumber, places 배열) 유지
+3. 장소 제거 시 places 배열에서 삭제, 추가 시 모든 필드 포함
+4. 새 장소 contentId는 "new_1", "new_2" 형식 사용
+5. 각 track에 최소 1개 이상 장소 유지
+6. title/description 수정 가능
+
+출력 형식 (이 형식만 출력):
+{"explanation":"변경 사항 설명 1~2문장","course":{...수정된 코스 JSON...}}`;
+
+function mockEditCourse(course, userRequest) {
+  const lower = userRequest.toLowerCase();
+  const modified = JSON.parse(JSON.stringify(course));
+  let explanation = '';
+
+  if (lower.includes('빼') || lower.includes('제거') || lower.includes('삭제') || lower.includes('줄여')) {
+    modified.tracks = modified.tracks.map(t => ({
+      ...t,
+      places: t.places.length > 1 ? t.places.slice(0, -1) : t.places,
+    }));
+    explanation = '각 Day의 마지막 장소를 제거했습니다. (Mock 모드)';
+  } else if (lower.includes('실내')) {
+    modified.description = (modified.description || '') + '\n(실내 위주 코스로 조정됨)';
+    explanation = '실내 위주 코스로 설명을 업데이트했습니다. (Mock 모드)';
+  } else if (lower.includes('아이') || lower.includes('어린이') || lower.includes('가족')) {
+    modified.description = (modified.description || '') + '\n(가족 친화 코스로 조정됨)';
+    explanation = '가족 친화적 코스 설명을 추가했습니다. (Mock 모드)';
+  } else {
+    explanation = `"${userRequest}" 요청을 받았습니다. 실제 AI 수정은 ANTHROPIC_API_KEY 설정 후 이용하세요. (Mock 모드)`;
+  }
+
+  return { course: modified, explanation, mock: true };
+}
+
+async function editCourse(course, userRequest) {
+  if (process.env.USE_MOCK_RAG !== 'false') {
+    return mockEditCourse(course, userRequest);
+  }
+
+  const courseJson = JSON.stringify(course);
+  const userMessage = `현재 코스 JSON:\n${courseJson}\n\n수정 요청: ${userRequest}`;
+
+  const llmResponse = await llmService.generate(
+    COURSE_EDIT_SYSTEM_PROMPT,
+    [{ role: 'user', content: userMessage }],
+    { maxTokens: 2048 },
+  );
+
+  let jsonText = llmResponse.content.trim();
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  const parsed = JSON.parse(jsonText);
+  return { course: parsed.course, explanation: parsed.explanation, mock: false };
+}
+
+module.exports = { chat, editCourse, routeQuery, retrieveContext, buildAugmentedPrompt };

@@ -26,16 +26,16 @@ function getMockResponse(messages) {
  *
  * @returns {Promise<{content: string, mock: boolean, usage?: {inputTokens: number, outputTokens: number}}>}
  */
-async function generate(systemPrompt, messages) {
+async function generate(systemPrompt, messages, options = {}) {
   if (process.env.USE_MOCK_RAG === 'true' || process.env.USE_MOCK_RAG === undefined) {
-    return mockGenerate(systemPrompt, messages);
+    return mockGenerate(systemPrompt, messages, options);
   } else {
-    return anthropicGenerate(systemPrompt, messages);
+    return anthropicGenerate(systemPrompt, messages, options);
   }
 }
 
 // 3-1. systemPrompt를 인자로 받아 RAG Context가 주입됐는지 확인하도록 개선
-async function mockGenerate(systemPrompt, messages) {
+async function mockGenerate(systemPrompt, messages, options = {}) {
   const hasContext = systemPrompt.includes('[참고 자료]');
   const baseResponse = getMockResponse(messages);
 
@@ -47,7 +47,7 @@ async function mockGenerate(systemPrompt, messages) {
   };
 }
 
-async function anthropicGenerate(systemPrompt, messages) {
+async function anthropicGenerate(systemPrompt, messages, options = {}) {
   // 3-2. API 키 유효성 검사
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error(
@@ -58,7 +58,7 @@ async function anthropicGenerate(systemPrompt, messages) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: options.maxTokens || 1024,
     system: systemPrompt,
     messages: messages.map(m => ({ role: m.role, content: m.content })),
   });

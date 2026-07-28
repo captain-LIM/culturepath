@@ -1,5 +1,26 @@
 const ragPipeline = require('../services/ragPipeline');
 
+// POST /ai/edit-course
+async function editCourse(req, res) {
+  const { course, userRequest } = req.body;
+
+  if (!course || !userRequest || typeof userRequest !== 'string') {
+    return res.status(400).json({ message: 'course와 userRequest가 필요합니다.' });
+  }
+
+  try {
+    const result = await ragPipeline.editCourse(course, userRequest);
+    return res.json(result);
+  } catch (error) {
+    console.error('코스 편집 AI 오류:', error.message);
+    const isDev = process.env.NODE_ENV !== 'production';
+    return res.status(500).json({
+      message: '코스 편집 실패',
+      ...(isDev && { error: error.message }),
+    });
+  }
+}
+
 // POST /ai/chat
 async function chat(req, res) {
   const { messages } = req.body;
@@ -31,4 +52,4 @@ async function chat(req, res) {
   }
 }
 
-module.exports = { chat };
+module.exports = { chat, editCourse };

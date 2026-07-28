@@ -6,6 +6,7 @@ import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
 import '../../completion/presentation/completion_sheet.dart';
+import 'course_ai_edit_sheet.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
@@ -151,6 +152,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            icon: const Text('✨', style: TextStyle(fontSize: 18)),
+            tooltip: 'ai_course_edit'.tr(),
+            onPressed: () => showCourseAiEditSheet(context, widget.course),
+          ),
           TextButton.icon(
             onPressed: _completed ? null : _handleComplete,
             icon: Icon(

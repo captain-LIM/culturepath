@@ -105,6 +105,18 @@
   "already_completed": "すでに完走認証済みのコースです。",
   "save_failed": "保存失敗：サーバーを確認してください。",
 
+  "ai_course_edit": "AI編集",
+  "ai_edit_hint": "どのように修正しますか？",
+  "ai_edit_quick_1": "子連れに適した内容に変えて",
+  "ai_edit_quick_2": "屋内施設中心に変更して",
+  "ai_edit_quick_3": "最後の場所を削除して",
+  "ai_edit_quick_4": "もっとシンプルにして",
+  "ai_edit_apply": "このコースで編集",
+  "ai_edit_retry": "もう一度",
+  "ai_edit_loading": "AIがコースを修正中...",
+  "ai_edit_mock_notice": "Mockモード",
+  "ai_edit_error": "修正失敗: {error}",
+
   "ai_title": "AI旅行アシスタント",
   "ai_subtitle": "コース推薦・旅行相談",
   "ai_reset": "会話をリセット",

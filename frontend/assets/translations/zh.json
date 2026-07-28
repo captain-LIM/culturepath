@@ -105,6 +105,18 @@
   "already_completed": "您已经认证过这条路线了。",
   "save_failed": "保存失败：请检查服务器。",
 
+  "ai_course_edit": "AI编辑",
+  "ai_edit_hint": "想怎么修改？",
+  "ai_edit_quick_1": "改成适合带孩子的路线",
+  "ai_edit_quick_2": "改成以室内场所为主",
+  "ai_edit_quick_3": "删除最后一个地点",
+  "ai_edit_quick_4": "让行程更简单",
+  "ai_edit_apply": "用此路线编辑",
+  "ai_edit_retry": "重新请求",
+  "ai_edit_loading": "AI正在修改路线...",
+  "ai_edit_mock_notice": "Mock模式",
+  "ai_edit_error": "修改失败：{error}",
+
   "ai_title": "AI旅行助手",
   "ai_subtitle": "路线推荐·旅行咨询",
   "ai_reset": "重置对话",

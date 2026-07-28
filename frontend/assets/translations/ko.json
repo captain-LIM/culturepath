@@ -105,6 +105,18 @@
   "already_completed": "이미 완주 인증한 코스입니다.",
   "save_failed": "저장 실패: 서버를 확인하세요.",
 
+  "ai_course_edit": "AI 코스 수정",
+  "ai_edit_hint": "어떻게 수정할까요?",
+  "ai_edit_quick_1": "아이랑 가기 좋게 바꿔줘",
+  "ai_edit_quick_2": "실내 위주로 변경해줘",
+  "ai_edit_quick_3": "마지막 장소 빼줘",
+  "ai_edit_quick_4": "더 간단하게 줄여줘",
+  "ai_edit_apply": "이 코스로 편집하기",
+  "ai_edit_retry": "다시 요청",
+  "ai_edit_loading": "AI가 코스를 수정하고 있어요...",
+  "ai_edit_mock_notice": "Mock 모드",
+  "ai_edit_error": "수정 실패: {error}",
+
   "ai_title": "AI 여행 어시스턴트",
   "ai_subtitle": "문화 코스 추천 · 여행 상담",
   "ai_reset": "대화 초기화",
