@@ -140,6 +140,11 @@
   "ai_quick_4": "Best cultural cities for solo travel?",
   "ai_quick_5": "Suggest a modern heritage sightseeing tour",
 
+  "spot_selected": "{n} selected",
+  "build_course": "Build Course",
+  "spot_added": "Added",
+  "spot_add": "Add to Course",
+
   "place_search_title": "Add Place",
   "place_search_hint": "Search by place name or address",
   "place_no_results": "No results found",

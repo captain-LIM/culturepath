@@ -140,6 +140,11 @@
   "ai_quick_4": "适合独自旅行的文化城市是？",
   "ai_quick_5": "推荐近代文化遗产观光路线",
 
+  "spot_selected": "已选{n}处",
+  "build_course": "创建路线",
+  "spot_added": "已添加",
+  "spot_add": "加入路线",
+
   "place_search_title": "添加地点",
   "place_search_hint": "按地点名称或地址搜索",
   "place_no_results": "没有搜索结果",

@@ -140,6 +140,11 @@
   "ai_quick_4": "혼자 여행하기 좋은 문화 도시는?",
   "ai_quick_5": "근대 문화유산 감상 코스 알려줘",
 
+  "spot_selected": "{n}곳 선택됨",
+  "build_course": "코스 만들기",
+  "spot_added": "담기 완료",
+  "spot_add": "코스에 담기",
+
   "place_search_title": "장소 추가",
   "place_search_hint": "장소 이름, 주소로 검색",
   "place_no_results": "검색 결과가 없습니다",

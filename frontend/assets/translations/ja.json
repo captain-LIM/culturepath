@@ -140,6 +140,11 @@
   "ai_quick_4": "一人旅に良い文化都市は？",
   "ai_quick_5": "近代文化遺産を楽しむコースは？",
 
+  "spot_selected": "{n}か所選択済み",
+  "build_course": "コースを作る",
+  "spot_added": "追加済み",
+  "spot_add": "コースに追加",
+
   "place_search_title": "場所を追加",
   "place_search_hint": "場所名・住所で検索",
   "place_no_results": "検索結果がありません",

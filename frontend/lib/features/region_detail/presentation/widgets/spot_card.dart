@@ -1,12 +1,19 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/spot_model.dart';
 
 class SpotCard extends StatelessWidget {
   final SpotItem spot;
+  final bool isSelected;
   final VoidCallback onAdd;
 
-  const SpotCard({super.key, required this.spot, required this.onAdd});
+  const SpotCard({
+    super.key,
+    required this.spot,
+    required this.isSelected,
+    required this.onAdd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +22,9 @@ class SpotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isSelected
+            ? Border.all(color: AppColors.primary, width: 2)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -26,20 +36,31 @@ class SpotCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 이미지 영역 (OpenAPI 연동 후 실제 이미지로 교체)
           Container(
             height: 140,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : AppColors.primary.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.image_outlined, size: 36, color: AppColors.primary.withValues(alpha: 0.3)),
+                  Icon(
+                    Icons.image_outlined,
+                    size: 36,
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
                   const SizedBox(height: 4),
-                  Text('이미지 준비 중', style: TextStyle(fontSize: 11, color: AppColors.primary.withValues(alpha: 0.4))),
+                  Text(
+                    '이미지 준비 중',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -59,7 +80,11 @@ class SpotCard extends StatelessWidget {
                       ),
                       child: Text(
                         spot.category,
-                        style: const TextStyle(fontSize: 11, color: AppColors.accent, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -67,7 +92,11 @@ class SpotCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   spot.title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 _InfoRow(Icons.place_outlined, spot.address),
@@ -78,11 +107,15 @@ class SpotCard extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onAdd,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('코스에 담기'),
+                    icon: Icon(isSelected ? Icons.check : Icons.add, size: 16),
+                    label: Text(isSelected ? 'spot_added'.tr() : 'spot_add'.tr()),
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: isSelected ? Colors.grey.shade200 : null,
+                      foregroundColor: isSelected ? Colors.grey.shade700 : null,
                       minimumSize: const Size.fromHeight(42),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
