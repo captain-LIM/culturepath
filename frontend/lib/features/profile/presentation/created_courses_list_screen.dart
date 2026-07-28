@@ -157,7 +157,7 @@ class _CourseTileState extends State<_CourseTile> {
                 borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => CourseViewScreen(course: c)),
+                  MaterialPageRoute(builder: (_) => CourseViewScreen(course: c, isOwner: true)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),

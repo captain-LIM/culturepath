@@ -12,8 +12,9 @@ import 'widgets/course_track_view.dart';
 
 class CourseViewScreen extends ConsumerStatefulWidget {
   final CourseItem course;
+  final bool isOwner;
 
-  const CourseViewScreen({super.key, required this.course});
+  const CourseViewScreen({super.key, required this.course, this.isOwner = false});
 
   @override
   ConsumerState<CourseViewScreen> createState() => _CourseViewScreenState();
@@ -81,6 +82,13 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: forked)),
     ));
+  }
+
+  Future<void> _handleEdit() async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: widget.course)),
+    ));
+    if (saved == true && mounted) Navigator.of(context).pop();
   }
 
   String? _primaryCulture() {
@@ -152,6 +160,12 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (widget.isOwner)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              tooltip: 'edit_course'.tr(),
+              onPressed: _handleEdit,
+            ),
           IconButton(
             icon: const Text('✨', style: TextStyle(fontSize: 18)),
             tooltip: 'ai_course_edit'.tr(),

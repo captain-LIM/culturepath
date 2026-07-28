@@ -127,7 +127,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        if (course.id != null) Navigator.of(context).pop();
+        if (course.id != null) Navigator.of(context).pop(true);
       }
     } catch (_) {
       await repo.saveGuestCourse(course);
