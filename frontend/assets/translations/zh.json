@@ -105,6 +105,7 @@
   "already_completed": "您已经认证过这条路线了。",
   "save_failed": "保存失败：请检查服务器。",
 
+  "ai_add_to_schedule": "添加到行程",
   "ai_course_edit": "AI编辑",
   "ai_edit_hint": "想怎么修改？",
   "ai_edit_quick_1": "改成适合带孩子的路线",

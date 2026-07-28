@@ -105,6 +105,7 @@
   "already_completed": "すでに完走認証済みのコースです。",
   "save_failed": "保存失敗：サーバーを確認してください。",
 
+  "ai_add_to_schedule": "日程に追加",
   "ai_course_edit": "AI編集",
   "ai_edit_hint": "どのように修正しますか？",
   "ai_edit_quick_1": "子連れに適した内容に変えて",

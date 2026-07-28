@@ -10,14 +10,18 @@ class CourseEditResult {
 }
 
 class AiRepository {
-  Future<String> chat(List<ChatMessage> history) async {
+  Future<({String content, Map<String, dynamic>? suggestedCourse})> chat(
+      List<ChatMessage> history) async {
     final messages = history
         .where((m) => !m.isLoading)
         .map((m) => m.toApiJson())
         .toList();
 
     final res = await apiClient.post('/ai/chat', {'messages': messages});
-    return res.data['content'] as String;
+    return (
+      content: res.data['content'] as String,
+      suggestedCourse: res.data['suggestedCourse'] as Map<String, dynamic>?,
+    );
   }
 
   Future<CourseEditResult> editCourse(CourseItem course, String userRequest) async {

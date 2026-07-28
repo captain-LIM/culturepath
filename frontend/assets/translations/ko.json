@@ -105,6 +105,7 @@
   "already_completed": "이미 완주 인증한 코스입니다.",
   "save_failed": "저장 실패: 서버를 확인하세요.",
 
+  "ai_add_to_schedule": "일정에 추가",
   "ai_course_edit": "AI 코스 수정",
   "ai_edit_hint": "어떻게 수정할까요?",
   "ai_edit_quick_1": "아이랑 가기 좋게 바꿔줘",

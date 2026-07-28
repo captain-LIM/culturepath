@@ -105,6 +105,7 @@
   "already_completed": "You've already completed this course.",
   "save_failed": "Save failed: please check the server.",
 
+  "ai_add_to_schedule": "Add to Course",
   "ai_course_edit": "AI Edit",
   "ai_edit_hint": "How would you like to modify it?",
   "ai_edit_quick_1": "Make it child-friendly",

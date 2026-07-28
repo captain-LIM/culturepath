@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../course_builder/data/course_model.dart';
+import '../../course_builder/presentation/course_builder_screen.dart';
 import '../data/chat_model.dart';
 import '../data/ai_repository.dart';
 import 'widgets/chat_bubble.dart';
@@ -35,7 +37,12 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
       final reply = await AiRepository().chat(state);
       state = [
         ...state.where((m) => !m.isLoading),
-        ChatMessage(role: 'assistant', content: reply, timestamp: DateTime.now()),
+        ChatMessage(
+          role: 'assistant',
+          content: reply.content,
+          timestamp: DateTime.now(),
+          suggestedCourse: reply.suggestedCourse,
+        ),
       ];
     } catch (_) {
       state = [
@@ -104,6 +111,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     _scrollToBottom();
   }
 
+  void _openCourseBuilder(Map<String, dynamic> courseJson) {
+    final course = CourseItem.fromJson(courseJson);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: course)),
+    ));
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
@@ -123,7 +137,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     final notifier = ref.read(_chatProvider.notifier);
 
     // 새 메시지 오면 스크롤
-    ref.listen(_chatProvider, (_, __) => _scrollToBottom());
+    ref.listen(_chatProvider, (_, next) => _scrollToBottom());
 
     final showQuickPrompts = messages.length == 1; // 환영 메시지만 있을 때
 
@@ -185,7 +199,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                     onTap: _send,
                   );
                 }
-                return ChatBubble(message: messages[i]);
+                final msg = messages[i];
+                return ChatBubble(
+                  message: msg,
+                  onAddToCourse: msg.suggestedCourse != null
+                      ? () => _openCourseBuilder(msg.suggestedCourse!)
+                      : null,
+                );
               },
             ),
           ),

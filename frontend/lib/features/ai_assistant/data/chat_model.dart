@@ -3,12 +3,14 @@ class ChatMessage {
   final String content;
   final DateTime timestamp;
   final bool isLoading;
+  final Map<String, dynamic>? suggestedCourse;
 
   const ChatMessage({
     required this.role,
     required this.content,
     required this.timestamp,
     this.isLoading = false,
+    this.suggestedCourse,
   });
 
   Map<String, dynamic> toApiJson() => {'role': role, 'content': content};
