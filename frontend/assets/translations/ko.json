@@ -39,6 +39,7 @@
   "completed_courses": "완주한 코스 🎖️",
   "no_completions": "완주한 코스가 없습니다.",
   "no_created_courses": "만든 코스가 없습니다.",
+  "no_liked_courses": "좋아요한 코스가 없습니다.",
   "course_load_failed": "코스 정보를 불러올 수 없습니다.",
   "created_courses": "내가 만든 코스",
   "stat_completed": "완주",

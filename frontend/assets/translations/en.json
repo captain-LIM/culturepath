@@ -39,6 +39,7 @@
   "completed_courses": "Completed Courses 🎖️",
   "no_completions": "No completed courses yet.",
   "no_created_courses": "No courses created yet.",
+  "no_liked_courses": "No liked courses yet.",
   "course_load_failed": "Could not load course info.",
   "created_courses": "My Courses",
   "stat_completed": "Completed",

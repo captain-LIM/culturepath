@@ -8,6 +8,7 @@ import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
 import 'completions_list_screen.dart';
 import 'created_courses_list_screen.dart';
+import 'liked_courses_list_screen.dart';
 
 final _profileProvider = FutureProvider.autoDispose<UserProfile>(
   (ref) => ProfileRepository().getMyProfile(),
@@ -104,15 +105,22 @@ class _LoggedInView extends ConsumerWidget {
             ],
           ),
         ),
-        data: (profile) => CustomScrollView(
-          slivers: [
-            _buildHeader(profile, context, ref),
-            _buildLanguageSelectorSliver(context),
-            _buildStats(profile.stats, context),
-            _sectionTitle('my_badges'.tr()),
-            _buildBadgeGrid(profile.badges),
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
-          ],
+        data: (profile) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(_profileProvider);
+            await ref.read(_profileProvider.future);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              _buildHeader(profile, context, ref),
+              _buildLanguageSelectorSliver(context),
+              _buildStats(profile.stats, context),
+              _sectionTitle('my_badges'.tr()),
+              _buildBadgeGrid(profile.badges),
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
+          ),
         ),
       ),
     );
@@ -201,7 +209,14 @@ class _LoggedInView extends ConsumerWidget {
               ),
             ),
             _Divider(),
-            _StatItem('stat_liked'.tr(), '${stats.likedCount}개', Icons.favorite, Colors.red),
+            _StatItem(
+              'stat_liked'.tr(), '${stats.likedCount}개',
+              Icons.favorite, Colors.red,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LikedCoursesListScreen()),
+              ),
+            ),
           ],
         ),
       ),

@@ -352,7 +352,7 @@ async function completeCourse(req, res) {
 async function getMyCompletions(req, res) {
   try {
     const [completions] = await pool.query(
-      `SELECT cc.id, cc.course_id as courseId, c.title as courseTitle, cc.note, cc.completed_at as completedAt
+      `SELECT cc.id, cc.course_id as courseId, c.title as courseTitle, cc.note, cc.culture, cc.completed_at as completedAt
        FROM course_completions cc
        LEFT JOIN courses c ON cc.course_id = c.id
        WHERE cc.user_id = ?
@@ -360,6 +360,22 @@ async function getMyCompletions(req, res) {
       [req.user.id]
     );
     return res.json(completions);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '서버 오류' });
+  }
+}
+
+async function getMyLikedCourses(req, res) {
+  const userId = req.user.id;
+  try {
+    const courses = await queryCourses(
+      'EXISTS (SELECT 1 FROM course_likes lf WHERE lf.course_id = c.id AND lf.user_id = ?)',
+      [userId],
+      userId,
+      'c.created_at DESC'
+    );
+    return res.json(courses);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: '서버 오류' });
@@ -422,5 +438,5 @@ async function getMyProfile(req, res) {
 module.exports = {
   getPublicCourses, getFeed, getRanking,
   createCourse, getCourses, getCourse, updateCourse, deleteCourse,
-  forkCourse, toggleLike, completeCourse, getMyCompletions, getMyProfile,
+  forkCourse, toggleLike, completeCourse, getMyCompletions, getMyProfile, getMyLikedCourses,
 };
