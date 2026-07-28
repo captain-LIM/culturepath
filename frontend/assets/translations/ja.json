@@ -92,7 +92,7 @@
 
   "complete_course": "完走認証",
   "completed_badge": "完走済み",
-  "fork_course": "このコースをフォーク",
+  "fork_course": "保存する",
   "forking": "フォーク中...",
   "fork_failed": "フォーク失敗: {error}",
   "login_required_complete": "完走認証にはログインが必要です。",

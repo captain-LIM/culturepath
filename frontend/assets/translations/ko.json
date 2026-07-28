@@ -92,7 +92,7 @@
 
   "complete_course": "완주 인증",
   "completed_badge": "완주됨",
-  "fork_course": "이 코스 포크하기",
+  "fork_course": "저장하기",
   "forking": "포크 중...",
   "fork_failed": "포크 실패: {error}",
   "login_required_complete": "로그인 후 완주 인증을 할 수 있습니다.",

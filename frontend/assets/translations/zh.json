@@ -92,7 +92,7 @@
 
   "complete_course": "完成认证",
   "completed_badge": "已完成",
-  "fork_course": "分叉此路线",
+  "fork_course": "保存路线",
   "forking": "分叉中...",
   "fork_failed": "分叉失败：{error}",
   "login_required_complete": "请登录后进行完成认证。",

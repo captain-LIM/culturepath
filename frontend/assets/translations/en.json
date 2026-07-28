@@ -92,7 +92,7 @@
 
   "complete_course": "Mark Complete",
   "completed_badge": "Completed",
-  "fork_course": "Fork This Course",
+  "fork_course": "Save Course",
   "forking": "Forking...",
   "fork_failed": "Fork failed: {error}",
   "login_required_complete": "Please log in to mark this course as complete.",
