@@ -57,6 +57,7 @@ class CourseItem {
   final int likeCount;
   final int forkCount;
   final bool isLikedByMe;
+  final bool isOwner;
   final int score;
 
   const CourseItem({
@@ -70,6 +71,7 @@ class CourseItem {
     this.likeCount = 0,
     this.forkCount = 0,
     this.isLikedByMe = false,
+    this.isOwner = false,
     this.score = 0,
   });
 
@@ -103,6 +105,7 @@ class CourseItem {
         likeCount: likeCount ?? this.likeCount,
         forkCount: forkCount,
         isLikedByMe: isLikedByMe ?? this.isLikedByMe,
+        isOwner: isOwner,
         score: score,
       );
 
@@ -130,6 +133,7 @@ class CourseItem {
         likeCount: (json['likeCount'] as int?) ?? 0,
         forkCount: (json['forkCount'] as int?) ?? 0,
         isLikedByMe: (json['isLikedByMe'] as bool?) ?? false,
+        isOwner: (json['isOwner'] as bool?) ?? false,
         score: (json['score'] as int?) ?? 0,
       );
 

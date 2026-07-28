@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 // ─── 헬퍼 ────────────────────────────────────────────────────────────────────
 
-function buildCourse(row, trackRows, isLikedByMe = false) {
+function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
   const byTrack = {};
   for (const t of trackRows) {
     if (!byTrack[t.track_number]) byTrack[t.track_number] = [];
@@ -37,6 +37,7 @@ function buildCourse(row, trackRows, isLikedByMe = false) {
     likeCount,
     forkCount,
     isLikedByMe: Boolean(isLikedByMe),
+    isOwner: userId != null && row.user_id === userId,
     score: likeCount * 2 + forkCount,
     totalPlaces,
     createdAt: row.created_at,
@@ -87,7 +88,7 @@ async function queryCourses(whereClause, params, userId = null, orderBy = 'c.cre
     trackMap[t.course_id].push(t);
   }
 
-  return courseRows.map(r => buildCourse(r, trackMap[r.id] || [], likedSet.has(r.id)));
+  return courseRows.map(r => buildCourse(r, trackMap[r.id] || [], likedSet.has(r.id), userId));
 }
 
 async function saveTracks(conn, courseId, tracks) {

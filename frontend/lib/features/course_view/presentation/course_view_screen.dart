@@ -160,7 +160,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          if (widget.isOwner)
+          if (widget.isOwner || course.isOwner)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.white),
               tooltip: 'edit_course'.tr(),
