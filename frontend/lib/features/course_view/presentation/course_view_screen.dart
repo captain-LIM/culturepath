@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
@@ -104,9 +105,26 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       }
       await Share.share(buffer.toString().trim(), subject: course.title);
     } catch (e) {
+      debugPrint('Share error: $e');
+      // 네이티브 공유 실패 시 클립보드 폴백
+      final course = widget.course;
+      final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
+      final fallback = StringBuffer()
+        ..writeln('📍 ${course.title}')
+        ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
+      if (course.description.isNotEmpty) {
+        fallback..writeln()..writeln(course.description);
+      }
+      if (course.id != null) {
+        fallback..writeln()..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
+      }
+      await Clipboard.setData(ClipboardData(text: fallback.toString().trim()));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('공유 실패: $e'), behavior: SnackBarBehavior.floating),
+          const SnackBar(
+            content: Text('링크가 클립보드에 복사되었습니다. 카카오톡에 붙여넣기 하세요!'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
