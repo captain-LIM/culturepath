@@ -1,6 +1,7 @@
 require('dotenv').config();
 const llmService = require('./llmService');
 const { createQdrantClient } = require('./qdrantClient');
+const { getRagIndexConfig } = require('../config/ragIndex');
 
 const MOCK_DOCUMENTS = [
   {
@@ -81,12 +82,14 @@ async function search(query, filter = {}, options = {}) {
   if (llmService.isMockMode(env)) {
     return mockSearch(query, filter);
   }
+  const ragIndexConfig = getRagIndexConfig(env);
   const client = options.qdrantClient || createQdrantClient({
     env,
     fetchImpl: options.fetchImpl,
     embed: text => llmService.createEmbedding(text, {
       ...options,
       client: options.openRouterClient,
+      expectedDimensions: ragIndexConfig.embeddingDimensions,
     }),
   });
   return client.search(query, filter);

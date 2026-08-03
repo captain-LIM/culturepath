@@ -16,7 +16,7 @@ CulturePath(문화여행·따라가방)의 기획과 협업 문서를 관리하�
 | [연관 방문 장소 API 계약](./RELATED_PLACES_CONTRACT.md) | 차량 이동 기반 연관 데이터의 해시 ID 매핑, 호출 상한, 캐시와 공개 응답 계약 |
 | [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md) | 지역 방문자 정규화, 초기 40/30/30 점수, 전용 캐시, fallback과 공개 지역 카드 계약 |
 | [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md) | 인증·호출 제한, OpenRouter·Qdrant 경계, `/ai/transform` 요청·응답과 장소 ID 검증 규칙 |
-
+| [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md) | BGE-M3·버전 컬렉션, 장소 문서·payload, 증분 upsert·명시적 prune와 실행 명령 |
 | [안정화 변경 배포 메모](./STABILIZATION_DEPLOYMENT_NOTES.md) | 기존 MySQL migration, 생성·Fork 멱등성, AI 호출 제한의 배포 조건과 잔여 실환경 검증 |
 
 ## 문서 관리 기준

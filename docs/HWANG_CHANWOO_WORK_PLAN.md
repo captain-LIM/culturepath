@@ -357,9 +357,9 @@ place_query_cache
 
 - [x] `GET /places/search`: 하드코딩 검색을 TourAPI/캐시 검색으로 교체
 - [x] `GET /places/:id`: 공통·소개·이미지 상세 결합
-- [ ] `GET /places/:id/related`: 연관 관광지 데이터 연결
-- [ ] `GET /regions/:code/spots?culture=`: 지역×문화 필터 적용
-- [ ] `GET /cultures/:id/regions`: 장소 밀도·방문자 추이 반영
+- [x] `GET /places/:id/related`: 연관 관광지 데이터 연결
+- [x] `GET /regions/:code/spots?culture=`: 지역×문화 필터 적용
+- [x] `GET /cultures/:id/regions`: 장소 밀도·방문자 추이 반영
 
 각 API는 기존 Flutter 모델을 깨지 않도록 현재 응답과 새 응답의 차이를 먼저 수민님에게 공유한다.
 
@@ -372,7 +372,7 @@ place_query_cache
 - [x] 서비스키 마스킹
 - [x] 동일 프로세스의 동일 요청 중복 호출 방지
 - [ ] 개발 환경에서 과도한 전체 데이터 수집 금지
-- [ ] 배치 수집 중 일부 실패가 전체 작업을 망치지 않도록 재개 지점 기록
+- [x] Qdrant 인덱싱은 완료 batch의 문서 hash를 재사용해 실패 후 재실행 비용 제한
 - [ ] 공공데이터 이미지 이용조건과 출처 표기 필요 여부 확인
 
 ---
@@ -402,8 +402,8 @@ Flutter diff 미리보기 → 적용/취소
 - MySQL에 상세 원본을 저장하고 Qdrant에는 벡터와 검색에 필요한 최소 payload만 저장한다.
 - 개발 중에는 Mock 모드를 유지하되, 실제 검색 검증 단계에서는 Mock 문서를 사용하지 않는다.
 - Qdrant Cloud 무료 클러스터로 시작한다.
-- 무료 Cloud Inference에 적합한 한국어/다국어 임베딩 모델이 있으면 먼저 품질을 평가한다.
-- 무료 모델 품질이 부족할 때만 OpenRouter 임베딩 비용을 사용한다.
+- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하고 R8 고정 평가 세트로 품질을 검증한다.
+- 무료 단일 공급자 모델의 가용성보다 변경분만 재임베딩하는 재현 가능한 저비용 계약을 우선한다.
 - LLM 호출은 모든 화면 조회가 아니라 사용자가 `AI 변형`을 요청했을 때만 수행한다.
 - 동일 입력·동일 코스에 대한 단기 결과 캐시 가능성을 검토한다.
 - 프롬프트에 관광지 전체 JSON을 넣지 않고 검색된 최소 문맥만 전달한다.
@@ -411,13 +411,13 @@ Flutter diff 미리보기 → 적용/취소
 ## B-2. 현재 코드에서 정리할 차이
 
 - [x] `vectorStore.js`의 `supabaseSearch` TODO를 Qdrant 검색 어댑터로 교체
-- [ ] `@qdrant/js-client-rest` 등 확정한 공식 클라이언트 추가
+- [x] 새 의존성 없이 기존 native `fetch` 기반 Qdrant REST 클라이언트를 컬렉션·인덱싱 작업까지 확장
 - [x] Anthropic 직접 SDK를 OpenRouter 호출 방식으로 교체
 - [x] `ANTHROPIC_API_KEY` 중심 설정을 `OPENROUTER_API_KEY` 중심으로 변경
-- [ ] `USE_MOCK_RAG`의 기본 동작과 운영 환경 금지 규칙 정의
+- [x] `USE_MOCK_RAG`는 정확히 `false`일 때만 실서비스를 사용하고 기본 테스트는 강제로 Mock 유지
 - [ ] `/ai/chat`을 유지할지, `/ai/transform`으로 완전히 전환할지 수민님과 합의
-- [ ] 계획서의 핵심인 `/ai/transform`을 우선 구현
-- [ ] 문자열 한 개만 반환하는 Flutter `AiRepository` 계약을 구조화된 모델로 변경하도록 명세 전달
+- [x] 계획서의 핵심인 `/ai/transform` 구현
+- [x] Flutter `AiRepository`와 변경 전·후 미리보기의 구조화 계약 기반 연결
 
 ## B-3. Qdrant 컬렉션 설계
 
@@ -436,21 +436,23 @@ Distance: 임베딩 모델 권장값에 맞춤
 {
   "contentId": "123456",
   "title": "박경리기념관",
-  "region": "통영",
-  "areaCode": "36",
-  "sigunguCode": "17",
+  "regionName": "통영",
+  "areaCode": "tongyeong",
+  "lDongRegnCd": "48",
+  "lDongSignguCd": "220",
   "cultures": ["문학"],
-  "contentTypeId": "12",
-  "indoor": true,
-  "sourceUpdatedAt": "2026-07-20T00:00:00Z",
-  "documentVersion": 1
+  "contentTypeId": "14",
+  "sourceUpdatedAt": "20260801093000",
+  "documentVersion": "culturepath-place-v1",
+  "documentHash": "sha256...",
+  "embeddingModel": "baai/bge-m3"
 }
 ```
 
 ### 설계 규칙
 
 - 임베딩 모델을 바꾸면 벡터 차원과 의미공간이 달라지므로 컬렉션 버전을 올리고 전체 재인덱싱한다.
-- `region`, `areaCode`, `cultures`, `contentTypeId`처럼 필터에 사용할 필드는 payload index를 만든다.
+- `regionName`, `areaCode`, `cultures`, `contentTypeId`처럼 필터에 사용할 필드는 payload index를 만든다.
 - 상세 설명 전체를 payload에 중복 저장할지 여부는 크기와 응답 속도를 측정한 뒤 결정한다.
 - Qdrant 데이터는 삭제돼도 MySQL에서 재생성할 수 있어야 한다.
 - 무료 클러스터 비활성 삭제에 대비해 인덱싱 명령 하나로 복구 가능하게 만든다.
@@ -471,14 +473,14 @@ Distance: 임베딩 모델 권장값에 맞춤
 
 ### 할 일
 
-- [ ] 장소별 검색 문서 템플릿 작성
-- [ ] HTML과 불필요한 공백 제거
-- [ ] 결측값을 사실처럼 채우지 않도록 처리
-- [ ] 문화 카테고리 매핑 결과 포함
+- [x] 장소별 검색 문서 템플릿 작성
+- [x] 상류 TourAPI 정규화 후 제어문자와 불필요한 공백 제거
+- [x] 결측값을 사실처럼 채우지 않도록 처리
+- [x] 문화 카테고리 매핑 결과 포함
 - [ ] 연관 관광지를 검색 문서에 넣을지 별도 payload로 둘지 비교
-- [ ] 너무 긴 상세정보는 의미 단위로 나누되 초기에는 장소당 1~2문서를 우선 검증
-- [ ] 문서 내용 해시를 저장해 변경된 장소만 재임베딩
-- [ ] 삭제·비공개 처리된 장소를 Qdrant에서도 제거
+- [x] 초기 계약은 장소당 문서·벡터 하나로 고정
+- [x] 문서 내용 해시를 저장해 변경된 장소만 재임베딩
+- [x] 전체 성공 후 명시적 `--prune`으로 삭제된 장소를 Qdrant에서도 제거
 
 ## B-5. 인덱싱 파이프라인
 
@@ -486,20 +488,22 @@ Distance: 임베딩 모델 권장값에 맞춤
 
 ```text
 npm run rag:index        # 전체 또는 변경분 인덱싱
-npm run rag:reindex      # 새 컬렉션으로 전체 재구축
-npm run rag:smoke        # 대표 검색 질문 검증
+npm run rag:index -- --dry-run --limit=20
+npm run rag:index -- --prune
 ```
 
 ### 처리 흐름
 
-- [ ] MySQL에서 인덱싱 대상 조회
-- [ ] 검색 문서 생성
-- [ ] 배치 임베딩
-- [ ] Qdrant batch upsert
-- [ ] 성공·실패·스킵 건수 출력
-- [ ] 실패 항목 재시도 가능하게 기록
-- [ ] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
-- [ ] 문서 버전과 임베딩 모델 버전 기록
+- [x] MySQL에서 cursor 기반 인덱싱 대상 조회
+- [x] 검색 문서 생성
+- [x] OpenRouter batch 임베딩
+- [x] Qdrant batch upsert
+- [x] 처리·임베딩·스킵·삭제 건수와 입력 토큰 출력
+- [x] 완료 batch의 hash 비교로 실패 후 안전하게 재실행
+- [x] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
+- [x] 문서 버전과 임베딩 모델 기록
+
+구체적인 실행·삭제 안전장치와 payload는 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## B-6. 검색 전략
 
@@ -932,9 +936,9 @@ User Request: 사용자의 원문
 ## Phase 2 — 캐시·연관·지역점수
 
 - [x] `places_cache`·`place_query_cache` 구현과 fake repository 테스트
-- [ ] 연관 관광지
-- [ ] 방문자 추이
-- [ ] 지역 문화점수 초기 버전
+- [x] 연관 관광지
+- [x] 방문자 추이
+- [x] 지역 문화점수 초기 버전
 - [x] TourAPI stale fallback과 MySQL fail-open
 - [ ] 실제 MySQL 8 통합 검증
 
@@ -954,22 +958,22 @@ User Request: 사용자의 원문
 ## Phase 4 — Qdrant 검색
 
 - [ ] 무료 클러스터
-- [ ] 컬렉션·payload index
-- [ ] 검색 문서 생성
-- [ ] 인덱싱·재인덱싱
-- [ ] 지역·문화 필터 검색
+- [x] 컬렉션·payload index 생성 계약
+- [x] 검색 문서 생성
+- [x] 증분 인덱싱·명시적 prune 명령
+- [x] 지역·문화 필터 검색 어댑터
 - [ ] 검색 평가 세트
 
 **완료 결과:** 사용자의 자연어 조건에 맞는 실제 장소를 안정적으로 찾는다.
 
 ## Phase 5 — AI 코스 변형
 
-- [ ] OpenRouter
-- [ ] 구조화 출력
-- [ ] `/ai/transform`
-- [ ] 후보·ID 검증
-- [ ] 변경 diff
-- [ ] 비용·사용량 기록
+- [x] OpenRouter 어댑터
+- [x] 구조화 출력
+- [x] `/ai/transform`
+- [x] 후보·ID 검증
+- [x] 변경 diff UI 기반
+- [x] 토큰 사용량 기록 기반
 
 **완료 결과:** 실제 코스를 자연어 조건에 맞게 변경하되 존재하지 않는 장소를 만들지 않는다.
 
