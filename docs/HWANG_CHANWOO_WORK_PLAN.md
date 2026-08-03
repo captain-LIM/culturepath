@@ -69,10 +69,10 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 | 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 장소 캐시 구현 중, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 실DB 검증과 연관 관광지 실데이터 연결 |
 | 지역·문화 데이터 | `regionsController.js`의 시드 맵 | 장소 밀도 + 방문자 데이터 + 큐레이션 | 점수 계산용 데이터 공급 |
 | 장소 이미지 | Flutter에서 이미지 준비 중 표시 | `detailImage2` 이미지 노출 | 이미지 필드와 fallback 규칙 정의 |
-| 벡터 검색 | Mock 문서 + Supabase TODO | Qdrant Cloud | Qdrant 클라이언트와 인덱싱 구현 |
-| LLM | Anthropic SDK 또는 Mock | OpenRouter | 호출부와 환경변수 교체 |
-| AI API | `POST /ai/chat` | `POST /ai/transform` | 구조화된 코스 변형 계약 구현 |
-| AI 화면 | 일반 채팅 문자열 표시 | 코스 변경 diff 미리보기 | 새 UX·응답 모델 설계 |
+| 벡터 검색 | Mock 문서 + Qdrant 검색 어댑터, 컬렉션 미적재 | Qdrant Cloud | 컬렉션 생성·인덱싱·평가·live 검증 |
+| LLM | OpenRouter 호출 어댑터 또는 Mock | OpenRouter | 모델 선택·비용 정책·제한 live 검증 |
+| AI API | 인증·호출 제한·장소 ID 검증이 있는 `POST /ai/transform`, 이전 경로 호환 | 구조화된 코스 변형 | 실제 Qdrant 후보와 OpenRouter 모델 품질 검증 |
+| AI 화면 | 변경 diff 미리보기와 타인 코스 적용 전 Fork | 안전한 코스 변경 UX | 선택 적용·원본 복구·사용량 안내 고도화 |
 | DB | `places_cache`·`place_query_cache` 스키마와 저장소 구현, AI 이력 테이블 없음 | 캐시·세션·메시지 저장 | 수민님과 스키마 공유 후 MySQL 8 통합 검증 |
 | 디자인 | 기본 컬러·폰트와 화면 구현 존재 | 통일된 Figma 원본·상태 명세 | 기존 UI 감사 후 개선안 전달 |
 
@@ -410,10 +410,10 @@ Flutter diff 미리보기 → 적용/취소
 
 ## B-2. 현재 코드에서 정리할 차이
 
-- [ ] `vectorStore.js`의 `supabaseSearch` TODO를 Qdrant 구현으로 교체
+- [x] `vectorStore.js`의 `supabaseSearch` TODO를 Qdrant 검색 어댑터로 교체
 - [ ] `@qdrant/js-client-rest` 등 확정한 공식 클라이언트 추가
-- [ ] Anthropic 직접 SDK를 OpenRouter 호출 방식으로 교체하거나 호환 계층 작성
-- [ ] `ANTHROPIC_API_KEY` 중심 설정을 `OPENROUTER_API_KEY` 중심으로 변경
+- [x] Anthropic 직접 SDK를 OpenRouter 호출 방식으로 교체
+- [x] `ANTHROPIC_API_KEY` 중심 설정을 `OPENROUTER_API_KEY` 중심으로 변경
 - [ ] `USE_MOCK_RAG`의 기본 동작과 운영 환경 금지 규칙 정의
 - [ ] `/ai/chat`을 유지할지, `/ai/transform`으로 완전히 전환할지 수민님과 합의
 - [ ] 계획서의 핵심인 `/ai/transform`을 우선 구현
@@ -558,12 +558,12 @@ npm run rag:smoke        # 대표 검색 질문 검증
 
 ### 검증 규칙
 
-- [ ] `request` 빈 문자열 금지 및 길이 제한
-- [ ] `courseId`와 현재 사용자 권한 확인은 기존 인증 계층과 연결
+- [x] `request` 빈 문자열 금지 및 길이 제한
+- [x] `courseId`로 서버 코스를 다시 조회하고 공개 여부·현재 사용자 권한 확인
 - [ ] `currentTracks`의 `contentId`가 실제 장소인지 검증
 - [ ] 허용된 제약 값과 자유 텍스트의 경계 정의
-- [ ] 최대 장소 수와 최대 대화·요청 크기 제한
-- [ ] 프롬프트 명령 삽입을 데이터와 지시문 분리로 완화
+- [x] 최대 장소 수와 최대 대화·요청 크기 제한
+- [x] 프롬프트 명령 삽입을 데이터와 지시문 분리로 완화
 
 ## B-8. `/ai/transform` 응답 계약
 
@@ -618,15 +618,15 @@ npm run rag:smoke        # 대표 검색 질문 검증
 
 ### 할 일
 
-- [ ] `OPENROUTER_API_KEY` 환경변수 추가
-- [ ] 개발·운영 모델명을 환경변수로 분리
-- [ ] 타임아웃과 최대 출력 토큰 설정
+- [x] `OPENROUTER_API_KEY` 환경변수 추가
+- [x] 개발·운영 모델명을 환경변수로 분리
+- [x] 타임아웃과 최대 출력 토큰 설정
 - [ ] 구조화된 출력 또는 JSON Schema 지원 모델 우선 검토
-- [ ] 모델 응답 JSON 파싱 실패 처리
-- [ ] 429, 5xx, 타임아웃 처리
-- [ ] 토큰 사용량과 요청별 예상 비용 기록
+- [x] 모델 응답 JSON 파싱 실패 처리
+- [x] 429, 5xx, 타임아웃을 내부 오류로 정규화
+- [ ] 토큰 사용량 기록은 구현, 요청별 예상 비용 계산은 모델 확정 후 추가
 - [ ] 운영 환경에서 Mock 응답이 노출되지 않도록 검증
-- [ ] 모델 교체 시 비즈니스 로직을 수정하지 않도록 `llmService` 인터페이스 유지
+- [x] 모델 교체 시 비즈니스 로직을 수정하지 않도록 `llmService` 인터페이스 유지
 
 ### 프롬프트 구성
 

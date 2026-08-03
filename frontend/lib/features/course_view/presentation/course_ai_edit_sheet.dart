@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ai_assistant/data/ai_repository.dart';
 import '../../course_builder/data/course_model.dart';
+import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/data/place_item.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
 
@@ -15,18 +16,23 @@ class _DiffItem {
   const _DiffItem(this.place, this.status);
 }
 
-Future<void> showCourseAiEditSheet(BuildContext context, CourseItem course) {
+Future<void> showCourseAiEditSheet(
+  BuildContext context,
+  CourseItem course, {
+  required bool isOwner,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _CourseAiEditSheet(course: course),
+    builder: (_) => _CourseAiEditSheet(course: course, isOwner: isOwner),
   );
 }
 
 class _CourseAiEditSheet extends StatefulWidget {
   final CourseItem course;
-  const _CourseAiEditSheet({required this.course});
+  final bool isOwner;
+  const _CourseAiEditSheet({required this.course, required this.isOwner});
 
   @override
   State<_CourseAiEditSheet> createState() => _CourseAiEditSheetState();
@@ -35,6 +41,7 @@ class _CourseAiEditSheet extends StatefulWidget {
 class _CourseAiEditSheetState extends State<_CourseAiEditSheet> {
   final _ctrl = TextEditingController();
   bool _loading = false;
+  bool _applying = false;
   CourseItem? _modified;
   String? _explanation;
   bool _isMock = false;
@@ -62,8 +69,8 @@ class _CourseAiEditSheetState extends State<_CourseAiEditSheet> {
           _isMock = result.mock;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+    } catch (_) {
+      if (mounted) setState(() => _error = 'ai_edit_error_generic'.tr());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -81,13 +88,39 @@ class _CourseAiEditSheetState extends State<_CourseAiEditSheet> {
     ];
   }
 
-  void _applyAndEdit() {
-    if (_modified == null) return;
-    final modified = _modified!;
-    Navigator.of(context).pop();
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: modified)),
-    ));
+  Future<void> _applyAndEdit() async {
+    if (_modified == null || _applying) return;
+    setState(() => _applying = true);
+    try {
+      var editable = _modified!;
+      if (!widget.isOwner && widget.course.id != null) {
+        final forked = await CourseRepository().forkCourse(widget.course.id!);
+        editable = CourseItem(
+          id: forked.id,
+          title: editable.title,
+          description: editable.description,
+          tracks: editable.tracks,
+          isPublic: false,
+          forkedFrom: forked.forkedFrom,
+          authorId: forked.authorId,
+          isOwner: true,
+        );
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ProviderScope(
+          child: CourseBuilderScreen(initialCourse: editable),
+        ),
+      ));
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _applying = false;
+          _error = 'ai_edit_apply_failed'.tr();
+        });
+      }
+    }
   }
 
   @override
@@ -310,20 +343,29 @@ class _CourseAiEditSheetState extends State<_CourseAiEditSheet> {
             Expanded(
               flex: 2,
               child: ElevatedButton(
-                onPressed: _applyAndEdit,
+                onPressed: _applying ? null : _applyAndEdit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: Text(
-                  'ai_edit_apply'.tr(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
+                child: _applying
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'ai_edit_apply'.tr(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
               ),
             ),
           ],

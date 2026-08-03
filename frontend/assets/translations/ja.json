@@ -96,6 +96,8 @@
   "course_saved": "コースを保存しました。",
   "course_saved_guest": "一時保存されました。（ゲスト）",
   "course_saved_offline": "オフライン保存されました。",
+  "course_save_uncertain": "応答が途切れ、保存結果を確認できません。再試行する前にマイコースを確認してください。",
+  "course_save_failed": "コースを保存できませんでした。しばらくしてからもう一度お試しください。",
   "forked_from": "フォーク元：「{title}」 by {author}",
   "place_count": "{n}か所",
   "fork_suffix": "（フォーク）",
@@ -107,6 +109,8 @@
   "forking": "フォーク中...",
   "fork_failed": "フォーク失敗: {error}",
   "login_required_complete": "完走認証にはログインが必要です。",
+  "login_required_ai": "AIコース編集を利用するにはログインしてください。",
+  "save_before_ai": "AIで編集する前にコースを保存してください。",
   "completion_saved": "完走認証が記録されました！ 🎖️",
 
   "completion_stamp": "完走！",
@@ -128,6 +132,8 @@
   "ai_edit_loading": "AIがコースを修正中...",
   "ai_edit_mock_notice": "Mockモード",
   "ai_edit_error": "修正失敗: {error}",
+  "ai_edit_error_generic": "コースを修正できませんでした。しばらくしてからもう一度お試しください。",
+  "ai_edit_apply_failed": "コースをアカウントにコピーできませんでした。もう一度お試しください。",
 
   "ai_title": "AI旅行アシスタント",
   "ai_subtitle": "コース推薦・旅行相談",

@@ -114,6 +114,29 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     if (saved == true && mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _handleAiEdit() async {
+    if (widget.course.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('save_before_ai'.tr())),
+      );
+      return;
+    }
+    if (!await CourseRepository().isLoggedIn()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('login_required_ai'.tr())),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    await showCourseAiEditSheet(
+      context,
+      widget.course,
+      isOwner: widget.isOwner || widget.course.isOwner,
+    );
+  }
+
   String? _primaryCulture() {
     final counts = <String, int>{};
     for (final track in widget.course.tracks) {
@@ -197,7 +220,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           IconButton(
             icon: const Text('✨', style: TextStyle(fontSize: 18)),
             tooltip: 'ai_course_edit'.tr(),
-            onPressed: () => showCourseAiEditSheet(context, widget.course),
+            onPressed: _handleAiEdit,
           ),
           TextButton.icon(
             onPressed: _completed ? null : _handleComplete,

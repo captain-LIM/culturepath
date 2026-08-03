@@ -96,6 +96,8 @@
   "course_saved": "Course saved.",
   "course_saved_guest": "Saved temporarily. (Guest)",
   "course_saved_offline": "Saved offline.",
+  "course_save_uncertain": "The connection ended before we could confirm the save. Check My Courses before retrying.",
+  "course_save_failed": "Could not save the course. Please try again.",
   "forked_from": "Forked: \"{title}\"  by {author}",
   "place_count": "{n} places",
   "fork_suffix": "(Fork)",
@@ -107,6 +109,8 @@
   "forking": "Forking...",
   "fork_failed": "Fork failed: {error}",
   "login_required_complete": "Please log in to mark this course as complete.",
+  "login_required_ai": "Please log in to edit a course with AI.",
+  "save_before_ai": "Please save the course before editing it with AI.",
   "completion_saved": "Completion recorded! 🎖️",
 
   "completion_stamp": "Done!",
@@ -128,6 +132,8 @@
   "ai_edit_loading": "AI is modifying the course...",
   "ai_edit_mock_notice": "Mock mode",
   "ai_edit_error": "Modification failed: {error}",
+  "ai_edit_error_generic": "Could not modify the course. Please try again.",
+  "ai_edit_apply_failed": "Could not copy this course to your account. Please try again.",
 
   "ai_title": "AI Travel Assistant",
   "ai_subtitle": "Course recommendations · Travel advice",

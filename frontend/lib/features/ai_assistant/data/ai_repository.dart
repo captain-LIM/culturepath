@@ -25,9 +25,10 @@ class AiRepository {
   }
 
   Future<CourseEditResult> editCourse(CourseItem course, String userRequest) async {
-    final res = await apiClient.post('/ai/edit-course', {
-      'course': course.toJson(),
-      'userRequest': userRequest,
+    final res = await apiClient.post('/ai/transform', {
+      'courseId': course.id,
+      'request': userRequest,
+      'constraints': <String, dynamic>{},
     });
     return CourseEditResult(
       course: CourseItem.fromJson(res.data['course'] as Map<String, dynamic>),

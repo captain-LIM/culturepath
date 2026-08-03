@@ -96,6 +96,8 @@
   "course_saved": "코스가 저장되었습니다.",
   "course_saved_guest": "임시 저장되었습니다. (게스트)",
   "course_saved_offline": "오프라인 저장되었습니다.",
+  "course_save_uncertain": "서버 응답이 끊겨 저장 여부를 확인할 수 없습니다. 내 코스 목록을 확인한 뒤 다시 시도해주세요.",
+  "course_save_failed": "코스를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.",
   "forked_from": "포크됨: \"{title}\"  by {author}",
   "place_count": "{n}곳",
   "fork_suffix": "(포크)",
@@ -107,6 +109,8 @@
   "forking": "포크 중...",
   "fork_failed": "포크 실패: {error}",
   "login_required_complete": "로그인 후 완주 인증을 할 수 있습니다.",
+  "login_required_ai": "AI 코스 편집은 로그인 후 이용할 수 있습니다.",
+  "save_before_ai": "코스를 먼저 저장한 후 AI 편집을 이용해주세요.",
   "completion_saved": "완주 인증이 기록되었습니다! 🎖️",
 
   "completion_stamp": "완주!",
@@ -128,6 +132,8 @@
   "ai_edit_loading": "AI가 코스를 수정하고 있어요...",
   "ai_edit_mock_notice": "Mock 모드",
   "ai_edit_error": "수정 실패: {error}",
+  "ai_edit_error_generic": "코스를 수정하지 못했습니다. 잠시 후 다시 시도해주세요.",
+  "ai_edit_apply_failed": "내 코스로 복제하지 못했습니다. 다시 시도해주세요.",
 
   "ai_title": "AI 여행 어시스턴트",
   "ai_subtitle": "문화 코스 추천 · 여행 상담",

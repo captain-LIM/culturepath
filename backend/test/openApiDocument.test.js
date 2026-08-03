@@ -64,3 +64,47 @@ test('documents the backward-compatible DataLab region score contract', () => {
   assert.ok(regions.responses[404]);
   assert.ok(regions.responses[500]);
 });
+
+test('documents the authenticated structured AI transform contract', () => {
+  const transform = openApiDocument.paths['/ai/transform'].post;
+  assert.deepEqual(transform.security, [{ bearerAuth: [] }]);
+  assert.equal(
+    transform.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/CourseTransformRequest',
+  );
+  assert.equal(
+    transform.responses[200].content['application/json'].schema.$ref,
+    '#/components/schemas/CourseTransformResponse',
+  );
+  assert.ok(transform.responses[400]);
+  assert.ok(transform.responses[401]);
+  assert.ok(transform.responses[403]);
+  assert.ok(transform.responses[404]);
+  assert.ok(transform.responses[429]);
+  assert.ok(transform.responses[500]);
+  assert.ok(transform.responses[502]);
+  assert.ok(transform.responses[503]);
+  assert.ok(transform.responses[504]);
+
+  const chat = openApiDocument.paths['/ai/chat'].post;
+  assert.deepEqual(chat.security, [{ bearerAuth: [] }]);
+  assert.ok(chat.responses[401]);
+  assert.ok(chat.responses[429]);
+
+  const compatibilityAlias = openApiDocument.paths['/ai/edit-course'].post;
+  assert.equal(compatibilityAlias.deprecated, true);
+  assert.deepEqual(compatibilityAlias.security, [{ bearerAuth: [] }]);
+  assert.deepEqual(
+    compatibilityAlias.requestBody.content['application/json'].schema.oneOf,
+    [
+      { $ref: '#/components/schemas/CourseTransformRequest' },
+      { $ref: '#/components/schemas/LegacyCourseTransformRequest' },
+    ],
+  );
+  const legacy = openApiDocument.components.schemas.LegacyCourseTransformRequest;
+  assert.deepEqual(legacy.properties.course.allOf[1].required, ['id']);
+  assert.equal(
+    legacy.properties.constraints.$ref,
+    '#/components/schemas/TransformConstraints',
+  );
+});

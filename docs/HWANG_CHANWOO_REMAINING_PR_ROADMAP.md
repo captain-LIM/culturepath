@@ -2,7 +2,7 @@
 
 > **문서 소유자:** 황찬우
 >
-> **최종 갱신:** 2026-07-24
+> **최종 갱신:** 2026-08-03
 >
 > **담당 범위:** 외부 API 연동 · RAG/AI Backend · Frontend UI/UX Design 및 API 연결
 >
@@ -74,7 +74,7 @@ backend/src/utils/publicDataValidation.js
 - `regionsController.js`의 문화별 지역 목록은 R4 브랜치에서 DataLab 점수 연결을 구현 중이며, 지역별 장소 목록은 아직 시드 상태다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐으며, Qdrant, OpenRouter와 구조화된 `/ai/transform`은 아직 완성되지 않았다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. 2026-08-03 안정화 브랜치에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했지만 실제 컬렉션 인덱싱·검색 평가·유료 smoke test는 아직 완료되지 않았다.
 - Flutter는 현재 공개 API의 기존 응답 형태와 Mock/시드 데이터에 의존하는 부분이 있다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
@@ -96,10 +96,10 @@ backend/src/utils/publicDataValidation.js
 | R4 | 구현·검증·독립 리뷰 완료 — `agent/datalab-region-score` | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
 | R5 | 대기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
 | R6 | 대기 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
-| R7 | 대기 | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
-| R8 | 대기 | RAG 검색·필터·평가 기반 | R7 | 제한적 |
-| R9 | 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
-| R10 | 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
+| R7 | 어댑터 기반 구현·인덱싱 대기 | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
+| R8 | 검색·필터 기반 구현·평가 대기 | RAG 검색·필터·평가 기반 | R7 | 제한적 |
+| R9 | 구조화 API 기반 구현·live 검증 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
+| R10 | 기존 diff UI 연결·품질 마감 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
 
 기본 원칙은 한 번에 하나의 코드 PR만 구현하는 것이다. R5 디자인은 코드 변경과 충돌하지 않는 범위에서 병렬 진행할 수 있지만, 저장소 변경은 별도 PR로 제출한다.
 

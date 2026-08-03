@@ -1,4 +1,6 @@
 require('dotenv').config();
+const llmService = require('./llmService');
+const { createQdrantClient } = require('./qdrantClient');
 
 const MOCK_DOCUMENTS = [
   {
@@ -74,12 +76,20 @@ const MOCK_DOCUMENTS = [
  *
  * @returns {Promise<Array<{id: string, content: string, metadata: Object, score: number}>>}
  */
-async function search(query, filter = {}) {
-  if (process.env.USE_MOCK_RAG === 'true' || process.env.USE_MOCK_RAG === undefined) {
+async function search(query, filter = {}, options = {}) {
+  const env = options.env || process.env;
+  if (llmService.isMockMode(env)) {
     return mockSearch(query, filter);
-  } else {
-    return supabaseSearch(query, filter);
   }
+  const client = options.qdrantClient || createQdrantClient({
+    env,
+    fetchImpl: options.fetchImpl,
+    embed: text => llmService.createEmbedding(text, {
+      ...options,
+      client: options.openRouterClient,
+    }),
+  });
+  return client.search(query, filter);
 }
 
 async function mockSearch(query, filter) {
@@ -125,23 +135,6 @@ async function mockSearch(query, filter) {
   
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, topK);
-}
-
-/**
- * 실제 Supabase pgvector 연동 시 사용할 함수.
- * 현재는 미구현 상태이므로 에러를 throw합니다.
- */
-async function supabaseSearch(query, filter) {
-  // TODO: Supabase 계정 생성 후 구현
-  // const { createClient } = require('@supabase/supabase-js');
-  // const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-  // const embedding = await getEmbedding(query);  // 임베딩 생성
-  // const { data, error } = await supabase.rpc('match_documents', {
-  //   query_embedding: embedding,
-  //   match_count: filter.topK || 5,
-  //   filter_metadata: { category: filter.category, region: filter.region },
-  // });
-  throw new Error('Supabase 연동이 아직 설정되지 않았습니다. USE_MOCK_RAG=true로 설정하세요.');
 }
 
 module.exports = { search };

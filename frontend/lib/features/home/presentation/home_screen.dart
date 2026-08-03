@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ai_assistant/presentation/ai_assistant_screen.dart';
+import '../../course_builder/data/course_repository.dart';
 import 'search_delegate.dart';
 import 'widgets/culture_grid.dart';
 import 'widgets/season_banner.dart';
@@ -78,12 +79,23 @@ class _AiChatButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const ProviderScope(child: AiAssistantScreen()),
-        ),
-      ),
+      onTap: () async {
+        if (!await CourseRepository().isLoggedIn()) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('login_required_ai'.tr())),
+            );
+          }
+          return;
+        }
+        if (!context.mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProviderScope(child: AiAssistantScreen()),
+          ),
+        );
+      },
       child: Container(
         width: 38,
         height: 38,
