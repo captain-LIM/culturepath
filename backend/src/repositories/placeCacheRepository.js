@@ -76,6 +76,29 @@ function summaryValues(place, cachedAt, expiresAt) {
 function createPlaceCacheRepository(options = {}) {
   const database = options.pool || pool;
 
+  async function listPlacesPage({ afterContentId = null, limit = 200 } = {}) {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+      throw new TypeError('장소 페이지 limit은 1 이상 1000 이하의 정수여야 합니다.');
+    }
+    const hasCursor = afterContentId !== null && afterContentId !== undefined &&
+      String(afterContentId) !== '';
+    const [rows] = await database.query(
+      `SELECT ${PLACE_COLUMNS}
+         FROM places_cache
+        ${hasCursor ? 'WHERE content_id > ?' : ''}
+        ORDER BY content_id ASC
+        LIMIT ?`,
+      hasCursor ? [String(afterContentId), limit] : [limit],
+    );
+    const items = rows.map(mapPlaceRow);
+    return {
+      items,
+      nextCursor: rows.length === limit
+        ? String(rows[rows.length - 1].content_id)
+        : null,
+    };
+  }
+
   async function findPlace(contentId) {
     const [rows] = await database.query(
       `SELECT ${PLACE_COLUMNS}
@@ -263,6 +286,7 @@ function createPlaceCacheRepository(options = {}) {
     findExistingPlaces,
     findPlaces,
     findQuery,
+    listPlacesPage,
     saveDetail,
     saveQuery,
   });
@@ -283,6 +307,7 @@ module.exports = {
   findExistingPlaces: contentIds => getDefaultRepository().findExistingPlaces(contentIds),
   findPlaces: contentIds => getDefaultRepository().findPlaces(contentIds),
   findQuery: cacheKey => getDefaultRepository().findQuery(cacheKey),
+  listPlacesPage: options => getDefaultRepository().listPlacesPage(options),
   saveDetail: input => getDefaultRepository().saveDetail(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),
 };

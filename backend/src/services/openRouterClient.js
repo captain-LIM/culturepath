@@ -1,5 +1,7 @@
 'use strict';
 
+const { DEFAULTS: RAG_INDEX_DEFAULTS } = require('../config/ragIndex');
+
 class AiProviderError extends Error {
   constructor(message, options = {}) {
     super(message);
@@ -112,25 +114,65 @@ function createOpenRouterClient(options = {}) {
     };
   }
 
-  async function embed(input) {
-    const model = env.OPENROUTER_EMBEDDING_MODEL;
-    if (!model) {
-      throw new AiProviderError('OPENROUTER_EMBEDDING_MODEL이 설정되지 않았습니다.', {
-        code: 'OPENROUTER_NOT_CONFIGURED',
-      });
+  async function embedMany(inputs, requestOptions = {}) {
+    if (!Array.isArray(inputs) || inputs.length === 0 ||
+        inputs.some(input => typeof input !== 'string' || !input.trim())) {
+      throw new TypeError('OpenRouter batch 임베딩 입력은 비어 있지 않은 문자열 배열이어야 합니다.');
     }
-    const payload = await post('/embeddings', { model, input });
-    const embedding = payload?.data?.[0]?.embedding;
-    if (!Array.isArray(embedding) || embedding.length === 0 ||
-        embedding.some(value => !Number.isFinite(value))) {
-      throw new AiProviderError('OpenRouter 임베딩 응답이 올바르지 않습니다.', {
+    const model = String(
+      env.OPENROUTER_EMBEDDING_MODEL || RAG_INDEX_DEFAULTS.embeddingModel,
+    ).trim();
+    const payload = await post('/embeddings', {
+      model,
+      input: inputs,
+      encoding_format: 'float',
+    });
+    if (!Array.isArray(payload?.data) || payload.data.length !== inputs.length) {
+      throw new AiProviderError('OpenRouter 임베딩 응답 개수가 올바르지 않습니다.', {
         code: 'OPENROUTER_INVALID_RESPONSE',
       });
     }
-    return embedding;
+
+    const embeddings = new Array(inputs.length);
+    for (let position = 0; position < payload.data.length; position += 1) {
+      const item = payload.data[position];
+      const index = Number.isSafeInteger(item?.index) ? item.index : position;
+      const embedding = item?.embedding;
+      if (index < 0 || index >= inputs.length || embeddings[index] ||
+          !Array.isArray(embedding) || embedding.length === 0 ||
+          embedding.some(value => !Number.isFinite(value))) {
+        throw new AiProviderError('OpenRouter 임베딩 응답이 올바르지 않습니다.', {
+          code: 'OPENROUTER_INVALID_RESPONSE',
+        });
+      }
+      if (requestOptions.expectedDimensions &&
+          embedding.length !== requestOptions.expectedDimensions) {
+        throw new AiProviderError('OpenRouter 임베딩 벡터 차원이 올바르지 않습니다.', {
+          code: 'OPENROUTER_DIMENSION_MISMATCH',
+        });
+      }
+      embeddings[index] = embedding;
+    }
+    if (embeddings.includes(undefined)) {
+      throw new AiProviderError('OpenRouter 임베딩 응답 순서가 올바르지 않습니다.', {
+        code: 'OPENROUTER_INVALID_RESPONSE',
+      });
+    }
+    return {
+      embeddings,
+      model: payload.model || model,
+      usage: {
+        inputTokens: Number(payload.usage?.prompt_tokens || payload.usage?.total_tokens || 0),
+      },
+    };
   }
 
-  return Object.freeze({ embed, generate });
+  async function embed(input, requestOptions = {}) {
+    const result = await embedMany([input], requestOptions);
+    return result.embeddings[0];
+  }
+
+  return Object.freeze({ embed, embedMany, generate });
 }
 
 module.exports = { AiProviderError, createOpenRouterClient };

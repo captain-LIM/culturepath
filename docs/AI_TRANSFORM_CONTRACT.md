@@ -81,23 +81,31 @@ LLM은 장소의 전체 객체를 결정하지 않는다. LLM은 허용된 `cont
 {
   "contentId": "123456",
   "title": "박경리기념관",
-  "overview": "장소 설명",
+  "content": "장소명: 박경리기념관\n문화: 문학\n지역: 통영...",
   "address": "통영시 산양읍",
+  "areaCode": "tongyeong",
   "regionName": "통영",
+  "lDongRegnCd": "48",
+  "lDongSignguCd": "220",
   "cultures": ["문학"],
   "category": "문학",
   "tel": "",
-  "openTime": "09:00~18:00"
+  "openTime": "09:00~18:00",
+  "documentVersion": "culturepath-place-v1",
+  "documentHash": "sha256...",
+  "embeddingModel": "baai/bge-m3"
 }
 ```
 
 - 문화 필터 필드: `cultures`
 - 지역 필터 필드: `regionName`
 - 컬렉션 기본명: `culturepath_places_v1`
-- 임베딩 차원과 distance는 선택한 `OPENROUTER_EMBEDDING_MODEL`에 맞춰 R7 인덱싱 단계에서 확정한다.
+- 임베딩 모델: `baai/bge-m3`
+- 벡터 차원과 distance: `1024`, `Cosine`
+- 생성·갱신·삭제 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## 환경변수와 검증 상태
 
 변수명은 `backend/.env.example`을 따른다. 키 원문은 문서, 로그, 오류 응답에 남기지 않는다.
 
-현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter와 Qdrant 요청 계약, 필터, 인증키 비노출, 입력 제한, 호출 제한, 허용되지 않은 장소 ID 거부를 검증한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke test가 필요하다.
+현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter batch 임베딩, Qdrant 컬렉션·payload index·증분 upsert·명시적 prune, 검색 필터, 인증키 비노출, 입력 제한, 호출 제한과 허용되지 않은 장소 ID 거부를 검증한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke test가 필요하다.

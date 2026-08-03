@@ -71,6 +71,43 @@ test('loads cached query items in the original contentId order', async () => {
   assert.deepEqual(queries[1].params, ['2', '1']);
 });
 
+test('paginates cached places with a stable contentId cursor', async () => {
+  const captured = [];
+  const pool = {
+    async query(sql, params) {
+      captured.push({ sql, params });
+      return [[
+        {
+          content_id: '10',
+          summary_json: place('10'),
+          detail_json: null,
+          summary_cached_at: new Date(1_000),
+          summary_expires_at: new Date(2_000),
+          detail_cached_at: null,
+          detail_expires_at: null,
+        },
+        {
+          content_id: '11',
+          summary_json: place('11'),
+          detail_json: null,
+          summary_cached_at: new Date(1_000),
+          summary_expires_at: new Date(2_000),
+          detail_cached_at: null,
+          detail_expires_at: null,
+        },
+      ]];
+    },
+  };
+  const page = await createPlaceCacheRepository({ pool })
+    .listPlacesPage({ afterContentId: '9', limit: 2 });
+
+  assert.deepEqual(page.items.map(item => item.contentId), ['10', '11']);
+  assert.equal(page.nextCursor, '11');
+  assert.match(captured[0].sql, /WHERE content_id > \?/);
+  assert.match(captured[0].sql, /ORDER BY content_id ASC/);
+  assert.deepEqual(captured[0].params, ['9', 2]);
+});
+
 test('treats a query with a missing place row as a cache miss', async () => {
   let call = 0;
   const pool = {

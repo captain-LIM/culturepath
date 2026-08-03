@@ -45,8 +45,10 @@
 | PR #6 | 머지 완료 | TourAPI 상세조회 조립, 공개 `/places/search`·`/places/:id` 실데이터 연결, Swagger/OpenAPI와 오류 계약 |
 | PR #7 | 머지 완료 | MySQL 장소·검색 2단계 캐시, 24시간 TTL·7일 stale, DB fail-open, single-flight와 `X-Cache-Status` |
 | PR #8 | 머지 완료 | 연관 관광지 실데이터 연결, 엄격한 제목·법정동 매핑, 호출 상한, R2 캐시 재사용과 공개 계약 |
+| PR #9 | 머지 완료 | DataLab 날짜 검증·캐시·fail-open과 문화별 지역 40/30/30 점수, `X-Region-Data-Status` |
+| PR #10 | 머지 완료 | 팀원 변경 안정화, MySQL migration, 코스 생성·Fork 멱등성, Qdrant/OpenRouter 어댑터와 구조화 `/ai/transform` 기반 |
 
-PR #8 머지 직후 기준으로 백엔드 테스트는 91개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
+PR #10 머지 기준으로 백엔드 테스트는 149개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
 
 현재 구현된 주요 파일은 다음과 같다.
 
@@ -71,11 +73,11 @@ backend/src/utils/publicDataValidation.js
 
 - 공개 `/places/search`와 `/places/:id`는 TourAPI 서비스 계층에 연결됐다.
 - `/places/:id/related`는 TourAPI 연관 관광지 실데이터와 캐시에 연결됐다.
-- `regionsController.js`의 문화별 지역 목록은 R4 브랜치에서 DataLab 점수 연결을 구현 중이며, 지역별 장소 목록은 아직 시드 상태다.
+- `regionsController.js`의 문화별 지역 목록은 PR #9의 DataLab 점수에 연결됐고, 지역별 장소 목록은 TourAPI·MySQL 캐시와 안전한 큐레이션 fallback을 사용한다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐다. 2026-08-03 안정화 브랜치에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했지만 실제 컬렉션 인덱싱·검색 평가·유료 smoke test는 아직 완료되지 않았다.
-- Flutter는 현재 공개 API의 기존 응답 형태와 Mock/시드 데이터에 의존하는 부분이 있다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했고 R7 브랜치에서 실제 컬렉션·증분 장소 인덱싱 명령을 구현 중이다. 검색 평가는 R8, live smoke test는 별도 승인 후 남아 있다.
+- Flutter는 문화→지역→장소 목록→코스 담기와 AI 변경안 UI가 부분 연결됐지만, 장소 상세·이미지·공통 상태와 실제 RAG 품질 연결은 남아 있다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
 
@@ -93,10 +95,10 @@ backend/src/utils/publicDataValidation.js
 | R1 | 머지 완료 — PR #6 (2026-07-23) | TourAPI 상세조회와 공개 장소 API 수직 연결 | PR #5 | R5 |
 | R2 | 머지 완료 — PR #7 (2026-07-23) | MySQL 장소 캐시와 장애 fallback | R1, 임수민과 스키마 합의 | R5 |
 | R3 | 머지 완료 — PR #8 (2026-07-24) | 연관 관광지 실데이터 연결 | R1, R2 | R4·R5 |
-| R4 | 구현·검증·독립 리뷰 완료 — `agent/datalab-region-score` | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
-| R5 | 대기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
-| R6 | 대기 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
-| R7 | 어댑터 기반 구현·인덱싱 대기 | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
+| R4 | 머지 완료 — PR #9 (2026-08-03) | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
+| R5 | 로컬 초안 보존·데스크탑 작업으로 연기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
+| R6 | 팀원 구현으로 부분 연결·R5 후 보완 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
+| R7 | 구현·검증 중 — `agent/qdrant-place-indexing` | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
 | R8 | 검색·필터 기반 구현·평가 대기 | RAG 검색·필터·평가 기반 | R7 | 제한적 |
 | R9 | 구조화 API 기반 구현·live 검증 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
 | R10 | 기존 diff UI 연결·품질 마감 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
@@ -351,11 +353,18 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - Qdrant를 원본 DB로 사용하는 설계
 - LLM 응답 생성
 
-### 결정 필요
+### 확정된 결정
 
-- 임베딩 모델과 차원
-- 컬렉션 이름·버전 정책
-- 무료 티어 한도 내 초기 적재 범위
+- `baai/bge-m3`, 1024차원, Cosine을 사용한다.
+- 컬렉션은 `culturepath_places_v1`이며 모델·차원 변경 시 버전을 올린다.
+- 생산 원본은 MySQL `places_cache`이고 인덱싱 명령에서 TourAPI를 호출하지 않는다.
+- 장소당 하나의 문서와 결정적 UUID point를 사용한다.
+- SHA-256 문서 hash가 같은 장소는 임베딩과 upsert를 생략한다.
+- 기본 batch는 32이며 payload index는 실제 필터 필드만 만든다.
+- 삭제는 전체 원본 조회가 성공한 명시적 `--prune`에서만 수행한다.
+- 실제 smoke test는 자동 검증·독립 리뷰 후 별도 승인받아 임시 컬렉션 3건으로 제한한다.
+
+상세 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## 12. R8 — RAG 검색·필터·평가 기반
 
@@ -488,17 +497,15 @@ R3과 R4는 R1 이후 병렬 가능하다. R5는 Backend 작업과 병렬 가능
 
 ## 18. 현재 세션 인수인계 포인트
 
-- 현재 작업은 **R4 — DataLab 지역 통계와 지역 문화점수 기반**이다.
-- 브랜치는 `agent/datalab-region-score`이며 PR #8 머지 커밋 `da0b8a5`에서 시작했다.
-- 사용자는 R4의 8개 결정사항을 모두 권장안으로 승인하고 서비스 계획서를 다시 읽도록 요청한 뒤 별도로 구현 시작을 지시했다.
-- 제품용 DataLab 정규화·전체 페이지 수집, 실제 달력 날짜 검증, 전용 MySQL 캐시와 single-flight·fail-open·stale fallback을 구현했다.
-- 현재 큐레이션 지역의 광역·기초 코드, 행정구역 개편 alias와 다중 자치구 그룹을 매핑하고 초기 40/30/30 점수를 구현했다.
-- 공개 `GET /cultures/:id/regions`의 배열 body는 유지하고 `X-Region-Data-Status`로 `HIT/REFRESHED/STALE/BYPASS/CURATED`만 공개한다.
-- 자동 테스트는 실제 키와 네트워크를 차단한다. 승인된 R4 smoke test는 재시도 없이 최대 4회만 실행하며 키와 전체 URL을 출력하지 않는다.
-- 2026-07-24 smoke는 `20260723`·`20260716` 기초·광역을 정확히 4회 호출했으며 모두 정상 빈 응답이었다. 추가 탐색 없이 검증된 `20210513`을 기준일로 유지했다.
-- Docker와 실제 MySQL은 이번 PR에서 실행하지 않는다.
-- 구현 계약은 [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md)을 기준으로 한다.
-- 네트워크 차단 백엔드 전체 테스트 118개가 통과했다.
-- 독립 `gpt-5.6-sol high` 1차 리뷰의 High 1건·Medium 3건·Low 1건을 모두 수정했고 최종 재리뷰 결과는 `APPROVE`, 남은 finding 0건이다.
-- 실제 MySQL 8 DDL·upsert와 다중 Node 인스턴스의 동시 갱신, 최근 유효 DataLab 날짜는 배포 전 별도 검증 위험으로 남아 있다.
+- 현재 작업은 **R7 — Qdrant 컬렉션과 장소 인덱싱**이다.
+- 브랜치는 `agent/qdrant-place-indexing`이며 PR #10 머지 커밋 `a55335a`에서 시작했다.
+- 사용자는 R5를 데스크탑 작업으로 연기하고 R7의 8개 권장안을 별도 예외 없이 승인한 것으로 해석한 뒤 명시적으로 구현 시작을 지시했다.
+- 임베딩 계약은 `baai/bge-m3`, 1024차원, Cosine, `culturepath_places_v1`이다.
+- MySQL `places_cache` cursor 조회, 장소 문서·결정적 UUID·SHA-256 hash, OpenRouter batch 임베딩과 Qdrant 컬렉션·payload index·조회·upsert·scroll·삭제를 구현한다.
+- `npm run rag:index`는 변경된 문서만 upsert하고 `--dry-run`, `--limit`, `--batch-size`, 명시적 `--prune`을 제공한다.
+- 기본 테스트는 실제 키와 네트워크를 차단한다. OpenRouter·Qdrant·MySQL은 가짜 응답과 repository로 검증한다.
+- 실제 Qdrant/OpenRouter smoke test는 자동 검증·독립 리뷰 후 사용자의 별도 승인을 받기 전까지 실행하지 않는다.
+- 구현 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 기준으로 한다.
+- R7 다음은 R8 검색·필터·평가 기반이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
+- 실제 MySQL 8 장소 데이터 전체 적재, Qdrant 무료 클러스터 비활성 정책과 실데이터 검색 품질은 운영 전 잔여 위험이다.
 - 전체 검증과 독립 `gpt-5.6-sol high` 리뷰가 끝나도 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.

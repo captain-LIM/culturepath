@@ -50,7 +50,9 @@ async function createEmbedding(input, options = {}) {
     env,
     fetchImpl: options.fetchImpl,
   });
-  return client.embed(input);
+  return client.embed(input, {
+    expectedDimensions: options.expectedDimensions,
+  });
 }
 
 module.exports = { createEmbedding, generate, isMockMode };
