@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,9 +81,13 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
 
   bool _canSaveOffline(Object error) =>
       error is DioException &&
+      error.type == DioExceptionType.connectionTimeout;
+
+  bool _isSaveOutcomeUncertain(Object error) =>
+      error is DioException &&
       (error.type == DioExceptionType.connectionError ||
-          error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.sendTimeout);
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout);
 
   void _openAddPlaceSheet() {
     showModalBottomSheet(
@@ -154,13 +161,14 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
         }
       }
       if (mounted) {
+        final messageKey = _canSaveOffline(error)
+            ? 'course_saved_offline'
+            : _isSaveOutcomeUncertain(error)
+                ? 'course_save_uncertain'
+                : 'course_save_failed';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              _canSaveOffline(error)
-                  ? 'course_saved_offline'.tr()
-                  : 'course_save_failed'.tr(),
-            ),
+            content: Text(messageKey.tr()),
           ),
         );
       }
@@ -335,5 +343,3 @@ class _ForkBanner extends StatelessWidget {
     );
   }
 }
-import 'dart:convert';
-import 'package:dio/dio.dart';

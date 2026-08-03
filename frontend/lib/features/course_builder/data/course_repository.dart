@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
@@ -85,9 +86,17 @@ class CourseRepository {
   }
 
   Future<CourseItem> createCourse(CourseItem course) async {
-    final res = await apiClient.post('/courses', course.toJson());
+    final fingerprint = jsonEncode(course.toJson());
+    final key = await _pendingMutationKey('create', fingerprint);
+    final res = await apiClient.post(
+      '/courses',
+      course.toJson(),
+      headers: {'Idempotency-Key': key},
+    );
+    final saved = CourseItem.fromJson(res.data as Map<String, dynamic>);
+    await _clearPendingMutationKey('create', key);
     await _invalidateCourseLists();
-    return CourseItem.fromJson(res.data as Map<String, dynamic>);
+    return saved;
   }
 
   Future<CourseItem> updateCourse(CourseItem course) async {
@@ -102,9 +111,17 @@ class CourseRepository {
   }
 
   Future<CourseItem> forkCourse(int courseId) async {
-    final res = await apiClient.post('/courses/$courseId/fork', {});
+    final scope = 'fork_$courseId';
+    final key = await _pendingMutationKey(scope, String(courseId));
+    final res = await apiClient.post(
+      '/courses/$courseId/fork',
+      {},
+      headers: {'Idempotency-Key': key},
+    );
+    final saved = CourseItem.fromJson(res.data as Map<String, dynamic>);
+    await _clearPendingMutationKey(scope, key);
     await _invalidateCourseLists();
-    return CourseItem.fromJson(res.data as Map<String, dynamic>);
+    return saved;
   }
 
   Future<List<CourseItem>> getMyCourses() async {
@@ -151,7 +168,7 @@ class CourseRepository {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token') != null;
   }
-}
+
   bool _canUseStaleCache(Object error) {
     if (error is! DioException) return false;
     if (error.type == DioExceptionType.connectionError ||
@@ -164,4 +181,40 @@ class CourseRepository {
     return status != null && status >= 500;
   }
 
-  Future<void> _invalidateCourseLists() => CacheService.clearAll();
+  Future<String> _pendingMutationKey(String scope, String fingerprint) async {
+    final prefs = await SharedPreferences.getInstance();
+    final fingerprintKey = 'pending_${scope}_fingerprint';
+    final idempotencyKey = 'pending_${scope}_idempotency_key';
+    if (prefs.getString(fingerprintKey) == fingerprint) {
+      final existing = prefs.getString(idempotencyKey);
+      if (existing != null) return existing;
+    }
+
+    final random = Random.secure();
+    final bytes = List<int>.generate(24, (_) => random.nextInt(256));
+    final key = base64UrlEncode(bytes).replaceAll('=', '');
+    await prefs.setString(fingerprintKey, fingerprint);
+    await prefs.setString(idempotencyKey, key);
+    return key;
+  }
+
+  Future<void> _clearPendingMutationKey(String scope, String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idempotencyKey = 'pending_${scope}_idempotency_key';
+      if (prefs.getString(idempotencyKey) != key) return;
+      await prefs.remove('pending_${scope}_fingerprint');
+      await prefs.remove(idempotencyKey);
+    } catch (_) {
+      // The server response is authoritative; cleanup must not turn success into failure.
+    }
+  }
+
+  Future<void> _invalidateCourseLists() async {
+    try {
+      await CacheService.clearAll();
+    } catch (_) {
+      // The server mutation already succeeded; cache cleanup is best-effort.
+    }
+  }
+}

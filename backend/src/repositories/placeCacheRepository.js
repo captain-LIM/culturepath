@@ -87,7 +87,7 @@ function createPlaceCacheRepository(options = {}) {
     return mapPlaceRow(rows[0]);
   }
 
-  async function findPlaces(contentIds) {
+  async function findExistingPlaces(contentIds) {
     if (!contentIds.length) {
       return [];
     }
@@ -99,12 +99,12 @@ function createPlaceCacheRepository(options = {}) {
         WHERE content_id IN (${placeholders})`,
       contentIds,
     );
-    const placesById = new Map(
-      rows.map(row => {
-        const place = mapPlaceRow(row);
-        return [place.contentId, place];
-      }),
-    );
+    return rows.map(mapPlaceRow);
+  }
+
+  async function findPlaces(contentIds) {
+    const existing = await findExistingPlaces(contentIds);
+    const placesById = new Map(existing.map(place => [place.contentId, place]));
 
     const ordered = contentIds.map(contentId => placesById.get(contentId));
     return ordered.some(place => !place) ? null : ordered;
@@ -260,6 +260,8 @@ function createPlaceCacheRepository(options = {}) {
 
   return Object.freeze({
     findPlace,
+    findExistingPlaces,
+    findPlaces,
     findQuery,
     saveDetail,
     saveQuery,
@@ -278,6 +280,8 @@ function getDefaultRepository() {
 module.exports = {
   createPlaceCacheRepository,
   findPlace: contentId => getDefaultRepository().findPlace(contentId),
+  findExistingPlaces: contentIds => getDefaultRepository().findExistingPlaces(contentIds),
+  findPlaces: contentIds => getDefaultRepository().findPlaces(contentIds),
   findQuery: cacheKey => getDefaultRepository().findQuery(cacheKey),
   saveDetail: input => getDefaultRepository().saveDetail(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),

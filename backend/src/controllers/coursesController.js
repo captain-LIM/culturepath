@@ -1,4 +1,30 @@
+const crypto = require('node:crypto');
 const pool = require('../config/db');
+
+function idempotencyFingerprint(operation, payload) {
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify({ operation, payload }))
+    .digest('hex');
+}
+
+function normalizedCreatePayload({ title, description, tracks, isPublic }) {
+  return {
+    title,
+    description: description || '',
+    isPublic: Boolean(isPublic),
+    tracks: Array.isArray(tracks) ? tracks.map(track => ({
+      trackNumber: track?.trackNumber || 1,
+      places: Array.isArray(track?.places) ? track.places.map(place => ({
+        contentId: place?.contentId || null,
+        title: place?.title || null,
+        address: place?.address || null,
+        category: place?.category || null,
+        region: place?.region || null,
+      })) : [],
+    })) : [],
+  };
+}
 
 // ─── 헬퍼 ────────────────────────────────────────────────────────────────────
 
@@ -45,9 +71,16 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
   };
 }
 
-async function queryCourses(whereClause, params, userId = null, orderBy = 'c.created_at DESC', limit = null) {
+async function queryCourses(
+  whereClause,
+  params,
+  userId = null,
+  orderBy = 'c.created_at DESC',
+  limit = null,
+  database = pool,
+) {
   const limitClause = limit ? `LIMIT ${parseInt(limit)}` : '';
-  const [courseRows] = await pool.query(
+  const [courseRows] = await database.query(
     `SELECT c.*,
        ANY_VALUE(u.nickname) AS nickname,
        COUNT(DISTINCT cl.user_id) AS like_count,
@@ -67,7 +100,7 @@ async function queryCourses(whereClause, params, userId = null, orderBy = 'c.cre
 
   const ids = courseRows.map(r => r.id);
 
-  const [trackRows] = await pool.query(
+  const [trackRows] = await database.query(
     `SELECT * FROM course_tracks WHERE course_id IN (?)
      ORDER BY course_id, track_number, sequence`,
     [ids]
@@ -75,7 +108,7 @@ async function queryCourses(whereClause, params, userId = null, orderBy = 'c.cre
 
   let likedSet = new Set();
   if (userId) {
-    const [likedRows] = await pool.query(
+    const [likedRows] = await database.query(
       `SELECT course_id FROM course_likes WHERE user_id = ? AND course_id IN (?)`,
       [userId, ids]
     );
@@ -150,22 +183,83 @@ async function getRanking(req, res) {
 async function createCourse(req, res) {
   const { title, description, tracks, isPublic } = req.body;
   if (!title) return res.status(400).json({ message: '코스 제목을 입력해주세요.' });
+  const idempotencyKey = req.get?.('Idempotency-Key') || null;
+  if (idempotencyKey && !/^[A-Za-z0-9_-]{16,64}$/.test(idempotencyKey)) {
+    return res.status(400).json({ message: 'Idempotency-Key 형식이 올바르지 않습니다.' });
+  }
+  const requestFingerprint = idempotencyKey
+    ? idempotencyFingerprint('create', normalizedCreatePayload(req.body))
+    : null;
 
   const conn = await pool.getConnection();
+  let committed = false;
   try {
     await conn.beginTransaction();
     const [result] = await conn.query(
-      'INSERT INTO courses (user_id, title, description, is_public) VALUES (?, ?, ?, ?)',
-      [req.user.id, title, description || '', isPublic ? 1 : 0]
+      `INSERT INTO courses (
+         user_id, title, description, is_public, idempotency_key, idempotency_fingerprint
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.id, title, description || '', isPublic ? 1 : 0,
+        idempotencyKey, requestFingerprint,
+      ]
     );
     const courseId = result.insertId;
     await saveTracks(conn, courseId, tracks || []);
     await conn.commit();
+    committed = true;
 
-    const [course] = await queryCourses('c.id = ?', [courseId], req.user.id);
-    return res.status(201).json(course);
+    try {
+      const [course] = await queryCourses('c.id = ?', [courseId], req.user.id);
+      if (course) return res.status(201).json(course);
+    } catch (readError) {
+      console.error('Committed course read-back failed:', readError);
+    }
+    return res.status(201).json({
+      id: courseId,
+      userId: String(req.user.id),
+      authorId: String(req.user.id),
+      title,
+      description: description || '',
+      isPublic: Boolean(isPublic),
+      forkedFrom: null,
+      tracks: Array.isArray(tracks) ? tracks : [],
+      likeCount: 0,
+      forkCount: 0,
+      isLikedByMe: false,
+      isOwner: true,
+      score: 0,
+    });
   } catch (err) {
-    await conn.rollback();
+    if (!committed) {
+      try {
+        await conn.rollback();
+      } catch (rollbackError) {
+        console.error('Course transaction rollback failed:', rollbackError);
+      }
+    }
+    if (idempotencyKey && err?.code === 'ER_DUP_ENTRY') {
+      try {
+        const [[existing]] = await conn.query(
+          `SELECT id, idempotency_fingerprint
+           FROM courses WHERE user_id = ? AND idempotency_key = ?`,
+          [req.user.id, idempotencyKey],
+        );
+        if (existing) {
+          if (existing.idempotency_fingerprint !== requestFingerprint) {
+            return res.status(409).json({
+              message: 'Idempotency-Key가 다른 요청에 이미 사용되었습니다.',
+            });
+          }
+          const [course] = await queryCourses(
+            'c.id = ?', [existing.id], req.user.id, 'c.created_at DESC', null, conn,
+          );
+          if (course) return res.status(200).json(course);
+        }
+      } catch (replayError) {
+        console.error('Idempotent course replay failed:', replayError);
+      }
+    }
     console.error(err);
     return res.status(500).json({ message: '서버 오류' });
   } finally {
@@ -259,9 +353,38 @@ async function deleteCourse(req, res) {
 
 async function forkCourse(req, res) {
   const originalId = parseInt(req.params.id);
+  const idempotencyKey = req.get?.('Idempotency-Key') || null;
+  if (idempotencyKey && !/^[A-Za-z0-9_-]{16,64}$/.test(idempotencyKey)) {
+    return res.status(400).json({ message: 'Idempotency-Key 형식이 올바르지 않습니다.' });
+  }
+  const requestFingerprint = idempotencyKey
+    ? idempotencyFingerprint('fork', { originalId })
+    : null;
   const conn = await pool.getConnection();
+  let committed = false;
+  let transactionStarted = false;
   try {
+    if (idempotencyKey) {
+      const [[existingReplay]] = await conn.query(
+        `SELECT id, idempotency_fingerprint
+         FROM courses WHERE user_id = ? AND idempotency_key = ?`,
+        [req.user.id, idempotencyKey],
+      );
+      if (existingReplay) {
+        if (existingReplay.idempotency_fingerprint !== requestFingerprint) {
+          return res.status(409).json({
+            message: 'Idempotency-Key가 다른 요청에 이미 사용되었습니다.',
+          });
+        }
+        const [course] = await queryCourses(
+          'c.id = ?', [existingReplay.id], req.user.id,
+          'c.created_at DESC', null, conn,
+        );
+        if (course) return res.status(200).json(course);
+      }
+    }
     await conn.beginTransaction();
+    transactionStarted = true;
     const [[original]] = await conn.query(
       'SELECT c.*, u.nickname FROM courses c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?',
       [originalId]
@@ -277,10 +400,13 @@ async function forkCourse(req, res) {
 
     const [result] = await conn.query(
       `INSERT INTO courses
-         (user_id, title, description, is_public, forked_from_course_id, forked_from_title, forked_from_author_id)
-       VALUES (?, ?, ?, FALSE, ?, ?, ?)`,
+         (user_id, title, description, is_public, forked_from_course_id,
+          forked_from_title, forked_from_author_id, idempotency_key,
+          idempotency_fingerprint)
+       VALUES (?, ?, ?, FALSE, ?, ?, ?, ?, ?)`,
       [req.user.id, `${original.title} (포크)`, original.description || '',
-       originalId, original.title, original.nickname || String(original.user_id)]
+       originalId, original.title, original.nickname || String(original.user_id),
+       idempotencyKey, requestFingerprint]
     );
     const newId = result.insertId;
 
@@ -298,11 +424,57 @@ async function forkCourse(req, res) {
       );
     }
     await conn.commit();
+    committed = true;
 
-    const [course] = await queryCourses('c.id = ?', [newId], req.user.id);
-    return res.status(201).json(course);
+    try {
+      const [course] = await queryCourses('c.id = ?', [newId], req.user.id);
+      if (course) return res.status(201).json(course);
+    } catch (readError) {
+      console.error('Committed fork read-back failed:', readError);
+    }
+    const fallback = buildCourse({
+      ...original,
+      id: newId,
+      user_id: req.user.id,
+      nickname: String(req.user.id),
+      is_public: 0,
+      forked_from_course_id: originalId,
+      forked_from_title: original.title,
+      forked_from_author_id: original.nickname || String(original.user_id),
+      like_count: 0,
+      fork_count: 0,
+    }, origTracks.map(track => ({ ...track, course_id: newId })), false, req.user.id);
+    return res.status(201).json(fallback);
   } catch (err) {
-    await conn.rollback();
+    if (transactionStarted && !committed) {
+      try {
+        await conn.rollback();
+      } catch (rollbackError) {
+        console.error('Fork transaction rollback failed:', rollbackError);
+      }
+    }
+    if (idempotencyKey && err?.code === 'ER_DUP_ENTRY') {
+      try {
+        const [[existing]] = await conn.query(
+          `SELECT id, idempotency_fingerprint
+           FROM courses WHERE user_id = ? AND idempotency_key = ?`,
+          [req.user.id, idempotencyKey],
+        );
+        if (existing) {
+          if (existing.idempotency_fingerprint !== requestFingerprint) {
+            return res.status(409).json({
+              message: 'Idempotency-Key가 다른 요청에 이미 사용되었습니다.',
+            });
+          }
+          const [course] = await queryCourses(
+            'c.id = ?', [existing.id], req.user.id, 'c.created_at DESC', null, conn,
+          );
+          if (course) return res.status(200).json(course);
+        }
+      } catch (replayError) {
+        console.error('Idempotent fork replay failed:', replayError);
+      }
+    }
     console.error(err);
     return res.status(500).json({ message: '서버 오류' });
   } finally {
@@ -316,7 +488,10 @@ async function toggleLike(req, res) {
   const courseId = parseInt(req.params.id);
   const userId = req.user.id;
   try {
-    const [[exists]] = await pool.query('SELECT id FROM courses WHERE id = ?', [courseId]);
+    const [[exists]] = await pool.query(
+      'SELECT id FROM courses WHERE id = ? AND (is_public = TRUE OR user_id = ?)',
+      [courseId, userId]
+    );
     if (!exists) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
 
     const [[liked]] = await pool.query(
@@ -346,7 +521,10 @@ async function completeCourse(req, res) {
   const userId = req.user.id;
   const { note, culture } = req.body;
   try {
-    const [[course]] = await pool.query('SELECT id FROM courses WHERE id = ?', [courseId]);
+    const [[course]] = await pool.query(
+      'SELECT id FROM courses WHERE id = ? AND (is_public = TRUE OR user_id = ?)',
+      [courseId, userId]
+    );
     if (!course) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
 
     const [[existing]] = await pool.query(
@@ -410,8 +588,9 @@ async function getMyLikedCourses(req, res) {
   const userId = req.user.id;
   try {
     const courses = await queryCourses(
-      'EXISTS (SELECT 1 FROM course_likes lf WHERE lf.course_id = c.id AND lf.user_id = ?)',
-      [userId],
+      `EXISTS (SELECT 1 FROM course_likes lf WHERE lf.course_id = c.id AND lf.user_id = ?)
+       AND (c.is_public = TRUE OR c.user_id = ?)`,
+      [userId, userId],
       userId,
       'c.created_at DESC'
     );

@@ -25,8 +25,16 @@ class ApiClient {
     ));
   }
 
-  Future<Response> post(String path, Map<String, dynamic> data) =>
-      _dio.post(path, data: data);
+  Future<Response> post(
+    String path,
+    Map<String, dynamic> data, {
+    Map<String, dynamic>? headers,
+  }) =>
+      _dio.post(
+        path,
+        data: data,
+        options: headers == null ? null : Options(headers: headers),
+      );
 
   Future<Response> put(String path, Map<String, dynamic> data) =>
       _dio.put(path, data: data);

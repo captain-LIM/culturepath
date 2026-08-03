@@ -3,7 +3,12 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const pool = require('../src/config/db');
-const { getCourse } = require('../src/controllers/coursesController');
+const {
+  completeCourse,
+  getCourse,
+  getMyLikedCourses,
+  toggleLike,
+} = require('../src/controllers/coursesController');
 
 function responseRecorder() {
   return {
@@ -88,5 +93,46 @@ test('rejects invalid course ids before querying the database', async () => {
     const res = responseRecorder();
     await getCourse({ params: { id: 'not-a-number' } }, res);
     assert.equal(res.statusCode, 404);
+  });
+});
+
+test('does not allow liking another user private course', async () => {
+  await withQueryStub(async (sql, params) => {
+    assert.match(sql, /is_public = TRUE OR user_id = \?/);
+    assert.deepEqual(params, [7, 99]);
+    return [[]];
+  }, async () => {
+    const res = responseRecorder();
+    await toggleLike({ params: { id: '7' }, user: { id: 99 } }, res);
+    assert.equal(res.statusCode, 404);
+  });
+});
+
+test('does not allow completing another user private course', async () => {
+  await withQueryStub(async (sql, params) => {
+    assert.match(sql, /is_public = TRUE OR user_id = \?/);
+    assert.deepEqual(params, [7, 99]);
+    return [[]];
+  }, async () => {
+    const res = responseRecorder();
+    await completeCourse({
+      params: { id: '7' },
+      user: { id: 99 },
+      body: {},
+    }, res);
+    assert.equal(res.statusCode, 404);
+  });
+});
+
+test('liked-course query filters private courses that are not owned by the caller', async () => {
+  await withQueryStub(async (sql, params) => {
+    assert.match(sql, /c\.is_public = TRUE OR c\.user_id = \?/);
+    assert.deepEqual(params, [99, 99]);
+    return [[]];
+  }, async () => {
+    const res = responseRecorder();
+    await getMyLikedCourses({ user: { id: 99 } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body, []);
   });
 });

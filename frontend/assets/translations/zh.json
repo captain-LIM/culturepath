@@ -96,6 +96,7 @@
   "course_saved": "路线已保存。",
   "course_saved_guest": "已临时保存。（访客）",
   "course_saved_offline": "已离线保存。",
+  "course_save_uncertain": "连接中断，无法确认是否已保存。重试前请先查看“我的路线”。",
   "course_save_failed": "无法保存路线，请稍后重试。",
   "forked_from": "分叉自：「{title}」 by {author}",
   "place_count": "{n}个地点",
@@ -108,6 +109,8 @@
   "forking": "分叉中...",
   "fork_failed": "分叉失败：{error}",
   "login_required_complete": "请登录后进行完成认证。",
+  "login_required_ai": "请登录后使用 AI 路线编辑。",
+  "save_before_ai": "请先保存路线，再使用 AI 编辑。",
   "completion_saved": "完成认证已记录！ 🎖️",
 
   "completion_stamp": "完成！",
@@ -129,6 +132,8 @@
   "ai_edit_loading": "AI正在修改路线...",
   "ai_edit_mock_notice": "Mock模式",
   "ai_edit_error": "修改失败：{error}",
+  "ai_edit_error_generic": "无法修改路线，请稍后重试。",
+  "ai_edit_apply_failed": "无法将路线复制到您的账户，请重试。",
 
   "ai_title": "AI旅行助手",
   "ai_subtitle": "路线推荐·旅行咨询",
