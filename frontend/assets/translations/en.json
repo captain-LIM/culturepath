@@ -96,6 +96,7 @@
   "course_saved": "Course saved.",
   "course_saved_guest": "Saved temporarily. (Guest)",
   "course_saved_offline": "Saved offline.",
+  "course_save_failed": "Could not save the course. Please try again.",
   "forked_from": "Forked: \"{title}\"  by {author}",
   "place_count": "{n} places",
   "fork_suffix": "(Fork)",

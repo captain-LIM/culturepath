@@ -96,6 +96,7 @@
   "course_saved": "コースを保存しました。",
   "course_saved_guest": "一時保存されました。（ゲスト）",
   "course_saved_offline": "オフライン保存されました。",
+  "course_save_failed": "コースを保存できませんでした。しばらくしてからもう一度お試しください。",
   "forked_from": "フォーク元：「{title}」 by {author}",
   "place_count": "{n}か所",
   "fork_suffix": "（フォーク）",

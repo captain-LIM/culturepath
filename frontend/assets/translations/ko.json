@@ -96,6 +96,7 @@
   "course_saved": "코스가 저장되었습니다.",
   "course_saved_guest": "임시 저장되었습니다. (게스트)",
   "course_saved_offline": "오프라인 저장되었습니다.",
+  "course_save_failed": "코스를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.",
   "forked_from": "포크됨: \"{title}\"  by {author}",
   "place_count": "{n}곳",
   "fork_suffix": "(포크)",

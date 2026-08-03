@@ -96,6 +96,7 @@
   "course_saved": "路线已保存。",
   "course_saved_guest": "已临时保存。（访客）",
   "course_saved_offline": "已离线保存。",
+  "course_save_failed": "无法保存路线，请稍后重试。",
   "forked_from": "分叉自：「{title}」 by {author}",
   "place_count": "{n}个地点",
   "fork_suffix": "（分叉）",

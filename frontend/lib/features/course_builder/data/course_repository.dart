@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/cache_service.dart';
@@ -24,7 +25,8 @@ class CourseRepository {
       return (res.data as List)
           .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (error) {
+      if (!_canUseStaleCache(error)) rethrow;
       final cached = await CacheService.getStale(key);
       if (cached != null) {
         return (jsonDecode(cached) as List)
@@ -43,7 +45,8 @@ class CourseRepository {
       return (res.data as List)
           .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (error) {
+      if (!_canUseStaleCache(error)) rethrow;
       final cached = await CacheService.getStale(key);
       if (cached != null) {
         return (jsonDecode(cached) as List)
@@ -62,7 +65,8 @@ class CourseRepository {
       return (res.data as List)
           .map((j) => CourseItem.fromJson(j as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (error) {
+      if (!_canUseStaleCache(error)) rethrow;
       final cached = await CacheService.getStale(key);
       if (cached != null) {
         return (jsonDecode(cached) as List)
@@ -76,25 +80,30 @@ class CourseRepository {
   // 좋아요 토글 — { liked: bool, likeCount: int } 반환
   Future<Map<String, dynamic>> toggleLike(int courseId) async {
     final res = await apiClient.post('/courses/$courseId/like', {});
+    await _invalidateCourseLists();
     return res.data as Map<String, dynamic>;
   }
 
   Future<CourseItem> createCourse(CourseItem course) async {
     final res = await apiClient.post('/courses', course.toJson());
+    await _invalidateCourseLists();
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }
 
   Future<CourseItem> updateCourse(CourseItem course) async {
     final res = await apiClient.put('/courses/${course.id}', course.toJson());
+    await _invalidateCourseLists();
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }
 
   Future<void> deleteCourse(int courseId) async {
     await apiClient.delete('/courses/$courseId');
+    await _invalidateCourseLists();
   }
 
   Future<CourseItem> forkCourse(int courseId) async {
     final res = await apiClient.post('/courses/$courseId/fork', {});
+    await _invalidateCourseLists();
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }
 
@@ -143,3 +152,16 @@ class CourseRepository {
     return prefs.getString('auth_token') != null;
   }
 }
+  bool _canUseStaleCache(Object error) {
+    if (error is! DioException) return false;
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return true;
+    }
+    final status = error.response?.statusCode;
+    return status != null && status >= 500;
+  }
+
+  Future<void> _invalidateCourseLists() => CacheService.clearAll();

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/services/cache_service.dart';
 
 final authStateProvider = FutureProvider<bool>((ref) async {
   final prefs = await SharedPreferences.getInstance();
@@ -30,6 +31,7 @@ class AuthRepository {
 
   Future<void> logout() async {
     await _googleSignIn.signOut();
+    await CacheService.clearAll();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
   }
@@ -40,6 +42,7 @@ class AuthRepository {
   }
 
   Future<void> _saveToken(String token) async {
+    await CacheService.clearAll();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
   }

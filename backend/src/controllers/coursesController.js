@@ -37,7 +37,7 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
     likeCount,
     forkCount,
     isLikedByMe: Boolean(isLikedByMe),
-    isOwner: userId != null && row.user_id === userId,
+    isOwner: userId != null && String(row.user_id) === String(userId),
     score: likeCount * 2 + forkCount,
     totalPlaces,
     createdAt: row.created_at,
@@ -184,8 +184,18 @@ async function getCourses(req, res) {
 }
 
 async function getCourse(req, res) {
+  const courseId = Number.parseInt(req.params.id, 10);
+  if (!Number.isSafeInteger(courseId) || courseId <= 0) {
+    return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
+  }
+
   try {
-    const courses = await queryCourses('c.id = ?', [parseInt(req.params.id)], req.user?.id);
+    const userId = req.user?.id ?? null;
+    const whereClause = userId == null
+      ? 'c.id = ? AND c.is_public = TRUE'
+      : 'c.id = ? AND (c.is_public = TRUE OR c.user_id = ?)';
+    const params = userId == null ? [courseId] : [courseId, userId];
+    const courses = await queryCourses(whereClause, params, userId);
     if (!courses.length) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
     return res.json(courses[0]);
   } catch (err) {
@@ -202,8 +212,14 @@ async function updateCourse(req, res) {
   try {
     await conn.beginTransaction();
     const [[existing]] = await conn.query('SELECT user_id FROM courses WHERE id = ?', [courseId]);
-    if (!existing) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
-    if (existing.user_id !== req.user.id) return res.status(403).json({ message: '권한이 없습니다.' });
+    if (!existing) {
+      await conn.rollback();
+      return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
+    }
+    if (String(existing.user_id) !== String(req.user.id)) {
+      await conn.rollback();
+      return res.status(403).json({ message: '권한이 없습니다.' });
+    }
 
     const updates = ['updated_at = NOW()'];
     const values = [];
@@ -250,7 +266,14 @@ async function forkCourse(req, res) {
       'SELECT c.*, u.nickname FROM courses c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?',
       [originalId]
     );
-    if (!original) return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
+    if (!original) {
+      await conn.rollback();
+      return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
+    }
+    if (!original.is_public && String(original.user_id) !== String(req.user.id)) {
+      await conn.rollback();
+      return res.status(403).json({ message: '비공개 코스는 Fork할 수 없습니다.' });
+    }
 
     const [result] = await conn.query(
       `INSERT INTO courses

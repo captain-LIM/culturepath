@@ -14,6 +14,7 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
 
   void updateTitle(String v) => state = state.copyWith(title: v);
   void updateDescription(String v) => state = state.copyWith(description: v);
+  void replace(CourseItem course) => state = course;
 
   void addPlace(int trackIdx, PlaceItem place) {
     final tracks = List<CourseTrack>.from(state.tracks);
@@ -58,6 +59,7 @@ class CourseBuilderScreen extends ConsumerStatefulWidget {
 class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   int _activeTrack = 0;
   bool _saving = false;
+  String? _lastGuestSave;
   late final TextEditingController _titleCtrl;
 
   @override
@@ -73,6 +75,12 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   }
 
   CourseItem? get _providerKey => widget.initialCourse;
+
+  bool _canSaveOffline(Object error) =>
+      error is DioException &&
+      (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout);
 
   void _openAddPlaceSheet() {
     showModalBottomSheet(
@@ -107,16 +115,22 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
 
     setState(() => _saving = true);
     final repo = CourseRepository();
+    final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
     try {
       final loggedIn = await repo.isLoggedIn();
       if (loggedIn) {
+        late final CourseItem saved;
         if (course.id != null) {
-          await repo.updateCourse(course);
+          saved = await repo.updateCourse(course);
         } else {
-          await repo.createCourse(course);
+          saved = await repo.createCourse(course);
         }
+        notifier.replace(saved);
       } else {
+        final fingerprint = jsonEncode(course.toJson());
+        if (_lastGuestSave == fingerprint) return;
         await repo.saveGuestCourse(course);
+        _lastGuestSave = fingerprint;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,13 +141,27 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        if (course.id != null) Navigator.of(context).pop(true);
+        if (loggedIn && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(true);
+        }
       }
-    } catch (_) {
-      await repo.saveGuestCourse(course);
+    } catch (error) {
+      if (_canSaveOffline(error)) {
+        final fingerprint = jsonEncode(course.toJson());
+        if (_lastGuestSave != fingerprint) {
+          await repo.saveGuestCourse(course);
+          _lastGuestSave = fingerprint;
+        }
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('course_saved_offline'.tr())),
+          SnackBar(
+            content: Text(
+              _canSaveOffline(error)
+                  ? 'course_saved_offline'.tr()
+                  : 'course_save_failed'.tr(),
+            ),
+          ),
         );
       }
     } finally {
@@ -307,3 +335,5 @@ class _ForkBanner extends StatelessWidget {
     );
   }
 }
+import 'dart:convert';
+import 'package:dio/dio.dart';
