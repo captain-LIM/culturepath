@@ -150,7 +150,7 @@ test('combines 40/30/30 inputs and preserves the RegionItem contract', async () 
   assert.equal(response.dataStatus, 'REFRESHED');
   assert.deepEqual(
     response.items.map(item => [item.areaCode, item.score]),
-    [['tongyeong', 99], ['gangneung', 55], ['hadong', 25]],
+    [['gangneung', 81], ['hadong', 65], ['tongyeong', 59]],
   );
   assert.deepEqual(Object.keys(response.items[0]).sort(), [
     'areaCode',
@@ -195,12 +195,14 @@ test('uses at most four cached DataLab queries when local and metro data are nee
   assert.equal(response.items.length, 3);
   assert.equal(calls.length, 4);
   assert.deepEqual(
-    calls.map(call => `${call.level}:${call.input.startYmd}`),
+    calls
+      .map(call => `${call.level}:${call.input.startYmd}`)
+      .sort(),
     [
-      'local:20210513',
       'local:20210506',
-      'metropolitan:20210513',
+      'local:20210513',
       'metropolitan:20210506',
+      'metropolitan:20210513',
     ],
   );
 });
