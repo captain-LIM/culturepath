@@ -103,9 +103,10 @@ LLM은 장소의 전체 객체를 결정하지 않는다. LLM은 허용된 `cont
 - 임베딩 모델: `baai/bge-m3`
 - 벡터 차원과 distance: `1024`, `Cosine`
 - 생성·갱신·삭제 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
+- 검색 Top-K·strict filter·MySQL 원본 재검증과 품질 기준은 [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)을 따른다.
 
 ## 환경변수와 검증 상태
 
 변수명은 `backend/.env.example`을 따른다. 키 원문은 문서, 로그, 오류 응답에 남기지 않는다.
 
-현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter batch 임베딩, Qdrant 컬렉션·payload index·증분 upsert·명시적 prune, 검색 필터, 인증키 비노출, 입력 제한, 호출 제한과 허용되지 않은 장소 ID 거부를 검증한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke test가 필요하다.
+현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter batch 임베딩, Qdrant 컬렉션·payload index·증분 upsert·명시적 prune, 지역·문화·콘텐츠 유형 strict filter, MySQL 원본 재검증, 인증키 비노출, 입력 제한, 호출 제한과 허용되지 않은 장소 ID 거부를 검증한다. 35개 고정 평가 세트의 Mock 회귀는 외부 호출 없이 실행한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke와 live 평가가 필요하다.

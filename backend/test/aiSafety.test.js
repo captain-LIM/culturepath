@@ -11,6 +11,7 @@ const { createRateLimit } = require('../src/middleware/rateLimit');
 const {
   buildAugmentedPrompt,
   buildReferenceContext,
+  chat,
   editCourse,
   normalizeTransformOutput,
 } = require('../src/services/ragPipeline');
@@ -105,6 +106,20 @@ test('bounds retrieved context and labels embedded instructions as untrusted dat
   assert.match(context, /<reference_data>/);
   assert.ok(context.length < 18000);
   assert.equal((context.match(/description/g) || []).length, 10);
+});
+
+test('keeps accepted chat messages compatible with the bounded RAG query', async () => {
+  const longMessage = `통영 문학 ${'가'.repeat(1000)}`;
+  const result = await chat([{ role: 'user', content: longMessage }], {
+    env: { USE_MOCK_RAG: 'true' },
+  });
+  assert.equal(result.routeInfo.normalizedQuery.length, 500);
+  assert.equal(result.routeInfo.region, '통영');
+
+  const assistantOnly = await chat([{ role: 'assistant', content: '이전 안내' }], {
+    env: { USE_MOCK_RAG: 'true' },
+  });
+  assert.equal(assistantOnly.routeInfo.normalizedQuery, '');
 });
 
 test('rejects AI transforms with more than 50 places in total', () => {
