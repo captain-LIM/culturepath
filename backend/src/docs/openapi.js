@@ -110,7 +110,7 @@ module.exports = Object.freeze({
         tags: ['AI'],
         summary: '현재 코스를 자연어 조건으로 변형',
         description:
-          '현재 코스와 사용자 요청을 받아 변경안을 반환합니다. 응답은 저장되지 않으며, 새 장소는 Qdrant 검색 결과의 TourAPI contentId로 제한됩니다.',
+          '서버에서 다시 조회한 현재 코스와 사용자 요청을 바탕으로 검증된 변경안을 반환합니다. OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 하며 응답은 저장되지 않습니다. 검증할 수 없는 핵심 조건은 외부 AI 호출 없이 원본 코스와 warning으로 반환합니다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -570,22 +570,28 @@ module.exports = Object.freeze({
         required: ['course', 'summary', 'explanation', 'sources', 'warnings', 'usage', 'mock'],
         properties: {
           course: { $ref: '#/components/schemas/CourseDraft' },
-          summary: { type: 'string' },
-          explanation: { type: 'string', description: '이전 Flutter 빌드 호환 필드' },
+          summary: { type: 'string', minLength: 1, maxLength: 500 },
+          explanation: { type: 'string', minLength: 1, maxLength: 500, description: '이전 Flutter 빌드 호환 필드' },
           sources: {
             type: 'array',
+            maxItems: 10,
             items: {
               type: 'object',
               required: ['contentId', 'title'],
               properties: {
-                contentId: { type: 'string' },
-                title: { type: 'string' },
+                contentId: { type: 'string', pattern: '^[0-9]+$' },
+                title: { type: 'string', minLength: 1, maxLength: 200 },
               },
             },
           },
-          warnings: { type: 'array', items: { type: 'string' } },
+          warnings: {
+            type: 'array',
+            maxItems: 5,
+            items: { type: 'string', minLength: 1, maxLength: 300 },
+          },
           usage: {
             type: 'object',
+            required: ['model', 'inputTokens', 'outputTokens'],
             properties: {
               model: { type: 'string' },
               inputTokens: { type: 'integer', minimum: 0 },

@@ -43,18 +43,22 @@ test('rejects hallucinated contentIds and reconstructs trusted place data', () =
     ['200', { contentId: '200', title: '검증 장소', address: '통영시', category: '문학' }],
   ]);
   const normalized = normalizeTransformOutput({
+    status: 'changed',
     summary: '검증 장소를 추가했습니다.',
     title: '수정 코스',
     description: '설명',
     tracks: [{ trackNumber: 1, contentIds: ['100', '200'] }],
+    warnings: [],
   }, course(), trusted);
   assert.equal(normalized.course.tracks[0].places[1].title, '검증 장소');
 
   assert.throws(() => normalizeTransformOutput({
+    status: 'changed',
     summary: '가짜 장소',
     title: '수정 코스',
     description: '',
     tracks: [{ trackNumber: 1, contentIds: ['new_1'] }],
+    warnings: [],
   }, course(), trusted), /허용되지 않은 장소/);
 });
 
@@ -133,10 +137,12 @@ test('rejects AI transforms with more than 50 places in total', () => {
     }),
   }));
   assert.throws(() => normalizeTransformOutput({
+    status: 'changed',
     summary: '변경',
     title: '수정 코스',
     description: '',
     tracks,
+    warnings: [],
   }, course(), trusted), /전체 장소 수/);
 });
 
@@ -176,6 +182,7 @@ test('rehydrates Qdrant candidates from the trusted place cache', async () => {
       async generate() {
         return {
           content: JSON.stringify({
+            status: 'changed',
             summary: '장소 추가',
             title: '수정 코스',
             description: '',
@@ -192,4 +199,55 @@ test('rehydrates Qdrant candidates from the trusted place cache', async () => {
   assert.equal(result.course.tracks[0].places[1].title, 'Trusted cache title');
   assert.equal(result.course.tracks[0].places[1].address, 'Trusted cache address');
   assert.equal(result.sources[0].title, 'Trusted cache title');
+});
+
+test('uses the cost-safe default of three AI requests per minute', () => {
+  const middleware = createRateLimit({ now: () => 0 });
+  const req = { user: { id: 7 }, ip: '127.0.0.1' };
+  const res = {
+    statusCode: 200,
+    set() {},
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; },
+  };
+  let passed = 0;
+  for (let index = 0; index < 4; index += 1) {
+    middleware(req, res, () => { passed += 1; });
+  }
+  assert.equal(passed, 3);
+  assert.equal(res.statusCode, 429);
+});
+
+test('returns a safe unchanged preview when the model cannot verify the request', async () => {
+  const original = course();
+  const result = await editCourse(course(), '비 오는 날 실내 코스로 바꿔줘', {}, {
+    env: { USE_MOCK_RAG: 'false' },
+    ragSearchService: {
+      async search() {
+        throw new Error('검증 불가능한 요청은 검색하지 않아야 합니다.');
+      },
+    },
+    client: {
+      async generate() {
+        throw new Error('검증 불가능한 요청은 모델을 호출하지 않아야 합니다.');
+      },
+    },
+  });
+  assert.deepEqual(result.course, original);
+  assert.deepEqual(result.sources, []);
+  assert.match(result.warnings[0], /실내·우천/);
+  assert.deepEqual(result.usage, { model: 'policy', inputTokens: 0, outputTokens: 0 });
+  assert.equal(result.mock, false);
+});
+
+test('applies the same unverified-condition fail-safe in mock mode', async () => {
+  const original = course();
+  const result = await editCourse(original, '부모님과 걷기 편한 코스로 바꿔줘', {}, {
+    env: { USE_MOCK_RAG: 'true' },
+  });
+  assert.deepEqual(result.course, original);
+  assert.match(result.warnings[0], /이동 편의/);
+  assert.match(result.warnings[0], /동행자 적합성/);
+  assert.deepEqual(result.usage, { model: 'policy', inputTokens: 0, outputTokens: 0 });
+  assert.equal(result.mock, true);
 });

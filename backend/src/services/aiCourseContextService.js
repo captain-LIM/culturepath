@@ -92,6 +92,9 @@ function createAiCourseContextService(options = {}) {
   if (tracks.length === 0 || tracks.every(track => track.places.length === 0)) {
     throw new CourseAccessError('AI로 변형할 장소가 없습니다.', 400);
   }
+  if (tracks.some((track, index) => track.trackNumber !== index + 1)) {
+    throw new CourseAccessError('AI로 변형할 Day 구성이 연속적이지 않습니다.', 400);
+  }
 
   return {
     id: Number(course.id),

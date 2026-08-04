@@ -85,6 +85,14 @@ test('documents the authenticated structured AI transform contract', () => {
   assert.ok(transform.responses[502]);
   assert.ok(transform.responses[503]);
   assert.ok(transform.responses[504]);
+  const transformResponse = openApiDocument.components.schemas.CourseTransformResponse;
+  assert.equal(transformResponse.properties.summary.maxLength, 500);
+  assert.equal(transformResponse.properties.warnings.maxItems, 5);
+  assert.deepEqual(transformResponse.properties.usage.required, [
+    'model',
+    'inputTokens',
+    'outputTokens',
+  ]);
 
   const chat = openApiDocument.paths['/ai/chat'].post;
   assert.deepEqual(chat.security, [{ bearerAuth: [] }]);

@@ -11,7 +11,7 @@
 ## 운영 경계
 
 - JWT 인증이 필요하다.
-- 기본 호출 제한은 사용자별 60초에 10회이며 환경변수로 조정한다.
+- 기본 호출 제한은 사용자별 60초에 3회이며 환경변수로 조정한다.
 - 기본 `USE_MOCK_RAG=true`에서는 외부 네트워크와 비용이 발생하지 않는다.
 - 실제 모드는 OpenRouter에서 질의 임베딩과 구조화된 변경안을 만들고 Qdrant에서 후보 장소를 검색한다.
 - MySQL과 TourAPI 장소가 원본이며 Qdrant는 검색 인덱스다.
@@ -21,6 +21,7 @@
 - Qdrant 후보 중 숫자형 TourAPI `contentId`가 있는 장소만 새 일정에 추가할 수 있다.
 - 사용자가 적용하기 전에는 코스 DB를 변경하지 않는다.
 - 타인의 공개 코스를 적용할 때 Flutter는 먼저 Fork API를 호출하고 Fork된 코스에 변경안을 반영한다.
+- 생성 요청은 스트리밍하지 않으며 애플리케이션에서 같은 요청을 자동 재호출하지 않는다. OpenRouter의 동일 모델 provider failover만 사용한다.
 
 ## 요청
 
@@ -73,6 +74,31 @@ Backend는 `courseId`로 DB의 제목·설명·Day·장소를 다시 조회한�
 
 LLM은 장소의 전체 객체를 결정하지 않는다. LLM은 허용된 `contentId` 배열만 선택하며, Backend가 현재 코스와 Qdrant 후보의 신뢰된 장소 객체로 최종 응답을 재구성한다.
 
+## 구조화 생성 계약
+
+- 기본 생성 모델: `google/gemini-2.5-flash-lite`
+- 최대 출력: 기본 1,600토큰, 운영 상한 4,096토큰
+- 출력 방식: non-streaming
+- OpenRouter `response_format.type`: `json_schema`
+- Schema 모드: `strict: true`
+- provider 정책: `require_parameters: true`
+- 모델 수준 fallback: 사용하지 않음
+- 애플리케이션 수준 자동 재시도: 사용하지 않음
+
+모델 내부 출력은 `status`, `summary`, `title`, `description`, `tracks`, `warnings`만 허용한다.
+`status`는 실제 변경이 있으면 `changed`, 원본과 완전히 같으면 `unchanged`여야 한다. 공개
+API 응답에는 내부 `status`를 새 필드로 노출하지 않아 기존 Flutter 계약을 유지한다.
+
+허용하는 연산은 장소 삭제, 순서 변경, Day 이동과 MySQL에서 재검증한 RAG 후보 추가다.
+교체는 기존 장소 삭제와 후보 추가로 표현한다. 결과의 Day는 1부터 연속이어야 하고 Day별
+장소는 1~20개, 전체 장소는 최대 50개이며 중복 `contentId`를 허용하지 않는다.
+
+우천·실내·이동성·동행·식이처럼 현재 원본에 검증 필드가 없는 핵심 조건은 사실처럼
+추측하지 않는다. Backend가 이런 조건을 먼저 감지하면 Qdrant와 OpenRouter를 호출하지
+않고 원본 코스를 그대로 반환하며 `warnings`에 사유를 기록한다. 이 정책은 Mock과 실제
+모드에 동일하게 적용한다. 모델 장애, 잘못된 Schema와 허용되지 않은 장소 ID는 성공
+응답으로 감추지 않고 오류로 처리한다.
+
 ## Qdrant payload 계약
 
 컬렉션의 각 장소 point는 다음 payload를 사용한다.
@@ -109,4 +135,4 @@ LLM은 장소의 전체 객체를 결정하지 않는다. LLM은 허용된 `cont
 
 변수명은 `backend/.env.example`을 따른다. 키 원문은 문서, 로그, 오류 응답에 남기지 않는다.
 
-현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter batch 임베딩, Qdrant 컬렉션·payload index·증분 upsert·명시적 prune, 지역·문화·콘텐츠 유형 strict filter, MySQL 원본 재검증, 인증키 비노출, 입력 제한, 호출 제한과 허용되지 않은 장소 ID 거부를 검증한다. 35개 고정 평가 세트의 Mock 회귀는 외부 호출 없이 실행한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke와 live 평가가 필요하다.
+현재 자동 테스트는 주입된 가짜 HTTP 응답으로 OpenRouter strict JSON Schema 요청, 출력 토큰 상한, batch 임베딩, Qdrant 컬렉션·payload index·증분 upsert·명시적 prune, 지역·문화·콘텐츠 유형 strict filter, MySQL 원본 재검증, 인증키 비노출, 입력 제한, 호출 제한, unchanged 안전 응답과 허용되지 않은 장소 ID 거부를 검증한다. 35개 고정 평가 세트의 Mock 회귀는 외부 호출 없이 실행한다. 실제 Qdrant 컬렉션 생성·인덱싱과 유료 OpenRouter 호출은 아직 수행하지 않았으므로 운영 전 제한된 smoke와 live 평가가 필요하다.

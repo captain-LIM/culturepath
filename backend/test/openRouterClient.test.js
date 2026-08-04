@@ -39,13 +39,27 @@ test('uses OpenRouter chat and embedding contracts without exposing the key in p
     },
   });
 
-  const generated = await client.generate('system', [{ role: 'user', content: 'hello' }], { json: true });
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['ok'],
+    properties: { ok: { type: 'boolean' } },
+  };
+  const generated = await client.generate('system', [{ role: 'user', content: 'hello' }], {
+    jsonSchema: { name: 'test_output', schema },
+  });
   const embedding = await client.embed('hello');
 
   assert.equal(generated.content, '{"ok":true}');
   assert.deepEqual(generated.usage, { inputTokens: 3, outputTokens: 2 });
   assert.deepEqual(embedding, [0.1, 0.2]);
-  assert.equal(requests[0].body.response_format.type, 'json_object');
+  assert.deepEqual(requests[0].body.response_format, {
+    type: 'json_schema',
+    json_schema: { name: 'test_output', strict: true, schema },
+  });
+  assert.deepEqual(requests[0].body.provider, { require_parameters: true });
+  assert.equal(requests[0].body.stream, false);
+  assert.equal(requests[0].body.max_tokens, 1600);
   assert.equal(requests[1].body.model, 'provider/embedding-model');
   assert.equal(requests[1].body.encoding_format, 'float');
   assert.equal(JSON.stringify(requests.map(request => request.body)).includes('secret-test-key'), false);
@@ -87,6 +101,51 @@ test('fails closed when OpenRouter configuration is missing', async () => {
   await assert.rejects(
     client.generate('system', [{ role: 'user', content: 'hello' }]),
     error => error instanceof AiProviderError && error.code === 'OPENROUTER_NOT_CONFIGURED',
+  );
+
+  const invalidModelClient = createOpenRouterClient({
+    env: {
+      OPENROUTER_API_KEY: 'secret-test-key',
+      OPENROUTER_MODEL: 'invalid-model-without-provider',
+    },
+    fetchImpl: async () => { throw new Error('must not call'); },
+  });
+  await assert.rejects(
+    invalidModelClient.generate('system', [{ role: 'user', content: 'hello' }]),
+    error => error instanceof AiProviderError && error.code === 'OPENROUTER_NOT_CONFIGURED',
+  );
+});
+
+test('uses the approved low-cost model by default and enforces the output cap', async () => {
+  let requestBody;
+  const client = createOpenRouterClient({
+    env: {
+      OPENROUTER_API_KEY: 'secret-test-key',
+      OPENROUTER_MAX_OUTPUT_TOKENS: '1200',
+    },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return jsonResponse({
+        choices: [{ message: { content: 'ok' } }],
+        usage: {},
+      });
+    },
+  });
+  const result = await client.generate('system', [{ role: 'user', content: 'hello' }], {
+    maxTokens: 1000,
+  });
+  assert.equal(requestBody.model, 'google/gemini-2.5-flash-lite');
+  assert.equal(requestBody.max_tokens, 1000);
+  assert.equal(result.model, 'google/gemini-2.5-flash-lite');
+  await assert.rejects(
+    client.generate('system', [{ role: 'user', content: 'hello' }], { maxTokens: 1201 }),
+    /1200 이하/,
+  );
+  await assert.rejects(
+    client.generate('system', [{ role: 'user', content: 'hello' }], {
+      jsonSchema: { name: 'Invalid-Name', schema: {} },
+    }),
+    /JSON Schema/,
   );
 });
 

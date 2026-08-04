@@ -47,8 +47,10 @@
 | PR #8 | 머지 완료 | 연관 관광지 실데이터 연결, 엄격한 제목·법정동 매핑, 호출 상한, R2 캐시 재사용과 공개 계약 |
 | PR #9 | 머지 완료 | DataLab 날짜 검증·캐시·fail-open과 문화별 지역 40/30/30 점수, `X-Region-Data-Status` |
 | PR #10 | 머지 완료 | 팀원 변경 안정화, MySQL migration, 코스 생성·Fork 멱등성, Qdrant/OpenRouter 어댑터와 구조화 `/ai/transform` 기반 |
+| PR #11 | 머지 완료 | Qdrant 컬렉션·payload index, 결정적 장소 문서와 증분 인덱싱·명시적 prune 명령 |
+| PR #12 | 머지 완료 | 규칙 기반 RAG 검색, strict filter, MySQL 원본 재검증과 35개 고정 평가 세트 |
 
-PR #10 머지 기준으로 백엔드 테스트는 149개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
+PR #12 구현 검증 기준으로 백엔드 테스트는 191개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
 
 현재 구현된 주요 파일은 다음과 같다.
 
@@ -76,7 +78,7 @@ backend/src/utils/publicDataValidation.js
 - `regionsController.js`의 문화별 지역 목록은 PR #9의 DataLab 점수에 연결됐고, 지역별 장소 목록은 TourAPI·MySQL 캐시와 안전한 큐레이션 fallback을 사용한다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했고 PR #11에서 실제 컬렉션·증분 장소 인덱싱 명령을 머지했다. 현재 R8에서 검색 정책과 고정 평가 기반을 구현 중이며 live smoke test는 별도 승인 후 남아 있다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant/OpenRouter 어댑터와 `/ai/transform` 기반을 추가했고 PR #11에서 컬렉션·증분 장소 인덱싱, PR #12에서 검색 정책·고정 평가 기반을 머지했다. 현재 R9에서 OpenRouter 구조화 코스 변형을 안정화하며 live smoke test는 별도 승인 후 남아 있다.
 - Flutter는 문화→지역→장소 목록→코스 담기와 AI 변경안 UI가 부분 연결됐지만, 장소 상세·이미지·공통 상태와 실제 RAG 품질 연결은 남아 있다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
@@ -99,8 +101,8 @@ backend/src/utils/publicDataValidation.js
 | R5 | 로컬 초안 보존·데스크탑 작업으로 연기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
 | R6 | 팀원 구현으로 부분 연결·R5 후 보완 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
 | R7 | 머지 완료 — PR #11 (2026-08-03) | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
-| R8 | 구현 중 — `agent/rag-search-evaluation` | RAG 검색·필터·평가 기반 | R7 | 제한적 |
-| R9 | 구조화 API 기반 구현·live 검증 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
+| R8 | 머지 완료 — PR #12 (2026-08-04) | RAG 검색·필터·평가 기반 | R7 | 제한적 |
+| R9 | 구현 중 — `agent/openrouter-structured-transform` | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
 | R10 | 기존 diff UI 연결·품질 마감 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
 
 기본 원칙은 한 번에 하나의 코드 PR만 구현하는 것이다. R5 디자인은 코드 변경과 충돌하지 않는 범위에서 병렬 진행할 수 있지만, 저장소 변경은 별도 PR로 제출한다.
@@ -434,6 +436,18 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - 변경 가능한 코스 연산 종류
 - 사용자 확인 전 서버 저장 여부
 
+### 확정된 결정
+
+- 1차 모델은 `google/gemini-2.5-flash-lite`이며 모델 수준 fallback은 사용하지 않는다.
+- OpenRouter의 동일 모델 provider failover만 사용하고 애플리케이션 자동 재호출은 하지 않는다.
+- `response_format=json_schema`, `strict=true`, `require_parameters=true`로 구조를 강제한 뒤 Backend가 다시 검증한다.
+- 응답은 non-streaming으로 한 번에 받고 최대 출력은 기본 1,600토큰으로 제한한다.
+- 장소 삭제·순서 변경·Day 이동·검증 후보 추가를 허용하며 교체는 삭제+추가로 표현한다.
+- 검증할 수 없는 핵심 조건은 추측하지 않고 원본 코스와 warning을 반환한다.
+- 공개 요청·응답과 `/ai/edit-course` 호환 별칭은 유지하고 사용자 확인 전 DB를 변경하지 않는다.
+- 사용자별 기본 호출 제한은 60초에 3회다.
+- 실제 OpenRouter·Qdrant·MySQL 호출은 별도 승인 전까지 실행하지 않는다.
+
 ## 14. R10 — AI 변경안 UI 통합과 품질·비용 마감
 
 ### 목표
@@ -508,15 +522,15 @@ R3과 R4는 R1 이후 병렬 가능하다. R5는 Backend 작업과 병렬 가능
 
 ## 18. 현재 세션 인수인계 포인트
 
-- 현재 작업은 **R8 — RAG 검색·필터·평가 기반**이다.
-- 브랜치는 `agent/rag-search-evaluation`이며 PR #11 머지 커밋 `8221560`에서 시작했다.
-- 사용자는 R8 권장안 1-A부터 8-A까지 모두 채택하고 명시적으로 구현 시작을 지시했다.
-- R7은 PR #11로 머지됐고 `baai/bge-m3`, 1024차원, Cosine, `culturepath_places_v1` 계약을 사용한다.
-- R8은 규칙 기반 query routing, strict 지역·문화·콘텐츠 유형 필터, Top-K 8·최대 10, MySQL 원본 재검증과 상세 진단을 구현한다.
-- 최소 점수는 live 평가 전에는 적용하지 않으며 고정 결과에 대한 threshold sweep 후 확정한다.
-- `backend/test/fixtures/rag-evaluation-v1.json`은 황찬우 소유의 35개 고정 case다.
-- `npm run rag:evaluate`는 Mock 전용이고, 실제 호출은 `--live`를 명시해야 한다.
-- 실제 Qdrant 클러스터·OpenRouter 키는 아직 설정되지 않았으며 smoke와 live 품질 평가는 실행하지 않았다.
-- 구현 계약은 [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)을 기준으로 한다.
-- R8 다음은 R9 구조화 코스 변형 API의 모델·비용·live 검증이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
+- 현재 작업은 **R9 — OpenRouter 기반 구조화 코스 변형 API 안정화**다.
+- 브랜치는 `agent/openrouter-structured-transform`이며 PR #12 머지 커밋 `cfe5416`에서 시작했다.
+- 사용자는 R9 권장안 1-A부터 9-A 조합을 확인한 뒤 명시적으로 구현 시작을 지시했다.
+- R8은 PR #12로 머지됐고 규칙 기반 routing, strict filter, MySQL 원본 재검증과 35개 고정 평가 세트를 제공한다.
+- R9은 `google/gemini-2.5-flash-lite`, strict JSON Schema, non-streaming, 기본 1,600 출력 토큰, 애플리케이션 재시도 없음과 분당 3회 제한을 사용한다.
+- 공개 `/ai/transform` 응답은 유지하며 내부 모델 출력에만 `changed|unchanged` 상태를 요구한다.
+- 모델은 현재 코스 또는 MySQL로 재검증한 후보의 숫자형 TourAPI `contentId`만 사용할 수 있다.
+- 검증할 수 없는 우천·이동성·동행·식이 조건은 추측하지 않고 원본 코스와 warning을 반환한다.
+- 실제 Qdrant 클러스터·OpenRouter 생성 모델·MySQL을 연결한 smoke와 live 품질 평가는 실행하지 않았다.
+- 구현 계약은 [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md)을 기준으로 한다.
+- R9 다음은 R10 AI 변경안 Flutter UI 통합·품질·비용 마감이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
 - 전체 검증과 독립 `gpt-5.6-sol high` 리뷰가 끝나도 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.
