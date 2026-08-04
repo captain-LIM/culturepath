@@ -35,7 +35,6 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
   }
 
   void reorder(int trackIdx, int oldIdx, int newIdx) {
-    if (newIdx > oldIdx) newIdx--;
     final tracks = List<CourseTrack>.from(state.tracks);
     final places = List<PlaceItem>.from(tracks[trackIdx].places);
     places.insert(newIdx, places.removeAt(oldIdx));
@@ -302,7 +301,8 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 100),
                     itemCount: course.tracks[_activeTrack].places.length,
-                    onReorder: (o, n) => notifier.reorder(_activeTrack, o, n),
+                    onReorderItem: (o, n) =>
+                        notifier.reorder(_activeTrack, o, n),
                     itemBuilder: (_, i) {
                       final place = course.tracks[_activeTrack].places[i];
                       return CoursePlaceCard(

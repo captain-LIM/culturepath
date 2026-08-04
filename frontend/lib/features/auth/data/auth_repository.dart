@@ -14,6 +14,24 @@ class AuthRepository {
       '793585667481-59trfjaarlkffp2g3u2nacmac3127uh9.apps.googleusercontent.com';
 
   final _googleSignIn = GoogleSignIn(serverClientId: _serverClientId);
+  final ApiClient _client;
+
+  AuthRepository({ApiClient? client}) : _client = client ?? apiClient;
+
+  Future<String> register({
+    required String email,
+    required String password,
+    required String nickname,
+  }) async {
+    final res = await _client.post('/auth/register', {
+      'email': email,
+      'password': password,
+      'nickname': nickname,
+    });
+    final token = res.data['token'] as String;
+    await _saveToken(token);
+    return token;
+  }
 
   Future<String> signInWithGoogle() async {
     final account = await _googleSignIn.signIn();
@@ -23,7 +41,7 @@ class AuthRepository {
     final idToken = auth.idToken;
     if (idToken == null) throw Exception('인증 토큰을 가져올 수 없습니다.');
 
-    final res = await apiClient.post('/auth/google', {'idToken': idToken});
+    final res = await _client.post('/auth/google', {'idToken': idToken});
     final token = res.data['token'] as String;
     await _saveToken(token);
     return token;

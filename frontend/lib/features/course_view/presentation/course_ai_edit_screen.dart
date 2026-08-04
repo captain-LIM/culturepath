@@ -487,7 +487,7 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.data_alert, color: Colors.orange.shade800),
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800),
                 const SizedBox(width: 8),
                 Text(
                   'ai_edit_warning_title'.tr(),

@@ -103,10 +103,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         ..writeln()
         ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
     }
-    SharePlus.instance.share(ShareParams(
-      text: buffer.toString(),
-      subject: course.title,
-    ));
+    Share.share(buffer.toString(), subject: course.title);
   }
 
   Future<void> _handleEdit() async {
