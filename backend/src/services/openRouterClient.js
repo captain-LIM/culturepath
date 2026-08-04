@@ -1,6 +1,7 @@
 'use strict';
 
 const { DEFAULTS: RAG_INDEX_DEFAULTS } = require('../config/ragIndex');
+const { getAiGenerationConfig } = require('../config/aiGeneration');
 
 class AiProviderError extends Error {
   constructor(message, options = {}) {
@@ -16,12 +17,56 @@ function positiveInteger(value, fallback) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function boundedOutputTokens(value, maximum) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > maximum) {
+    throw new TypeError(`OpenRouter 출력 토큰은 1 이상 ${maximum} 이하여야 합니다.`);
+  }
+  return parsed;
+}
+
+function structuredResponseOptions(requestOptions) {
+  if (requestOptions.jsonSchema === undefined) {
+    return requestOptions.json
+      ? { response_format: { type: 'json_object' } }
+      : {};
+  }
+  const specification = requestOptions.jsonSchema;
+  if (!specification || typeof specification !== 'object' || Array.isArray(specification) ||
+      typeof specification.name !== 'string' || !/^[a-z][a-z0-9_]{0,63}$/.test(specification.name) ||
+      !specification.schema || typeof specification.schema !== 'object' ||
+      Array.isArray(specification.schema)) {
+    throw new TypeError('OpenRouter JSON Schema 설정이 올바르지 않습니다.');
+  }
+  return {
+    provider: { require_parameters: true },
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: specification.name,
+        strict: true,
+        schema: specification.schema,
+      },
+    },
+  };
+}
+
 function createOpenRouterClient(options = {}) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const baseUrl = String(env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1')
     .replace(/\/+$/, '');
   const timeoutMs = positiveInteger(env.OPENROUTER_TIMEOUT_MS, 15000);
+
+  function generationConfiguration() {
+    try {
+      return getAiGenerationConfig(env);
+    } catch {
+      throw new AiProviderError('OpenRouter 생성 모델 설정이 올바르지 않습니다.', {
+        code: 'OPENROUTER_NOT_CONFIGURED',
+      });
+    }
+  }
 
   async function post(path, body) {
     if (!env.OPENROUTER_API_KEY) {
@@ -82,21 +127,22 @@ function createOpenRouterClient(options = {}) {
   }
 
   async function generate(systemPrompt, messages, requestOptions = {}) {
-    const model = env.OPENROUTER_MODEL;
-    if (!model) {
-      throw new AiProviderError('OPENROUTER_MODEL이 설정되지 않았습니다.', {
-        code: 'OPENROUTER_NOT_CONFIGURED',
-      });
-    }
+    const generationConfig = generationConfiguration();
+    const maxTokens = boundedOutputTokens(
+      requestOptions.maxTokens ?? generationConfig.maxOutputTokens,
+      generationConfig.maxOutputTokens,
+    );
+    const responseOptions = structuredResponseOptions(requestOptions);
     const payload = await post('/chat/completions', {
-      model,
-      max_tokens: positiveInteger(requestOptions.maxTokens, 1024),
+      model: generationConfig.model,
+      max_tokens: maxTokens,
       temperature: requestOptions.temperature ?? 0.2,
+      stream: false,
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages.map(message => ({ role: message.role, content: message.content })),
       ],
-      ...(requestOptions.json ? { response_format: { type: 'json_object' } } : {}),
+      ...responseOptions,
     });
     const content = payload?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
@@ -106,7 +152,7 @@ function createOpenRouterClient(options = {}) {
     }
     return {
       content,
-      model: payload.model || model,
+      model: payload.model || generationConfig.model,
       usage: {
         inputTokens: Number(payload.usage?.prompt_tokens || 0),
         outputTokens: Number(payload.usage?.completion_tokens || 0),
@@ -175,4 +221,8 @@ function createOpenRouterClient(options = {}) {
   return Object.freeze({ embed, embedMany, generate });
 }
 
-module.exports = { AiProviderError, createOpenRouterClient };
+module.exports = {
+  AiProviderError,
+  createOpenRouterClient,
+  structuredResponseOptions,
+};

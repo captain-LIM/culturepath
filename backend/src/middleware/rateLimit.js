@@ -7,7 +7,7 @@ function positiveInteger(value, fallback) {
 
 function createRateLimit(options = {}) {
   const windowMs = positiveInteger(options.windowMs, 60000);
-  const max = positiveInteger(options.max, 10);
+  const max = positiveInteger(options.max, 3);
   const now = options.now || Date.now;
   const maxBuckets = positiveInteger(options.maxBuckets, 10000);
   const buckets = new Map();

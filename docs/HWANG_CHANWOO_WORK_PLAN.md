@@ -8,7 +8,7 @@
 >
 > **기준일:** 2026-07-20
 >
-> **최종 갱신:** 2026-07-23
+> **최종 갱신:** 2026-08-04
 >
 > **관련 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](./TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
 
@@ -550,15 +550,7 @@ npm run rag:index -- --prune
     "mobility": "low",
     "dietary": [],
     "startRegion": "통영"
-  },
-  "currentTracks": [
-    {
-      "trackNumber": 1,
-      "sequence": 1,
-      "contentId": "123456",
-      "stayMinutes": 60
-    }
-  ]
+  }
 }
 ```
 
@@ -566,7 +558,7 @@ npm run rag:index -- --prune
 
 - [x] `request` 빈 문자열 금지 및 길이 제한
 - [x] `courseId`로 서버 코스를 다시 조회하고 공개 여부·현재 사용자 권한 확인
-- [ ] `currentTracks`의 `contentId`가 실제 장소인지 검증
+- [x] 클라이언트 `currentTracks`를 신뢰하지 않고 `courseId`로 서버 코스와 장소를 재조회
 - [ ] 허용된 제약 값과 자유 텍스트의 경계 정의
 - [x] 최대 장소 수와 최대 대화·요청 크기 제한
 - [x] 프롬프트 명령 삽입을 데이터와 지시문 분리로 완화
@@ -577,38 +569,29 @@ npm run rag:index -- --prune
 
 ```json
 {
-  "summary": "야외 장소 1곳을 실내 문화시설로 교체했습니다.",
-  "assumptions": ["출발지는 통영 시내로 가정했습니다."],
-  "transformedTracks": [
-    {
-      "trackNumber": 1,
-      "sequence": 1,
-      "contentId": "123456",
-      "stayMinutes": 60,
-      "action": "keep",
-      "reason": "실내 관람이 가능하고 문학 테마에 적합합니다."
-    }
-  ],
-  "changes": [
-    {
-      "type": "replace",
-      "fromContentId": "old-id",
-      "toContentId": "new-id",
-      "reason": "우천 시 야외 이동을 줄이기 위해 교체했습니다."
-    }
-  ],
-  "sources": [
-    {
-      "contentId": "123456",
-      "title": "박경리기념관"
-    }
-  ],
-  "warnings": [],
+  "course": {
+    "id": 42,
+    "title": "통영 문학 당일 코스",
+    "description": "원본 설명",
+    "tracks": [
+      {
+        "trackNumber": 1,
+        "places": [
+          { "contentId": "123456", "title": "박경리기념관" }
+        ]
+      }
+    ]
+  },
+  "summary": "실내 여부를 검증할 수 없어 원본 코스를 유지했습니다.",
+  "explanation": "실내 여부를 검증할 수 없어 원본 코스를 유지했습니다.",
+  "sources": [],
+  "warnings": ["장소별 실내 여부 데이터가 없습니다."],
   "usage": {
-    "model": "provider/model",
+    "model": "google/gemini-2.5-flash-lite",
     "inputTokens": 0,
     "outputTokens": 0
-  }
+  },
+  "mock": false
 }
 ```
 
@@ -619,6 +602,8 @@ npm run rag:index -- --prune
 - 변경 이유는 사용자에게 보여줄 수 있는 짧은 문장으로 제공한다.
 - 결과를 즉시 DB에 덮어쓰지 않고 사용자가 `적용`을 눌렀을 때만 저장한다.
 - 원본 코스는 변형 미리보기 단계에서 보존한다.
+- 내부 모델 출력의 `status`는 공개 응답에 추가하지 않아 기존 Flutter 파서를 유지한다.
+- 검증할 수 없는 핵심 조건은 원본 코스를 유지하고 `warnings`에 이유를 기록한다.
 
 ## B-9. OpenRouter 연동
 
@@ -627,11 +612,11 @@ npm run rag:index -- --prune
 - [x] `OPENROUTER_API_KEY` 환경변수 추가
 - [x] 개발·운영 모델명을 환경변수로 분리
 - [x] 타임아웃과 최대 출력 토큰 설정
-- [ ] 구조화된 출력 또는 JSON Schema 지원 모델 우선 검토
+- [x] `google/gemini-2.5-flash-lite`와 strict JSON Schema 사용
 - [x] 모델 응답 JSON 파싱 실패 처리
 - [x] 429, 5xx, 타임아웃을 내부 오류로 정규화
-- [ ] 토큰 사용량 기록은 구현, 요청별 예상 비용 계산은 모델 확정 후 추가
-- [ ] 운영 환경에서 Mock 응답이 노출되지 않도록 검증
+- [x] 입력·출력 토큰 기록과 기본 1,600 출력 토큰 상한 적용
+- [ ] 운영 환경에서 Mock 응답이 노출되지 않도록 배포 설정 검증
 - [x] 모델 교체 시 비즈니스 로직을 수정하지 않도록 `llmService` 인터페이스 유지
 
 ### 프롬프트 구성
@@ -684,9 +669,9 @@ User Request: 사용자의 원문
 - [ ] Mock 문서가 아닌 TourAPI 기반 장소를 검색한다.
 - [x] Qdrant가 비어 있으면 명확한 오류를 반환한다.
 - [x] 지역·문화·명시적 콘텐츠 유형 필터가 AND 조건으로 적용된다.
-- [ ] `/ai/transform` 응답이 합의된 JSON Schema를 항상 만족한다.
-- [ ] 존재하지 않는 장소를 결과에 포함하지 않는다.
-- [ ] 사용자가 적용하기 전 원본 코스를 변경하지 않는다.
+- [x] `/ai/transform` 내부 모델 응답을 strict JSON Schema와 Backend 검증으로 제한한다.
+- [x] 존재하지 않는 장소를 결과에 포함하지 않는다.
+- [x] 사용자가 적용하기 전 원본 코스를 변경하지 않는다.
 - [ ] live 평가 세트 결과와 대표 실패 사례를 문서로 남긴다.
 - [x] 검색 요청별 임베딩 모델·입력 토큰·지연시간을 확인할 수 있다.
 - [x] Qdrant 전체 재인덱싱이 가능하다.
@@ -898,7 +883,7 @@ User Request: 사용자의 원문
 - [ ] 오류 코드와 사용자 메시지 구분
 - [ ] 페이지네이션 방식
 - [ ] 캐시 데이터의 최신성 표시 여부
-- [ ] `/ai/transform` JSON Schema
+- [x] `/ai/transform` JSON Schema와 기존 Flutter 호환 공개 응답
 - [ ] Figma 화면·컴포넌트·상태 명세
 
 ## D-2. 수민님에게 받아야 할 것
@@ -924,10 +909,10 @@ User Request: 사용자의 원문
 
 ## Phase 0 — 계약 고정
 
-- [ ] Qdrant + OpenRouter 사용 확정
+- [x] Qdrant + OpenRouter 사용 확정
 - [ ] 내부 장소 모델 합의
-- [ ] `/ai/transform` 초안 합의
-- [ ] `contentId` 공통 ID 사용 합의
+- [x] `/ai/transform` 초안 합의
+- [x] 숫자형 TourAPI `contentId` 공통 ID 사용 합의
 
 **완료 결과:** 구현 중 응답 형식이 반복해서 바뀌지 않는다.
 

@@ -116,3 +116,19 @@ test('rejects server-loaded courses that exceed the total place limit', async ()
     error => error instanceof CourseAccessError && error.status === 400,
   );
 });
+
+test('rejects non-contiguous server-loaded Day numbers', async () => {
+  const tracks = [
+    trackRow({ track_number: 1, content_id: '100' }),
+    trackRow({ track_number: 3, content_id: '300' }),
+  ];
+  const service = createService(
+    courseRow(),
+    tracks,
+    [trustedPlace('100'), trustedPlace('300')],
+  );
+  await assert.rejects(
+    service.loadCourseForTransform(7, 12),
+    error => error instanceof CourseAccessError && error.status === 400,
+  );
+});
