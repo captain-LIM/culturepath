@@ -1,6 +1,8 @@
 'use strict';
 
+const { performance } = require('node:perf_hooks');
 const { DEFAULTS: RAG_INDEX_DEFAULTS } = require('../config/ragIndex');
+const { DEFAULTS: RAG_SEARCH_DEFAULTS, optionalScore } = require('../config/ragSearch');
 
 class VectorStoreError extends Error {
   constructor(message, code = 'VECTOR_STORE_ERROR', options = {}) {
@@ -25,6 +27,7 @@ function createQdrantClient(options = {}) {
     env.QDRANT_COLLECTION || RAG_INDEX_DEFAULTS.collection,
   ).trim();
   const timeoutMs = positiveInteger(env.QDRANT_TIMEOUT_MS, 8000);
+  const now = options.now || (() => performance.now());
 
   function requireConfiguration() {
     if (!baseUrl || !collection || typeof fetchImpl !== 'function') {
@@ -227,56 +230,171 @@ function createQdrantClient(options = {}) {
     };
   }
 
-  async function search(query, filter = {}) {
-    if (typeof embed !== 'function') {
+  function normalizeVector(vector) {
+    if (!Array.isArray(vector) || vector.length === 0 ||
+        vector.some(value => !Number.isFinite(value))) {
       throw new VectorStoreError(
-        'Qdrant 임베딩 설정이 완료되지 않았습니다.',
-        'QDRANT_NOT_CONFIGURED',
+        'Qdrant 검색 벡터가 올바르지 않습니다.',
+        'QDRANT_INVALID_VECTOR',
       );
     }
-    const vector = await embed(query);
-    const must = [];
-    if (filter.category) must.push({ key: 'cultures', match: { value: filter.category } });
-    if (filter.region) must.push({ key: 'regionName', match: { value: filter.region } });
-    const limit = Math.min(20, positiveInteger(filter.topK, 5));
-    const scoreThreshold = Number.parseFloat(env.QDRANT_SCORE_THRESHOLD);
-    const body = {
-      query: vector,
-      limit,
-      with_payload: true,
-      ...(must.length ? { filter: { must } } : {}),
-      ...(Number.isFinite(scoreThreshold) ? { score_threshold: scoreThreshold } : {}),
-    };
-    const { payload } = await request(collectionPath('/points/query'), {
-      body,
-      method: 'POST',
-    });
-    const points = payload?.result?.points || payload?.result || [];
+    return vector;
+  }
+
+  function searchLimit(value) {
+    if (value === undefined || value === null || value === '') return RAG_SEARCH_DEFAULTS.topK;
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > RAG_SEARCH_DEFAULTS.maxTopK) {
+      throw new TypeError(`Qdrant 검색 topK는 1 이상 ${RAG_SEARCH_DEFAULTS.maxTopK} 이하여야 합니다.`);
+    }
+    return parsed;
+  }
+
+  function normalizeSearchPoints(points) {
     if (!Array.isArray(points)) {
       throw new VectorStoreError(
         'Qdrant 검색 응답이 올바르지 않습니다.',
         'QDRANT_INVALID_RESPONSE',
       );
     }
-
     return points.map(point => {
-      const data = point.payload || {};
+      if (point?.id === undefined || !Number.isFinite(Number(point?.score)) ||
+          !point.payload || typeof point.payload !== 'object' || Array.isArray(point.payload)) {
+        throw new VectorStoreError(
+          'Qdrant 검색 point가 올바르지 않습니다.',
+          'QDRANT_INVALID_RESPONSE',
+        );
+      }
+      const data = point.payload;
       const contentId = data.contentId ?? data.content_id ?? null;
       return {
         id: String(point.id),
         content: String(data.content || data.overview || ''),
         metadata: {
           contentId: contentId == null ? null : String(contentId),
+          contentTypeId: data.contentTypeId == null ? null : String(data.contentTypeId),
           place_name: String(data.title || data.place_name || ''),
           address: String(data.address || ''),
           open_time: String(data.openTime || data.open_time || ''),
           category: String(data.category || data.cultures?.[0] || ''),
+          cultures: Array.isArray(data.cultures) ? data.cultures.map(String) : [],
           region: String(data.regionName || data.region || ''),
           tel: String(data.tel || ''),
         },
-        score: Number(point.score || 0),
+        score: Number(point.score),
       };
     });
+  }
+
+  async function searchByVector(vector, filter = {}) {
+    normalizeVector(vector);
+    const must = [];
+    if (filter.category) must.push({ key: 'cultures', match: { value: filter.category } });
+    if (filter.region) must.push({ key: 'regionName', match: { value: filter.region } });
+    if (filter.contentTypeId) {
+      must.push({ key: 'contentTypeId', match: { value: String(filter.contentTypeId) } });
+    }
+    const limit = searchLimit(filter.topK);
+    const scoreThreshold = optionalScore(
+      Object.prototype.hasOwnProperty.call(filter, 'scoreThreshold')
+        ? filter.scoreThreshold
+        : env.QDRANT_SCORE_THRESHOLD,
+    );
+    const body = {
+      query: vector,
+      limit,
+      with_payload: true,
+      ...(must.length ? { filter: { must } } : {}),
+      ...(scoreThreshold === null ? {} : { score_threshold: scoreThreshold }),
+    };
+    let payload;
+    try {
+      ({ payload } = await request(collectionPath('/points/query'), {
+        body,
+        method: 'POST',
+      }));
+    } catch (error) {
+      if (error instanceof VectorStoreError && error.status === 404) {
+        throw new VectorStoreError(
+          'Qdrant 검색 인덱스가 준비되지 않았습니다.',
+          'QDRANT_INDEX_EMPTY',
+          { status: 404 },
+        );
+      }
+      throw error;
+    }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
+        (Object.prototype.hasOwnProperty.call(payload, 'status') &&
+          String(payload.status).toLowerCase() !== 'ok')) {
+      throw new VectorStoreError(
+        'Qdrant 검색 응답이 올바르지 않습니다.',
+        'QDRANT_INVALID_RESPONSE',
+      );
+    }
+    const result = payload.result;
+    const points = Array.isArray(result)
+      ? result
+      : result && typeof result === 'object' && !Array.isArray(result) &&
+          Array.isArray(result.points)
+        ? result.points
+        : null;
+    if (!points) {
+      throw new VectorStoreError(
+        'Qdrant 검색 응답이 올바르지 않습니다.',
+        'QDRANT_INVALID_RESPONSE',
+      );
+    }
+    return normalizeSearchPoints(points);
+  }
+
+  function embeddingDetails(result) {
+    if (Array.isArray(result)) {
+      return { inputTokens: 0, model: null, vector: normalizeVector(result) };
+    }
+    const vector = result?.vector || result?.embedding;
+    if (!result || typeof result !== 'object') {
+      throw new VectorStoreError(
+        'Qdrant 임베딩 결과가 올바르지 않습니다.',
+        'QDRANT_INVALID_VECTOR',
+      );
+    }
+    return {
+      inputTokens: Number(result.usage?.inputTokens || 0),
+      model: result.model ? String(result.model) : null,
+      vector: normalizeVector(vector),
+    };
+  }
+
+  async function searchDetailed(query, filter = {}) {
+    if (typeof embed !== 'function') {
+      throw new VectorStoreError(
+        'Qdrant 임베딩 설정이 완료되지 않았습니다.',
+        'QDRANT_NOT_CONFIGURED',
+      );
+    }
+    const startedAt = now();
+    const embedded = embeddingDetails(await embed(query));
+    const embeddedAt = now();
+    const documents = await searchByVector(embedded.vector, filter);
+    const completedAt = now();
+    return {
+      diagnostics: {
+        latencyMs: {
+          embedding: Math.max(0, embeddedAt - startedAt),
+          qdrant: Math.max(0, completedAt - embeddedAt),
+          total: Math.max(0, completedAt - startedAt),
+        },
+        usage: {
+          embeddingModel: embedded.model,
+          inputTokens: embedded.inputTokens,
+        },
+      },
+      documents,
+    };
+  }
+
+  async function search(query, filter = {}) {
+    return (await searchDetailed(query, filter)).documents;
   }
 
   return Object.freeze({
@@ -286,6 +404,8 @@ function createQdrantClient(options = {}) {
     retrievePoints,
     scrollPoints,
     search,
+    searchByVector,
+    searchDetailed,
     upsertPoints,
   });
 }

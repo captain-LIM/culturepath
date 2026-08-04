@@ -1,0 +1,228 @@
+{
+  "version": "culturepath-rag-eval-v1",
+  "owner": "황찬우",
+  "topK": 8,
+  "thresholds": {
+    "hitRateAtK": 0.8,
+    "mrrAtK": 0.5,
+    "routingAccuracy": 1,
+    "strictFilterRate": 1,
+    "emptyCaseRate": 1,
+    "trustedSourceRate": 1
+  },
+  "cases": [
+    {
+      "id": "gangneung-coffee-exact",
+      "query": "강릉 커피·카페 여행",
+      "expectedFilters": { "region": "강릉", "category": "커피·카페" },
+      "expected": { "titles": ["안목해변 커피거리"] }
+    },
+    {
+      "id": "gangneung-bookshop-exact",
+      "query": "강릉 독립서점·책방 여행",
+      "expectedFilters": { "region": "강릉", "category": "독립서점·책방" },
+      "expected": { "titles": ["책방 나다"] }
+    },
+    {
+      "id": "gangneung-literature-exact",
+      "query": "강릉 문학 여행",
+      "expectedFilters": { "region": "강릉", "category": "문학" },
+      "expected": { "titles": ["오죽헌"] }
+    },
+    {
+      "id": "jeonju-heritage-exact",
+      "query": "전주 근대 문화유산 여행",
+      "expectedFilters": { "region": "전주", "category": "근대 문화유산" },
+      "expected": { "titles": ["전주 한옥마을"] }
+    },
+    {
+      "id": "jeonju-bookshop-exact",
+      "query": "전주 독립서점·책방 여행",
+      "expectedFilters": { "region": "전주", "category": "독립서점·책방" },
+      "expected": { "titles": ["경암책방"] }
+    },
+    {
+      "id": "jeonju-alcohol-exact",
+      "query": "전주 전통주·양조장 여행",
+      "expectedFilters": { "region": "전주", "category": "전통주·양조장" },
+      "expected": { "titles": ["전주 막걸리 골목"] }
+    },
+    {
+      "id": "tongyeong-literature-exact",
+      "query": "통영 문학 당일치기",
+      "expectedFilters": { "region": "통영", "category": "문학" },
+      "expected": { "titles": ["박경리기념관"] }
+    },
+    {
+      "id": "tongyeong-music-exact",
+      "query": "통영 음악 여행",
+      "expectedFilters": { "region": "통영", "category": "음악" },
+      "expected": { "titles": ["통영국제음악당"] }
+    },
+    {
+      "id": "tongyeong-food-exact",
+      "query": "통영 로컬 미식 여행",
+      "expectedFilters": { "region": "통영", "category": "로컬 미식" },
+      "expected": { "titles": ["통영 중앙시장"] }
+    },
+    {
+      "id": "gunsan-heritage-exact",
+      "query": "군산 근대 문화유산 여행",
+      "expectedFilters": { "region": "군산", "category": "근대 문화유산" },
+      "expected": { "titles": ["근대역사박물관"] }
+    },
+    {
+      "id": "chuncheon-animation-exact",
+      "query": "춘천 영화·애니메이션 여행",
+      "expectedFilters": { "region": "춘천", "category": "영화·애니메이션" },
+      "expected": { "titles": ["애니메이션박물관"] }
+    },
+    {
+      "id": "andong-alcohol-exact",
+      "query": "안동 전통주·양조장 여행",
+      "expectedFilters": { "region": "안동", "category": "전통주·양조장" },
+      "expected": { "titles": ["안동소주 박물관"] }
+    },
+    {
+      "id": "gangneung-cafe-alias",
+      "query": "강릉 카페 추천",
+      "expectedFilters": { "region": "강릉", "category": "커피·카페" },
+      "expected": { "titles": ["안목해변 커피거리"] }
+    },
+    {
+      "id": "gangneung-book-alias",
+      "query": "강릉 책방을 둘러보고 싶어",
+      "expectedFilters": { "region": "강릉", "category": "독립서점·책방" },
+      "expected": { "titles": ["책방 나다"] }
+    },
+    {
+      "id": "jeonju-makgeolli-alias",
+      "query": "전주 막걸리 체험",
+      "expectedFilters": { "region": "전주", "category": "전통주·양조장" },
+      "expected": { "titles": ["전주 막걸리 골목"] }
+    },
+    {
+      "id": "tongyeong-food-alias",
+      "query": "통영 맛집과 시장",
+      "expectedFilters": { "region": "통영", "category": "로컬 미식" },
+      "expected": { "titles": ["통영 중앙시장"] }
+    },
+    {
+      "id": "chuncheon-animation-alias",
+      "query": "춘천 애니 여행",
+      "expectedFilters": { "region": "춘천", "category": "영화·애니메이션" },
+      "expected": { "titles": ["애니메이션박물관"] }
+    },
+    {
+      "id": "gunsan-modern-alias",
+      "query": "군산 근대 여행",
+      "expectedFilters": { "region": "군산", "category": "근대 문화유산" },
+      "expected": { "titles": ["근대역사박물관"] }
+    },
+    {
+      "id": "andong-soju-alias",
+      "query": "안동 소주 문화 체험",
+      "expectedFilters": { "region": "안동", "category": "전통주·양조장" },
+      "expected": { "titles": ["안동소주 박물관"] }
+    },
+    {
+      "id": "tongyeong-concert-alias",
+      "query": "통영 음악 공연장",
+      "expectedFilters": { "region": "통영", "category": "음악" },
+      "expected": { "titles": ["통영국제음악당"] }
+    },
+    {
+      "id": "tongyeong-region-only",
+      "query": "통영에서 조용한 문화 코스",
+      "expectedFilters": { "region": "통영" },
+      "expected": { "titles": ["박경리기념관", "통영국제음악당", "통영 중앙시장"] }
+    },
+    {
+      "id": "gangneung-region-only",
+      "query": "강릉 반나절 문화 여행",
+      "expectedFilters": { "region": "강릉" },
+      "expected": { "titles": ["안목해변 커피거리", "책방 나다", "오죽헌"] }
+    },
+    {
+      "id": "jeonju-region-only",
+      "query": "전주 가족 문화 코스",
+      "expectedFilters": { "region": "전주" },
+      "expected": { "titles": ["전주 한옥마을", "경암책방", "전주 막걸리 골목"] }
+    },
+    {
+      "id": "literature-category-only",
+      "query": "문학의 흔적을 찾는 여행",
+      "expectedFilters": { "category": "문학" },
+      "expected": { "titles": ["오죽헌", "박경리기념관"] }
+    },
+    {
+      "id": "bookshop-category-only",
+      "query": "독립서점 중심 여행",
+      "expectedFilters": { "category": "독립서점·책방" },
+      "expected": { "titles": ["책방 나다", "경암책방"] }
+    },
+    {
+      "id": "animation-category-only",
+      "query": "애니메이션 문화 여행",
+      "expectedFilters": { "category": "영화·애니메이션" },
+      "expected": { "titles": ["애니메이션박물관"] }
+    },
+    {
+      "id": "rain-tongyeong-literature",
+      "query": "비 오는 날 실내 중심 통영 문학 코스",
+      "expectedFilters": { "region": "통영", "category": "문학" },
+      "expected": { "titles": ["박경리기념관"] }
+    },
+    {
+      "id": "parents-gangneung-literature",
+      "query": "부모님과 걷기 편한 강릉 문학 코스",
+      "expectedFilters": { "region": "강릉", "category": "문학" },
+      "expected": { "titles": ["오죽헌"] }
+    },
+    {
+      "id": "children-chuncheon-animation",
+      "query": "아이와 가는 춘천 애니메이션 코스",
+      "expectedFilters": { "region": "춘천", "category": "영화·애니메이션" },
+      "expected": { "titles": ["애니메이션박물관"] }
+    },
+    {
+      "id": "empty-tongyeong-animation",
+      "query": "통영 애니메이션 코스",
+      "expectedFilters": { "region": "통영", "category": "영화·애니메이션" },
+      "expected": { "empty": true }
+    },
+    {
+      "id": "empty-gunsan-coffee",
+      "query": "군산 커피 여행",
+      "expectedFilters": { "region": "군산", "category": "커피·카페" },
+      "expected": { "empty": true }
+    },
+    {
+      "id": "empty-andong-literature",
+      "query": "안동 문학 여행",
+      "expectedFilters": { "region": "안동", "category": "문학" },
+      "expected": { "empty": true }
+    },
+    {
+      "id": "content-type-cultural-facility",
+      "query": "통영 문학 문화시설",
+      "filters": { "contentTypeId": "14" },
+      "expectedFilters": { "region": "통영", "category": "문학", "contentTypeId": "14" },
+      "expected": { "titles": ["박경리기념관"] }
+    },
+    {
+      "id": "content-type-shopping",
+      "query": "통영 시장",
+      "filters": { "contentTypeId": "38" },
+      "expectedFilters": { "region": "통영", "contentTypeId": "38" },
+      "expected": { "titles": ["통영 중앙시장"] }
+    },
+    {
+      "id": "content-type-mismatch-empty",
+      "query": "통영 문학 음식점",
+      "filters": { "contentTypeId": "39" },
+      "expectedFilters": { "region": "통영", "category": "문학", "contentTypeId": "39" },
+      "expected": { "empty": true }
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 > **문서 소유자:** 황찬우
 >
-> **최종 갱신:** 2026-08-03
+> **최종 갱신:** 2026-08-04
 >
 > **담당 범위:** 외부 API 연동 · RAG/AI Backend · Frontend UI/UX Design 및 API 연결
 >
@@ -76,7 +76,7 @@ backend/src/utils/publicDataValidation.js
 - `regionsController.js`의 문화별 지역 목록은 PR #9의 DataLab 점수에 연결됐고, 지역별 장소 목록은 TourAPI·MySQL 캐시와 안전한 큐레이션 fallback을 사용한다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했고 R7 브랜치에서 실제 컬렉션·증분 장소 인덱싱 명령을 구현 중이다. 검색 평가는 R8, live smoke test는 별도 승인 후 남아 있다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant 검색 어댑터, OpenRouter 호출 어댑터와 구조화된 `/ai/transform` 기반을 추가했고 PR #11에서 실제 컬렉션·증분 장소 인덱싱 명령을 머지했다. 현재 R8에서 검색 정책과 고정 평가 기반을 구현 중이며 live smoke test는 별도 승인 후 남아 있다.
 - Flutter는 문화→지역→장소 목록→코스 담기와 AI 변경안 UI가 부분 연결됐지만, 장소 상세·이미지·공통 상태와 실제 RAG 품질 연결은 남아 있다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
@@ -98,8 +98,8 @@ backend/src/utils/publicDataValidation.js
 | R4 | 머지 완료 — PR #9 (2026-08-03) | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
 | R5 | 로컬 초안 보존·데스크탑 작업으로 연기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
 | R6 | 팀원 구현으로 부분 연결·R5 후 보완 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
-| R7 | 구현·검증 중 — `agent/qdrant-place-indexing` | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
-| R8 | 검색·필터 기반 구현·평가 대기 | RAG 검색·필터·평가 기반 | R7 | 제한적 |
+| R7 | 머지 완료 — PR #11 (2026-08-03) | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
+| R8 | 구현 중 — `agent/rag-search-evaluation` | RAG 검색·필터·평가 기반 | R7 | 제한적 |
 | R9 | 구조화 API 기반 구현·live 검증 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
 | R10 | 기존 diff UI 연결·품질 마감 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
 
@@ -393,6 +393,17 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - 필터를 엄격 적용할지 결과 부족 시 완화할지
 - 품질 합격 기준과 평가 세트 소유자
 
+### 확정된 결정
+
+- 기본 Top-K는 8, 최대 10으로 제한한다.
+- 실제 점수 분포를 보기 전에는 최소 점수를 적용하지 않고 threshold sweep 후 확정한다.
+- 지역·문화와 명시적 콘텐츠 유형은 hard filter로 적용하고 자동으로 완화하지 않는다.
+- 우천·이동성·동행·반려동물·식이 조건은 구조화 근거가 없으면 의미 검색과 warning으로만 다룬다.
+- 기존 배열 반환 `search()`는 유지하고 내부 진단용 상세 경로를 추가한다.
+- 35개 고정 평가 세트의 소유자는 황찬우이며 Hit@8 0.80, MRR@8 0.50, routing·필터·신뢰 원본 1.00을 초기 기준으로 사용한다.
+- 기본 평가 명령은 Mock 전용이며 실제 호출은 별도 승인된 `--live`에서만 수행한다.
+- 상세 계약은 [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)을 따른다.
+
 ## 13. R9 — OpenRouter 기반 구조화 코스 변형 API
 
 ### 목표
@@ -497,15 +508,15 @@ R3과 R4는 R1 이후 병렬 가능하다. R5는 Backend 작업과 병렬 가능
 
 ## 18. 현재 세션 인수인계 포인트
 
-- 현재 작업은 **R7 — Qdrant 컬렉션과 장소 인덱싱**이다.
-- 브랜치는 `agent/qdrant-place-indexing`이며 PR #10 머지 커밋 `a55335a`에서 시작했다.
-- 사용자는 R5를 데스크탑 작업으로 연기하고 R7의 8개 권장안을 별도 예외 없이 승인한 것으로 해석한 뒤 명시적으로 구현 시작을 지시했다.
-- 임베딩 계약은 `baai/bge-m3`, 1024차원, Cosine, `culturepath_places_v1`이다.
-- MySQL `places_cache` cursor 조회, 장소 문서·결정적 UUID·SHA-256 hash, OpenRouter batch 임베딩과 Qdrant 컬렉션·payload index·조회·upsert·scroll·삭제를 구현한다.
-- `npm run rag:index`는 변경된 문서만 upsert하고 `--dry-run`, `--limit`, `--batch-size`, 명시적 `--prune`을 제공한다.
-- 기본 테스트는 실제 키와 네트워크를 차단한다. OpenRouter·Qdrant·MySQL은 가짜 응답과 repository로 검증한다.
-- 실제 Qdrant/OpenRouter smoke test는 자동 검증·독립 리뷰 후 사용자의 별도 승인을 받기 전까지 실행하지 않는다.
-- 구현 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 기준으로 한다.
-- R7 다음은 R8 검색·필터·평가 기반이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
-- 실제 MySQL 8 장소 데이터 전체 적재, Qdrant 무료 클러스터 비활성 정책과 실데이터 검색 품질은 운영 전 잔여 위험이다.
+- 현재 작업은 **R8 — RAG 검색·필터·평가 기반**이다.
+- 브랜치는 `agent/rag-search-evaluation`이며 PR #11 머지 커밋 `8221560`에서 시작했다.
+- 사용자는 R8 권장안 1-A부터 8-A까지 모두 채택하고 명시적으로 구현 시작을 지시했다.
+- R7은 PR #11로 머지됐고 `baai/bge-m3`, 1024차원, Cosine, `culturepath_places_v1` 계약을 사용한다.
+- R8은 규칙 기반 query routing, strict 지역·문화·콘텐츠 유형 필터, Top-K 8·최대 10, MySQL 원본 재검증과 상세 진단을 구현한다.
+- 최소 점수는 live 평가 전에는 적용하지 않으며 고정 결과에 대한 threshold sweep 후 확정한다.
+- `backend/test/fixtures/rag-evaluation-v1.json`은 황찬우 소유의 35개 고정 case다.
+- `npm run rag:evaluate`는 Mock 전용이고, 실제 호출은 `--live`를 명시해야 한다.
+- 실제 Qdrant 클러스터·OpenRouter 키는 아직 설정되지 않았으며 smoke와 live 품질 평가는 실행하지 않았다.
+- 구현 계약은 [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)을 기준으로 한다.
+- R8 다음은 R9 구조화 코스 변형 API의 모델·비용·live 검증이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
 - 전체 검증과 독립 `gpt-5.6-sol high` 리뷰가 끝나도 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.

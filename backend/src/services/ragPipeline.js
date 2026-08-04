@@ -3,21 +3,8 @@
 const vectorStore = require('./vectorStore');
 const llmService = require('./llmService');
 const placeCacheRepository = require('../repositories/placeCacheRepository');
-
-const CATEGORIES = [
-  '독립서점·책방', '문학', '음악', '전통주·양조장', '로컬 미식',
-  '공예·공방', '근대 문화유산', '미술·갤러리', '영화·애니메이션', '커피·카페',
-];
-const REGIONS = ['강릉', '전주', '통영', '군산', '춘천', '안동', '서울', '포항', '하동', '목포'];
-const ALIAS_MAP = {
-  카페: '커피·카페', 커피: '커피·카페', 책방: '독립서점·책방', 서점: '독립서점·책방',
-  북스테이: '독립서점·책방', 막걸리: '전통주·양조장', 소주: '전통주·양조장',
-  양조장: '전통주·양조장', 맛집: '로컬 미식', 음식: '로컬 미식', 미식: '로컬 미식',
-  공방: '공예·공방', 공예: '공예·공방', 체험: '공예·공방', 갤러리: '미술·갤러리',
-  미술관: '미술·갤러리', 아트: '미술·갤러리', 영화: '영화·애니메이션',
-  애니: '영화·애니메이션', 만화: '영화·애니메이션', 근대: '근대 문화유산',
-  유산: '근대 문화유산', 역사: '근대 문화유산',
-};
+const { createRagSearchService } = require('./ragSearchService');
+const { routeQuery } = require('./ragQuery');
 
 const BASE_SYSTEM_PROMPT = `당신은 '문화여행 따라가방' 서비스의 AI 여행 어시스턴트입니다.
 검색된 참고 자료에 근거해 한국 문화 관광지를 간결하게 안내하세요.
@@ -33,6 +20,7 @@ const COURSE_TRANSFORM_SYSTEM_PROMPT = `당신은 기존 문화여행 코스를 
 const MAX_REFERENCE_DOCS = 10;
 const MAX_REFERENCE_CONTENT_LENGTH = 1500;
 const MAX_REFERENCE_FIELD_LENGTH = 200;
+const MAX_RAG_QUERY_LENGTH = 500;
 
 function boundedText(value, maxLength) {
   return String(value || '')
@@ -41,21 +29,16 @@ function boundedText(value, maxLength) {
     .slice(0, maxLength);
 }
 
-function routeQuery(query) {
-  const normalized = String(query || '').trim().toLowerCase();
-  const category = CATEGORIES.find(item => normalized.includes(item)) ||
-    Object.entries(ALIAS_MAP).find(([alias]) => normalized.includes(alias))?.[1] || null;
-  const region = REGIONS.find(item => normalized.includes(item)) || null;
-  return { category, region };
+async function retrieveContextDetailed(query, routeInfo, options = {}) {
+  const service = options.ragSearchService || createRagSearchService({
+    placeRepository: options.placeRepository || placeCacheRepository,
+    vectorStore,
+  });
+  return service.search(query, { routeInfo }, options);
 }
 
 async function retrieveContext(query, routeInfo, options = {}) {
-  const topK = Number.parseInt(options.env?.RAG_TOP_K || process.env.RAG_TOP_K, 10) || 5;
-  return vectorStore.search(query, {
-    category: routeInfo.category,
-    region: routeInfo.region,
-    topK,
-  }, options);
+  return (await retrieveContextDetailed(query, routeInfo, options)).documents;
 }
 
 function buildAugmentedPrompt(docs) {
@@ -79,9 +62,19 @@ function buildReferenceContext(docs) {
 
 async function chat(messages, options = {}) {
   const lastUserContent = messages.filter(message => message.role === 'user').pop()?.content || '';
-  const routeInfo = routeQuery(lastUserContent);
-  const docs = lastUserContent.trim()
-    ? await retrieveContext(lastUserContent, routeInfo, options)
+  const ragQuery = boundedText(lastUserContent, MAX_RAG_QUERY_LENGTH);
+  const routeInfo = ragQuery
+    ? routeQuery(ragQuery)
+    : {
+        areaCode: null,
+        category: null,
+        contentTypeId: null,
+        normalizedQuery: '',
+        region: null,
+        softConditions: [],
+      };
+  const docs = ragQuery
+    ? await retrieveContext(ragQuery, routeInfo, options)
     : [];
   const referenceContext = buildReferenceContext(docs);
   const response = await llmService.generate(
@@ -121,18 +114,20 @@ function currentPlaceMap(course) {
   return places;
 }
 
-function candidateFromCachedPlace(place) {
-  const trusted = place?.summary;
-  const contentId = String(place?.contentId || '');
-  if (!/^\d+$/.test(contentId) || !trusted?.title) return null;
+function candidateFromSearchDocument(document) {
+  const metadata = document?.metadata || {};
+  const contentId = String(metadata.contentId || '');
+  if (!/^\d+$/.test(contentId) || !metadata.place_name || metadata.trustedSource !== true) {
+    return null;
+  }
   return {
     contentId,
-    title: boundedText(trusted.title, 200),
-    address: boundedText(trusted.address, 500),
-    category: boundedText(trusted.category || trusted.cultures?.[0], 100),
-    region: trusted.regionName ? boundedText(trusted.regionName, 100) : null,
-    tel: boundedText(trusted.tel, 100),
-    openTime: boundedText(trusted.openTime, 500),
+    title: boundedText(metadata.place_name, 200),
+    address: boundedText(metadata.address, 500),
+    category: boundedText(metadata.category || metadata.cultures?.[0], 100),
+    region: metadata.region ? boundedText(metadata.region, 100) : null,
+    tel: boundedText(metadata.tel, 100),
+    openTime: boundedText(metadata.open_time, 500),
   };
 }
 
@@ -237,21 +232,24 @@ async function editCourse(course, request, constraints = {}, options = {}) {
   const env = options.env || process.env;
   if (llmService.isMockMode(env)) return mockTransform(course, request);
 
-  const routeInfo = routeQuery(`${request} ${constraints.startRegion || ''}`);
-  const docs = await retrieveContext(
+  const routeInfo = routeQuery(boundedText(
+    `${constraints.startRegion || ''} ${request}`,
+    MAX_RAG_QUERY_LENGTH,
+  ));
+  const candidateQuery = boundedText(
     `${request}\n${(course.tracks || []).flatMap(track => track.places || []).map(place => place.title).join(' ')}`,
+    MAX_RAG_QUERY_LENGTH,
+  );
+  const searchResult = await retrieveContextDetailed(
+    candidateQuery,
     routeInfo,
     options,
   );
+  const docs = searchResult.documents;
   const trustedPlaces = currentPlaceMap(course);
   const candidatePlaces = [];
-  const candidateIds = [...new Set(docs
-    .map(doc => String(doc.metadata?.contentId || ''))
-    .filter(contentId => /^\d+$/.test(contentId) && !trustedPlaces.has(contentId)))];
-  const placeRepository = options.placeRepository || placeCacheRepository;
-  const cachedCandidates = await placeRepository.findExistingPlaces(candidateIds);
-  for (const cachedPlace of cachedCandidates) {
-    const candidate = candidateFromCachedPlace(cachedPlace);
+  for (const document of docs) {
+    const candidate = candidateFromSearchDocument(document);
     if (candidate && !trustedPlaces.has(candidate.contentId)) {
       trustedPlaces.set(candidate.contentId, candidate);
       candidatePlaces.push(candidate);
@@ -313,5 +311,6 @@ module.exports = {
   editCourse,
   normalizeTransformOutput,
   retrieveContext,
+  retrieveContextDetailed,
   routeQuery,
 };
