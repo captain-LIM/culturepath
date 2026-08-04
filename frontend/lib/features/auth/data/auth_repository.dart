@@ -31,9 +31,17 @@ class AuthRepository {
 
   Future<void> logout() async {
     await _googleSignIn.signOut();
-    await CacheService.clearAll();
+    await clearExpiredSession();
+  }
+
+  Future<void> clearExpiredSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    try {
+      await CacheService.clearAll();
+    } catch (_) {
+      // An expired token must stay cleared even if local cache cleanup fails.
+    }
   }
 
   Future<bool> isLoggedIn() async {

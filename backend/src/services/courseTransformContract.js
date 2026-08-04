@@ -12,16 +12,16 @@ const COURSE_TRANSFORM_SCHEMA = Object.freeze({
     tracks: {
       type: 'array',
       minItems: 1,
-      maxItems: 7,
+      maxItems: 3,
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['trackNumber', 'contentIds'],
         properties: {
-          trackNumber: { type: 'integer', minimum: 1, maximum: 7 },
+          trackNumber: { type: 'integer', minimum: 1, maximum: 3 },
           contentIds: {
             type: 'array',
-            minItems: 1,
+            minItems: 0,
             maxItems: 20,
             uniqueItems: true,
             items: { type: 'string', pattern: '^[0-9]+$' },
@@ -80,7 +80,7 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
       parsed.warnings.some(item => typeof item !== 'string' || !item.trim() || item.length > 300)) {
     throw new Error('AI 코스 경고가 올바르지 않습니다.');
   }
-  if (!Array.isArray(parsed.tracks) || parsed.tracks.length < 1 || parsed.tracks.length > 7) {
+  if (!Array.isArray(parsed.tracks) || parsed.tracks.length < 1 || parsed.tracks.length > 3) {
     throw new Error('AI Day 구성이 올바르지 않습니다.');
   }
   if (parsed.status === 'changed' && constraints.days !== undefined &&
@@ -96,7 +96,7 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
     }
     rejectUnknownFields(track, TRACK_FIELDS, 'AI Day 항목에 허용되지 않은 필드가 있습니다.');
     if (track.trackNumber !== index + 1 || !Array.isArray(track.contentIds) ||
-        track.contentIds.length < 1 || track.contentIds.length > 20) {
+        track.contentIds.length > 20) {
       throw new Error('AI Day 항목이 올바르지 않습니다.');
     }
     totalPlaces += track.contentIds.length;
@@ -113,6 +113,9 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
     });
     return { trackNumber: track.trackNumber, places };
   });
+  if (totalPlaces < 1) {
+    throw new Error('AI 코스에는 장소가 한 곳 이상 필요합니다.');
+  }
 
   const course = {
     ...clone(original),

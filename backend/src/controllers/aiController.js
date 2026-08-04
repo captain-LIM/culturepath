@@ -2,12 +2,13 @@
 
 const ragPipeline = require('../services/ragPipeline');
 const { loadCourseForTransform } = require('../services/aiCourseContextService');
+const { normalizedCourseShape } = require('../services/courseTransformContract');
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_TOTAL_MESSAGE_LENGTH = 8000;
 const MAX_REQUEST_LENGTH = 500;
-const MAX_TRACKS = 7;
+const MAX_TRACKS = 3;
 const MAX_PLACES_PER_TRACK = 20;
 const MAX_TOTAL_PLACES = 50;
 
@@ -73,7 +74,8 @@ function normalizeConstraints(value) {
   if (Object.keys(value).some(key => !allowed.has(key)) || JSON.stringify(value).length > 2000) {
     return null;
   }
-  if (value.days != null && (!Number.isSafeInteger(value.days) || value.days < 1 || value.days > 7)) return null;
+  if (value.days != null &&
+      (!Number.isSafeInteger(value.days) || value.days < 1 || value.days > MAX_TRACKS)) return null;
   for (const key of ['weather', 'mobility', 'startRegion']) {
     if (value[key] != null && (typeof value[key] !== 'string' || value[key].length > 100)) return null;
   }
@@ -112,9 +114,22 @@ async function transformCourse(req, res) {
     return res.status(400).json({ message: 'constraints가 올바르지 않습니다.' });
   }
 
+  const startedAt = Date.now();
   try {
     const course = await loadCourseForTransform(courseId, req.user.id);
     const result = await ragPipeline.editCourse(course, request.trim(), constraints);
+    const changed = JSON.stringify(normalizedCourseShape(result.course)) !==
+      JSON.stringify(normalizedCourseShape(course));
+    console.info('AI 코스 변형 완료:', {
+      changed,
+      warningCount: result.warnings?.length || 0,
+      sourceCount: result.sources?.length || 0,
+      model: result.usage?.model || 'unknown',
+      inputTokens: result.usage?.inputTokens || 0,
+      outputTokens: result.usage?.outputTokens || 0,
+      durationMs: Date.now() - startedAt,
+      mock: Boolean(result.mock),
+    });
     return res.json(result);
   } catch (error) {
     console.error('AI 코스 변형 실패:', { errorName: error?.name || 'Error', code: error?.code || null });

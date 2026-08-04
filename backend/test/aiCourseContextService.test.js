@@ -74,6 +74,10 @@ test('rehydrates an owner course from trusted TourAPI cache metadata', async () 
   assert.equal(course.tracks[0].places[0].title, 'TourAPI 캐시 장소');
   assert.equal(course.tracks[0].places[0].address, '통영시');
   assert.equal(course.isOwner, true);
+  assert.deepEqual(course.tracks.slice(1), [
+    { trackNumber: 2, places: [] },
+    { trackNumber: 3, places: [] },
+  ]);
 });
 
 test('rejects access to another user private course before loading tracks', async () => {
@@ -117,7 +121,7 @@ test('rejects server-loaded courses that exceed the total place limit', async ()
   );
 });
 
-test('rejects non-contiguous server-loaded Day numbers', async () => {
+test('preserves an empty middle Day in the three-Day product contract', async () => {
   const tracks = [
     trackRow({ track_number: 1, content_id: '100' }),
     trackRow({ track_number: 3, content_id: '300' }),
@@ -127,8 +131,13 @@ test('rejects non-contiguous server-loaded Day numbers', async () => {
     tracks,
     [trustedPlace('100'), trustedPlace('300')],
   );
-  await assert.rejects(
-    service.loadCourseForTransform(7, 12),
-    error => error instanceof CourseAccessError && error.status === 400,
-  );
+  const course = await service.loadCourseForTransform(7, 12);
+  assert.deepEqual(course.tracks.map(track => ({
+    trackNumber: track.trackNumber,
+    contentIds: track.places.map(place => place.contentId),
+  })), [
+    { trackNumber: 1, contentIds: ['100'] },
+    { trackNumber: 2, contentIds: [] },
+    { trackNumber: 3, contentIds: ['300'] },
+  ]);
 });

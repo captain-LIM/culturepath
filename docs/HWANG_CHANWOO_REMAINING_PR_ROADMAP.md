@@ -49,8 +49,9 @@
 | PR #10 | 머지 완료 | 팀원 변경 안정화, MySQL migration, 코스 생성·Fork 멱등성, Qdrant/OpenRouter 어댑터와 구조화 `/ai/transform` 기반 |
 | PR #11 | 머지 완료 | Qdrant 컬렉션·payload index, 결정적 장소 문서와 증분 인덱싱·명시적 prune 명령 |
 | PR #12 | 머지 완료 | 규칙 기반 RAG 검색, strict filter, MySQL 원본 재검증과 35개 고정 평가 세트 |
+| PR #13 | 머지 완료 | OpenRouter strict JSON Schema 코스 변형, 신뢰 장소 재구성, 원본 유지 정책과 비용 제한 |
 
-PR #12 구현 검증 기준으로 백엔드 테스트는 191개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
+R10 구현 중 백엔드 테스트는 204개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
 
 현재 구현된 주요 파일은 다음과 같다.
 
@@ -78,8 +79,8 @@ backend/src/utils/publicDataValidation.js
 - `regionsController.js`의 문화별 지역 목록은 PR #9의 DataLab 점수에 연결됐고, 지역별 장소 목록은 TourAPI·MySQL 캐시와 안전한 큐레이션 fallback을 사용한다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant/OpenRouter 어댑터와 `/ai/transform` 기반을 추가했고 PR #11에서 컬렉션·증분 장소 인덱싱, PR #12에서 검색 정책·고정 평가 기반을 머지했다. 현재 R9에서 OpenRouter 구조화 코스 변형을 안정화하며 live smoke test는 별도 승인 후 남아 있다.
-- Flutter는 문화→지역→장소 목록→코스 담기와 AI 변경안 UI가 부분 연결됐지만, 장소 상세·이미지·공통 상태와 실제 RAG 품질 연결은 남아 있다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant/OpenRouter 어댑터와 `/ai/transform` 기반을 추가했고 PR #11에서 컬렉션·증분 장소 인덱싱, PR #12에서 검색 정책·고정 평가 기반, PR #13에서 구조화 코스 변형을 머지했다. live smoke test는 별도 승인 후 남아 있다.
+- Flutter는 문화→지역→장소 목록→코스 담기가 연결됐고 R10에서 AI 변경안 전체 화면·diff·경고·적용 흐름을 마감한다. 장소 상세·이미지·공통 P0 상태의 전면 디자인 보완은 R10 범위가 아니다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
 
@@ -102,8 +103,8 @@ backend/src/utils/publicDataValidation.js
 | R6 | 팀원 구현으로 부분 연결·R5 후 보완 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
 | R7 | 머지 완료 — PR #11 (2026-08-03) | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
 | R8 | 머지 완료 — PR #12 (2026-08-04) | RAG 검색·필터·평가 기반 | R7 | 제한적 |
-| R9 | 구현 중 — `agent/openrouter-structured-transform` | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
-| R10 | 기존 diff UI 연결·품질 마감 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
+| R9 | 머지 완료 — PR #13 (2026-08-04) | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
+| R10 | 구현 중 — `agent/r10-ai-transform-ux` | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
 
 기본 원칙은 한 번에 하나의 코드 PR만 구현하는 것이다. R5 디자인은 코드 변경과 충돌하지 않는 범위에서 병렬 진행할 수 있지만, 저장소 변경은 별도 PR로 제출한다.
 
@@ -456,9 +457,9 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 
 ### 포함 범위
 
-- 변경 전·후 diff 표시
-- 추가·삭제·이동·교체 이유 표시
-- 전체 적용, 선택 적용, 취소, 원본 복구
+- 변경 전·후 semantic diff 표시
+- 제목·설명·추가·삭제·Day 이동·순서 변경과 전체 변경 요약 표시
+- 전체 변경안 편집, 취소, 저장 전 원본 복구
 - 로딩·부분 실패·재시도·사용량 제한 UX
 - 실제 `/ai/transform` 연동
 - 통합 테스트와 핵심 사용자 시나리오 회귀
@@ -470,11 +471,15 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - P2 개인화와 소셜 추천 고도화
 - 핵심 흐름과 무관한 신규 외부 API
 
-### 결정 필요
+### 확정된 결정
 
-- 변경안 적용 단위
-- AI 사용 횟수와 비용 안내 방식
-- 실패 시 원본 코스 보존 및 자동 저장 정책
+- Android 360~430dp에서 읽기 쉬운 전용 전체 화면을 사용한다.
+- 장소별 선택 적용은 만들지 않고 전체 변경안을 빌더에서 수동 조정한다.
+- 소유자 코스는 빌더 저장 전까지 DB를 바꾸지 않는다. 타인 코스는 명시적인 `내 코스로 저장하고 편집`에서만 Fork한다.
+- 일반 사용자에게 모델·토큰을 노출하지 않고 `429 Retry-After`와 안전한 오류 문구를 표시한다.
+- 코스·AI 계약은 최대 3-Day로 맞추고 빈 Day를 보존한다.
+- 실제 기기와 Release는 `--dart-define=API_BASE_URL=https://...`로 HTTPS 주소를 주입한다.
+- 실제 Qdrant·OpenRouter live smoke는 이 코드 PR에서 실행하지 않고 배포 전 별도 승인 게이트로 남긴다.
 
 ## 15. 의존 관계
 
@@ -522,15 +527,14 @@ R3과 R4는 R1 이후 병렬 가능하다. R5는 Backend 작업과 병렬 가능
 
 ## 18. 현재 세션 인수인계 포인트
 
-- 현재 작업은 **R9 — OpenRouter 기반 구조화 코스 변형 API 안정화**다.
-- 브랜치는 `agent/openrouter-structured-transform`이며 PR #12 머지 커밋 `cfe5416`에서 시작했다.
-- 사용자는 R9 권장안 1-A부터 9-A 조합을 확인한 뒤 명시적으로 구현 시작을 지시했다.
-- R8은 PR #12로 머지됐고 규칙 기반 routing, strict filter, MySQL 원본 재검증과 35개 고정 평가 세트를 제공한다.
-- R9은 `google/gemini-2.5-flash-lite`, strict JSON Schema, non-streaming, 기본 1,600 출력 토큰, 애플리케이션 재시도 없음과 분당 3회 제한을 사용한다.
-- 공개 `/ai/transform` 응답은 유지하며 내부 모델 출력에만 `changed|unchanged` 상태를 요구한다.
-- 모델은 현재 코스 또는 MySQL로 재검증한 후보의 숫자형 TourAPI `contentId`만 사용할 수 있다.
-- 검증할 수 없는 우천·이동성·동행·식이 조건은 추측하지 않고 원본 코스와 warning을 반환한다.
+- 현재 작업은 **R10 — AI 변경안 UI 통합과 품질·비용 마감**이다.
+- 브랜치는 `agent/r10-ai-transform-ux`이며 PR #13 머지 커밋 `64f8512`에서 시작했다.
+- 사용자는 R10 권장안 1-A부터 10-A까지 전부 채택하고 구현 시작을 지시했다.
+- Backend는 최대 3-Day, 빈 Day 보존, 비밀값 없는 성공 사용량 로그로 정렬됐고 자동 테스트 204개가 통과했다.
+- Flutter는 전체 `/ai/transform` 응답, semantic diff, unchanged·warning·source, 오류별 UX와 전체 화면을 구현한다.
+- 적용은 자동 저장이 아니라 코스 빌더 편집이며 저장 전 원본 복구를 제공한다. 타인 코스는 명시적 Fork 후 같은 화면 세션에서 Fork를 재사용한다.
+- API 주소는 `API_BASE_URL` dart-define으로 주입하고 Release에서 HTTPS를 강제한다.
+- 이 PC에는 Flutter SDK가 없어 Flutter 검증은 GitHub CI와 데스크톱 실제 기기 QA로 수행한다.
+- Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존하고 통째로 병합하지 않는다. R10 AI 전용 최신 명세는 [R10 AI 변경안 UX·Figma 명세](./R10_AI_TRANSFORM_UX.md)를 사용한다.
 - 실제 Qdrant 클러스터·OpenRouter 생성 모델·MySQL을 연결한 smoke와 live 품질 평가는 실행하지 않았다.
-- 구현 계약은 [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md)을 기준으로 한다.
-- R9 다음은 R10 AI 변경안 Flutter UI 통합·품질·비용 마감이며, Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존돼 있다.
 - 전체 검증과 독립 `gpt-5.6-sol high` 리뷰가 끝나도 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.

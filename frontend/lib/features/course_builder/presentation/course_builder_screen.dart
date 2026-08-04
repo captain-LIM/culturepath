@@ -52,8 +52,15 @@ final courseBuilderProvider = StateNotifierProvider.autoDispose
 
 class CourseBuilderScreen extends ConsumerStatefulWidget {
   final CourseItem? initialCourse;
+  final CourseItem? aiOriginalCourse;
+  final CourseRepository? courseRepository;
 
-  const CourseBuilderScreen({super.key, this.initialCourse});
+  const CourseBuilderScreen({
+    super.key,
+    this.initialCourse,
+    this.aiOriginalCourse,
+    this.courseRepository,
+  });
 
   @override
   ConsumerState<CourseBuilderScreen> createState() => _CourseBuilderScreenState();
@@ -121,18 +128,18 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     }
 
     setState(() => _saving = true);
-    final repo = CourseRepository();
+    final repo = widget.courseRepository ?? CourseRepository();
     final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
     try {
       final loggedIn = await repo.isLoggedIn();
+      late final CourseItem savedCourse;
       if (loggedIn) {
-        late final CourseItem saved;
         if (course.id != null) {
-          saved = await repo.updateCourse(course);
+          savedCourse = await repo.updateCourse(course);
         } else {
-          saved = await repo.createCourse(course);
+          savedCourse = await repo.createCourse(course);
         }
-        notifier.replace(saved);
+        notifier.replace(savedCourse);
       } else {
         final fingerprint = jsonEncode(course.toJson());
         if (_lastGuestSave == fingerprint) return;
@@ -149,7 +156,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           ),
         );
         if (loggedIn && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pop(savedCourse);
         }
       }
     } catch (error) {
@@ -175,6 +182,17 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _restoreAiOriginal() {
+    final original = widget.aiOriginalCourse;
+    if (original == null) return;
+    ref.read(courseBuilderProvider(_providerKey).notifier).replace(original);
+    _titleCtrl.text = original.title;
+    setState(() => _activeTrack = 0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('ai_edit_original_restored'.tr())),
+    );
   }
 
   @override
@@ -233,6 +251,24 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
         children: [
           if (isFork)
             _ForkBanner(originalTitle: course.forkedFrom!.title, authorId: course.forkedFrom!.authorId),
+          if (widget.aiOriginalCourse != null)
+            Material(
+              key: const ValueKey('ai-draft-banner'),
+              color: AppColors.accent.withValues(alpha: 0.08),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.auto_awesome, color: AppColors.accent),
+                title: Text(
+                  'ai_edit_draft_notice'.tr(),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                trailing: TextButton(
+                  key: const ValueKey('ai-restore-original'),
+                  onPressed: _saving ? null : _restoreAiOriginal,
+                  child: Text('ai_edit_restore_original'.tr()),
+                ),
+              ),
+            ),
           TrackTimeline(
             tracks: course.tracks,
             activeTrack: _activeTrack,

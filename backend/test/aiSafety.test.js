@@ -34,6 +34,8 @@ test('validates bounded AI chat and transform inputs', () => {
   assert.equal(validateCourse(course()), null);
   assert.match(validateCourse({ ...course(), tracks: [] }), /Day/);
   assert.deepEqual(normalizeConstraints({ days: 1, weather: 'rain' }), { days: 1, weather: 'rain' });
+  assert.deepEqual(normalizeConstraints({ days: 3 }), { days: 3 });
+  assert.equal(normalizeConstraints({ days: 4 }), null);
   assert.equal(normalizeConstraints({ unknown: true }), null);
 });
 

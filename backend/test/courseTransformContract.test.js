@@ -42,6 +42,8 @@ function unchangedOutput(overrides = {}) {
 test('defines a strict schema and reconstructs only trusted changed places', () => {
   assert.equal(COURSE_TRANSFORM_SCHEMA.additionalProperties, false);
   assert.equal(COURSE_TRANSFORM_SCHEMA.properties.tracks.items.additionalProperties, false);
+  assert.equal(COURSE_TRANSFORM_SCHEMA.properties.tracks.maxItems, 3);
+  assert.equal(COURSE_TRANSFORM_SCHEMA.properties.tracks.items.properties.contentIds.minItems, 0);
   const normalized = normalizeTransformOutput({
     status: 'changed',
     summary: '검증 후보를 추가했습니다.',
@@ -52,6 +54,30 @@ test('defines a strict schema and reconstructs only trusted changed places', () 
   }, originalCourse(), trustedPlaces());
   assert.equal(normalized.status, 'changed');
   assert.equal(normalized.course.tracks[0].places[1].title, '검증 후보');
+});
+
+test('allows empty Days but rejects an entirely empty course', () => {
+  const normalized = normalizeTransformOutput({
+    status: 'changed',
+    summary: '둘째 날을 비웠습니다.',
+    title: '변경 코스',
+    description: '원본 설명',
+    tracks: [
+      { trackNumber: 1, contentIds: ['100'] },
+      { trackNumber: 2, contentIds: [] },
+    ],
+    warnings: [],
+  }, originalCourse(), trustedPlaces());
+  assert.equal(normalized.course.tracks[1].places.length, 0);
+
+  assert.throws(() => normalizeTransformOutput({
+    status: 'changed',
+    summary: '모든 장소를 제거했습니다.',
+    title: '빈 코스',
+    description: '',
+    tracks: [{ trackNumber: 1, contentIds: [] }],
+    warnings: [],
+  }, originalCourse(), trustedPlaces()), /한 곳 이상/);
 });
 
 test('allows a reasoned unchanged preview without mutating the original', () => {
