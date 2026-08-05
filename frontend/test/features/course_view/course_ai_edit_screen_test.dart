@@ -166,6 +166,23 @@ CourseEditResult result(
       mock: true,
     );
 
+Future<void> waitForWidget(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  for (var attempt = 0; attempt < 100; attempt += 1) {
+    await tester.pump();
+    if (finder.evaluate().isNotEmpty) {
+      await tester.pumpAndSettle();
+      return;
+    }
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+  }
+  throw TestFailure('Timed out waiting for $finder');
+}
+
 Future<void> pumpScreen(
   WidgetTester tester, {
   required CourseItem original,
@@ -203,7 +220,10 @@ Future<void> pumpScreen(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  await waitForWidget(
+    tester,
+    find.byKey(const ValueKey('ai-request-field')),
+  );
 }
 
 Future<void> submitRequest(WidgetTester tester) async {
@@ -446,7 +466,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await waitForWidget(
+      tester,
+      find.byKey(const ValueKey('open-builder')),
+    );
 
     await tester.tap(find.byKey(const ValueKey('open-builder')));
     await tester.pumpAndSettle();
