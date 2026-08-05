@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:culturepath/core/network/api_client.dart';
 import 'package:culturepath/features/ai_assistant/data/ai_repository.dart';
 import 'package:culturepath/features/ai_assistant/data/course_transform_models.dart';
@@ -10,8 +12,23 @@ import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _UncachedRootBundleAssetLoader extends AssetLoader {
+  const _UncachedRootBundleAssetLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(String path, Locale locale) async {
+    final localeName = locale.toString().replaceAll('_', '-');
+    final contents = await rootBundle.loadString(
+      '$path/$localeName.json',
+      cache: false,
+    );
+    return (jsonDecode(contents) as Map).cast<String, dynamic>();
+  }
+}
 
 class _UnusedClient extends ApiClient {
   _UnusedClient()
@@ -197,6 +214,7 @@ Future<void> pumpScreen(
     EasyLocalization(
       supportedLocales: const [Locale('ko')],
       path: 'assets/translations',
+      assetLoader: const _UncachedRootBundleAssetLoader(),
       fallbackLocale: const Locale('ko'),
       startLocale: const Locale('ko'),
       saveLocale: false,
@@ -449,6 +467,7 @@ void main() {
       EasyLocalization(
         supportedLocales: const [Locale('ko')],
         path: 'assets/translations',
+        assetLoader: const _UncachedRootBundleAssetLoader(),
         fallbackLocale: const Locale('ko'),
         startLocale: const Locale('ko'),
         saveLocale: false,
