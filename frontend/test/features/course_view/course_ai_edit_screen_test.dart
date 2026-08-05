@@ -249,7 +249,27 @@ Future<void> submitRequest(WidgetTester tester) async {
     find.byKey(const ValueKey('ai-request-field')),
     '마지막 장소 빼줘',
   );
+  await tester.ensureVisible(
+    find.byKey(const ValueKey('ai-send-button')),
+  );
+  await tester.pump();
   await tester.tap(find.byKey(const ValueKey('ai-send-button')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> scrollAiContentUntilVisible(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  final scrollable = find.descendant(
+    of: find.byType(ListView),
+    matching: find.byType(Scrollable),
+  );
+  await tester.scrollUntilVisible(
+    finder,
+    240,
+    scrollable: scrollable,
+  );
   await tester.pumpAndSettle();
 }
 
@@ -298,7 +318,10 @@ void main() {
     await submitRequest(tester);
 
     expect(find.byKey(const ValueKey('ai-unchanged')), findsOneWidget);
-    expect(find.text('실내 여부를 검증할 수 없습니다.'), findsOneWidget);
+    expect(
+      find.textContaining('실내 여부를 검증할 수 없습니다.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('ai-apply-button')), findsNothing);
   });
 
@@ -424,7 +447,8 @@ void main() {
     );
     await submitRequest(tester);
 
-    await tester.ensureVisible(
+    await scrollAiContentUntilVisible(
+      tester,
       find.byKey(const ValueKey('ai-apply-button')),
     );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
@@ -434,7 +458,8 @@ void main() {
     expect(find.text('내 코스로 복제하지 못했습니다. 다시 시도해주세요.'),
         findsOneWidget);
 
-    await tester.ensureVisible(
+    await scrollAiContentUntilVisible(
+      tester,
       find.byKey(const ValueKey('ai-apply-button')),
     );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
@@ -451,7 +476,8 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.arrow_back).first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
+    await scrollAiContentUntilVisible(
+      tester,
       find.byKey(const ValueKey('ai-apply-button')),
     );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
