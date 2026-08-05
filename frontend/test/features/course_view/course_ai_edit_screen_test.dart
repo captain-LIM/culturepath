@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:culturepath/core/network/api_client.dart';
 import 'package:culturepath/features/ai_assistant/data/ai_repository.dart';
 import 'package:culturepath/features/ai_assistant/data/course_transform_models.dart';
@@ -12,6 +15,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _JsonFileAssetLoader extends AssetLoader {
+  const _JsonFileAssetLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(String path, Locale locale) async {
+    final contents = await File('$path/${locale.toString()}.json').readAsString();
+    final translations = jsonDecode(contents) as Map;
+    return translations.cast<String, dynamic>();
+  }
+}
 
 class _UnusedClient extends ApiClient {
   _UnusedClient()
@@ -179,11 +193,14 @@ Future<void> pumpScreen(
     EasyLocalization(
       supportedLocales: const [Locale('ko')],
       path: 'assets/translations',
+      assetLoader: const _JsonFileAssetLoader(),
       fallbackLocale: const Locale('ko'),
       startLocale: const Locale('ko'),
+      saveLocale: false,
       child: ProviderScope(
         child: MaterialApp(
           home: CourseAiEditScreen(
+            key: UniqueKey(),
             course: original,
             isOwner: isOwner,
             aiRepository: aiRepository,
@@ -378,6 +395,9 @@ void main() {
     );
     await submitRequest(tester);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai-apply-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
     await tester.pumpAndSettle();
     expect(courseRepository.forkCalls, 1);
@@ -385,6 +405,9 @@ void main() {
     expect(find.text('내 코스로 복제하지 못했습니다. 다시 시도해주세요.'),
         findsOneWidget);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai-apply-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
     await tester.pumpAndSettle();
     expect(courseRepository.forkCalls, 2);
@@ -399,6 +422,9 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.arrow_back).first);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai-apply-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('ai-apply-button')));
     await tester.pumpAndSettle();
     expect(courseRepository.forkCalls, 2);
@@ -412,8 +438,10 @@ void main() {
       EasyLocalization(
         supportedLocales: const [Locale('ko')],
         path: 'assets/translations',
+        assetLoader: const _JsonFileAssetLoader(),
         fallbackLocale: const Locale('ko'),
         startLocale: const Locale('ko'),
+        saveLocale: false,
         child: MaterialApp(
           home: _BuilderHost(
             initialCourse: initial,
@@ -427,7 +455,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('open-builder')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('저장'));
+    await tester.tap(find.byKey(const ValueKey('course-save-button')));
     await tester.pumpAndSettle();
 
     expect(repository.updateCalls, 1);

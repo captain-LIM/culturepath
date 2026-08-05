@@ -237,6 +237,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                   ),
                 )
               : TextButton(
+                  key: const ValueKey('course-save-button'),
                   onPressed: _saveCourse,
                   child: Text(
                     'save'.tr(),
