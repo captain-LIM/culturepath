@@ -11,6 +11,7 @@ import 'package:culturepath/features/course_builder/presentation/course_builder_
 import 'package:culturepath/features/course_view/presentation/course_ai_edit_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,10 +21,10 @@ class _JsonFileAssetLoader extends AssetLoader {
   const _JsonFileAssetLoader();
 
   @override
-  Future<Map<String, dynamic>> load(String path, Locale locale) async {
-    final contents = await File('$path/${locale.toString()}.json').readAsString();
+  Future<Map<String, dynamic>> load(String path, Locale locale) {
+    final contents = File('$path/${locale.toString()}.json').readAsStringSync();
     final translations = jsonDecode(contents) as Map;
-    return translations.cast<String, dynamic>();
+    return SynchronousFuture(translations.cast<String, dynamic>());
   }
 }
 
@@ -189,6 +190,7 @@ Future<void> pumpScreen(
   Future<void> Function()? onUnauthorized,
   VoidCallback? onCourseUnavailable,
 }) async {
+  final screenKey = UniqueKey();
   await tester.pumpWidget(
     EasyLocalization(
       supportedLocales: const [Locale('ko')],
@@ -204,7 +206,7 @@ Future<void> pumpScreen(
             supportedLocales: context.supportedLocales,
             locale: context.locale,
             home: CourseAiEditScreen(
-              key: UniqueKey(),
+              key: screenKey,
               course: original,
               isOwner: isOwner,
               aiRepository: aiRepository,
