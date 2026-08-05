@@ -481,7 +481,7 @@ module.exports = Object.freeze({
         type: 'object',
         required: ['trackNumber', 'places'],
         properties: {
-          trackNumber: { type: 'integer', minimum: 1, maximum: 7 },
+          trackNumber: { type: 'integer', minimum: 1, maximum: 3 },
           places: {
             type: 'array',
             maxItems: 20,
@@ -500,7 +500,7 @@ module.exports = Object.freeze({
           tracks: {
             type: 'array',
             minItems: 1,
-            maxItems: 7,
+            maxItems: 3,
             items: { $ref: '#/components/schemas/CourseTrack' },
           },
         },
@@ -518,7 +518,7 @@ module.exports = Object.freeze({
         type: 'object',
         additionalProperties: false,
         properties: {
-          days: { type: 'integer', minimum: 1, maximum: 7 },
+          days: { type: 'integer', minimum: 1, maximum: 3 },
           weather: { type: 'string', maxLength: 100 },
           companions: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 100 } },
           mobility: { type: 'string', maxLength: 100 },

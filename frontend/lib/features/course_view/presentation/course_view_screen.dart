@@ -1,13 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
-import 'course_ai_edit_sheet.dart';
+import 'course_ai_edit_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
@@ -101,17 +103,14 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         ..writeln()
         ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
     }
-    SharePlus.instance.share(ShareParams(
-      text: buffer.toString(),
-      subject: course.title,
-    ));
+    Share.share(buffer.toString(), subject: course.title);
   }
 
   Future<void> _handleEdit() async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+    final saved = await Navigator.of(context).push<CourseItem>(MaterialPageRoute(
       builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: widget.course)),
     ));
-    if (saved == true && mounted) Navigator.of(context).pop();
+    if (saved != null && mounted) Navigator.of(context).pop();
   }
 
   Future<void> _handleAiEdit() async {
@@ -130,11 +129,24 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       return;
     }
     if (!mounted) return;
-    await showCourseAiEditSheet(
+    final saved = await showCourseAiEditScreen(
       context,
       widget.course,
       isOwner: widget.isOwner || widget.course.isOwner,
+      onUnauthorized: () async {
+        await AuthRepository().clearExpiredSession();
+        ref.invalidate(authStateProvider);
+        if (mounted) context.go('/login');
+      },
+      onCourseUnavailable: () {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ai_edit_course_unavailable'.tr())),
+        );
+      },
     );
+    if (saved != null && mounted) Navigator.of(context).pop();
   }
 
   String? _primaryCulture() {

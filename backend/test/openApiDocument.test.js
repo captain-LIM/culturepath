@@ -86,6 +86,9 @@ test('documents the authenticated structured AI transform contract', () => {
   assert.ok(transform.responses[503]);
   assert.ok(transform.responses[504]);
   const transformResponse = openApiDocument.components.schemas.CourseTransformResponse;
+  assert.equal(openApiDocument.components.schemas.CourseDraft.properties.tracks.maxItems, 3);
+  assert.equal(openApiDocument.components.schemas.CourseTrack.properties.trackNumber.maximum, 3);
+  assert.equal(openApiDocument.components.schemas.TransformConstraints.properties.days.maximum, 3);
   assert.equal(transformResponse.properties.summary.maxLength, 500);
   assert.equal(transformResponse.properties.warnings.maxItems, 5);
   assert.deepEqual(transformResponse.properties.usage.required, [

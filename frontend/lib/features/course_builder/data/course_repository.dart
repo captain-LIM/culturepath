@@ -112,7 +112,7 @@ class CourseRepository {
 
   Future<CourseItem> forkCourse(int courseId) async {
     final scope = 'fork_$courseId';
-    final key = await _pendingMutationKey(scope, String(courseId));
+    final key = await _pendingMutationKey(scope, courseId.toString());
     final res = await apiClient.post(
       '/courses/$courseId/fork',
       {},
