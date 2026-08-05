@@ -560,6 +560,11 @@ void main() {
         );
 
         await submitRequestViaCallback(tester);
+        await scrollAiContentUntilVisible(
+          tester,
+          find.byKey(const ValueKey('ai-changed')),
+        );
+        expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
         await tester.showKeyboard(
           find.byKey(const ValueKey('ai-request-field')),
         );
@@ -567,7 +572,6 @@ void main() {
         addTearDown(tester.view.resetViewInsets);
         await tester.pump();
 
-        expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
         expect(
           find.byKey(const ValueKey('ai-send-button')).hitTestable(),
           findsOneWidget,
