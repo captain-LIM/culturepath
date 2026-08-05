@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:culturepath/core/network/api_client.dart';
 import 'package:culturepath/features/ai_assistant/data/ai_repository.dart';
 import 'package:culturepath/features/ai_assistant/data/course_transform_models.dart';
@@ -11,22 +8,10 @@ import 'package:culturepath/features/course_builder/presentation/course_builder_
 import 'package:culturepath/features/course_view/presentation/course_ai_edit_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class _JsonFileAssetLoader extends AssetLoader {
-  const _JsonFileAssetLoader();
-
-  @override
-  Future<Map<String, dynamic>> load(String path, Locale locale) {
-    final contents = File('$path/${locale.toString()}.json').readAsStringSync();
-    final translations = jsonDecode(contents) as Map;
-    return SynchronousFuture(translations.cast<String, dynamic>());
-  }
-}
 
 class _UnusedClient extends ApiClient {
   _UnusedClient()
@@ -195,7 +180,6 @@ Future<void> pumpScreen(
     EasyLocalization(
       supportedLocales: const [Locale('ko')],
       path: 'assets/translations',
-      assetLoader: const _JsonFileAssetLoader(),
       fallbackLocale: const Locale('ko'),
       startLocale: const Locale('ko'),
       saveLocale: false,
@@ -445,7 +429,6 @@ void main() {
       EasyLocalization(
         supportedLocales: const [Locale('ko')],
         path: 'assets/translations',
-        assetLoader: const _JsonFileAssetLoader(),
         fallbackLocale: const Locale('ko'),
         startLocale: const Locale('ko'),
         saveLocale: false,
