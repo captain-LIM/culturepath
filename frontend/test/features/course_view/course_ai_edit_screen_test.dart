@@ -197,16 +197,21 @@ Future<void> pumpScreen(
       fallbackLocale: const Locale('ko'),
       startLocale: const Locale('ko'),
       saveLocale: false,
-      child: ProviderScope(
-        child: MaterialApp(
-          home: CourseAiEditScreen(
-            key: UniqueKey(),
-            course: original,
-            isOwner: isOwner,
-            aiRepository: aiRepository,
-            courseRepository: courseRepository,
-            onUnauthorized: onUnauthorized,
-            onCourseUnavailable: onCourseUnavailable,
+      child: Builder(
+        builder: (context) => ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: context.locale,
+            home: CourseAiEditScreen(
+              key: UniqueKey(),
+              course: original,
+              isOwner: isOwner,
+              aiRepository: aiRepository,
+              courseRepository: courseRepository,
+              onUnauthorized: onUnauthorized,
+              onCourseUnavailable: onCourseUnavailable,
+            ),
           ),
         ),
       ),
@@ -442,11 +447,16 @@ void main() {
         fallbackLocale: const Locale('ko'),
         startLocale: const Locale('ko'),
         saveLocale: false,
-        child: MaterialApp(
-          home: _BuilderHost(
-            initialCourse: initial,
-            originalCourse: course([place('1')], id: 21),
-            courseRepository: repository,
+        child: Builder(
+          builder: (context) => MaterialApp(
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: context.locale,
+            home: _BuilderHost(
+              initialCourse: initial,
+              originalCourse: course([place('1')], id: 21),
+              courseRepository: repository,
+            ),
           ),
         ),
       ),
