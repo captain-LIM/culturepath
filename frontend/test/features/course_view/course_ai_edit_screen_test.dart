@@ -257,6 +257,19 @@ Future<void> submitRequest(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> submitRequestViaCallback(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const ValueKey('ai-request-field')),
+    '마지막 장소 빼줘',
+  );
+  final onPressed = tester
+      .widget<IconButton>(find.byKey(const ValueKey('ai-send-button')))
+      .onPressed;
+  expect(onPressed, isNotNull);
+  onPressed!();
+  await tester.pumpAndSettle();
+}
+
 Future<void> scrollAiContentUntilVisible(
   WidgetTester tester,
   Finder finder,
@@ -546,7 +559,7 @@ void main() {
           ]),
         );
 
-        await submitRequest(tester);
+        await submitRequestViaCallback(tester);
         await tester.showKeyboard(
           find.byKey(const ValueKey('ai-request-field')),
         );
