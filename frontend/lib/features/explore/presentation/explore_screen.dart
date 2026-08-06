@@ -145,7 +145,7 @@ class _FeedTab extends ConsumerWidget {
                   value: sort == 'popular',
                   onChanged: (v) =>
                       ref.read(_feedSortProvider.notifier).state = v ? 'popular' : 'recent',
-                  activeColor: AppColors.accent,
+                  activeThumbColor: AppColors.accent,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 Text('sort_popular'.tr(), style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),

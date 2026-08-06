@@ -1,22 +1,37 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  static const _baseUrl = 'http://10.0.2.2:3000';
+  static const defaultBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:3000',
+  );
 
   final Dio _dio;
+  final Future<String?> Function() _tokenLoader;
 
-  ApiClient()
-      : _dio = Dio(BaseOptions(
-          baseUrl: _baseUrl,
+  ApiClient({
+    Dio? dio,
+    String baseUrl = defaultBaseUrl,
+    Future<String?> Function()? tokenLoader,
+  })  : _dio = dio ?? Dio(BaseOptions(
+          baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 30),
           headers: {'Content-Type': 'application/json'},
-        )) {
+        )),
+        _tokenLoader = tokenLoader ?? _loadStoredToken {
+    final uri = Uri.tryParse(_dio.options.baseUrl);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      throw ArgumentError.value(_dio.options.baseUrl, 'baseUrl', '유효한 API 주소가 필요합니다.');
+    }
+    if (kReleaseMode && uri.scheme != 'https') {
+      throw StateError('Release 빌드는 HTTPS API_BASE_URL이 필요합니다.');
+    }
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('auth_token');
+        final token = await _tokenLoader();
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -25,8 +40,21 @@ class ApiClient {
     ));
   }
 
-  Future<Response> post(String path, Map<String, dynamic> data) =>
-      _dio.post(path, data: data);
+  static Future<String?> _loadStoredToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  }
+
+  Future<Response> post(
+    String path,
+    Map<String, dynamic> data, {
+    Map<String, dynamic>? headers,
+  }) =>
+      _dio.post(
+        path,
+        data: data,
+        options: headers == null ? null : Options(headers: headers),
+      );
 
   Future<Response> put(String path, Map<String, dynamic> data) =>
       _dio.put(path, data: data);

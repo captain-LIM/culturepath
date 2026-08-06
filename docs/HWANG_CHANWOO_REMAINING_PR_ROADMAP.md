@@ -2,7 +2,7 @@
 
 > **문서 소유자:** 황찬우
 >
-> **최종 갱신:** 2026-07-24
+> **최종 갱신:** 2026-08-04
 >
 > **담당 범위:** 외부 API 연동 · RAG/AI Backend · Frontend UI/UX Design 및 API 연결
 >
@@ -45,8 +45,13 @@
 | PR #6 | 머지 완료 | TourAPI 상세조회 조립, 공개 `/places/search`·`/places/:id` 실데이터 연결, Swagger/OpenAPI와 오류 계약 |
 | PR #7 | 머지 완료 | MySQL 장소·검색 2단계 캐시, 24시간 TTL·7일 stale, DB fail-open, single-flight와 `X-Cache-Status` |
 | PR #8 | 머지 완료 | 연관 관광지 실데이터 연결, 엄격한 제목·법정동 매핑, 호출 상한, R2 캐시 재사용과 공개 계약 |
+| PR #9 | 머지 완료 | DataLab 날짜 검증·캐시·fail-open과 문화별 지역 40/30/30 점수, `X-Region-Data-Status` |
+| PR #10 | 머지 완료 | 팀원 변경 안정화, MySQL migration, 코스 생성·Fork 멱등성, Qdrant/OpenRouter 어댑터와 구조화 `/ai/transform` 기반 |
+| PR #11 | 머지 완료 | Qdrant 컬렉션·payload index, 결정적 장소 문서와 증분 인덱싱·명시적 prune 명령 |
+| PR #12 | 머지 완료 | 규칙 기반 RAG 검색, strict filter, MySQL 원본 재검증과 35개 고정 평가 세트 |
+| PR #13 | 머지 완료 | OpenRouter strict JSON Schema 코스 변형, 신뢰 장소 재구성, 원본 유지 정책과 비용 제한 |
 
-PR #8 머지 직후 기준으로 백엔드 테스트는 91개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
+R10 구현 중 백엔드 테스트는 204개가 통과했다. 새 세션은 이 숫자를 고정값으로 믿지 말고 현재 테스트를 다시 실행해 기준을 갱신한다.
 
 현재 구현된 주요 파일은 다음과 같다.
 
@@ -71,11 +76,11 @@ backend/src/utils/publicDataValidation.js
 
 - 공개 `/places/search`와 `/places/:id`는 TourAPI 서비스 계층에 연결됐다.
 - `/places/:id/related`는 TourAPI 연관 관광지 실데이터와 캐시에 연결됐다.
-- `regionsController.js`의 문화별 지역 목록은 R4 브랜치에서 DataLab 점수 연결을 구현 중이며, 지역별 장소 목록은 아직 시드 상태다.
+- `regionsController.js`의 문화별 지역 목록은 PR #9의 DataLab 점수에 연결됐고, 지역별 장소 목록은 TourAPI·MySQL 캐시와 안전한 큐레이션 fallback을 사용한다.
 - 상세조회는 개요, 운영시간, 휴무일과 이미지를 조립하며 원본에 없는 값만 `null`로 유지한다.
 - Swagger에는 TourAPI 기반 공개 장소 계약이 추가됐다.
-- MySQL 장소 캐시는 PR #7로 머지됐으며, Qdrant, OpenRouter와 구조화된 `/ai/transform`은 아직 완성되지 않았다.
-- Flutter는 현재 공개 API의 기존 응답 형태와 Mock/시드 데이터에 의존하는 부분이 있다.
+- MySQL 장소 캐시는 PR #7로 머지됐다. PR #10에서 Qdrant/OpenRouter 어댑터와 `/ai/transform` 기반을 추가했고 PR #11에서 컬렉션·증분 장소 인덱싱, PR #12에서 검색 정책·고정 평가 기반, PR #13에서 구조화 코스 변형을 머지했다. live smoke test는 별도 승인 후 남아 있다.
+- Flutter는 문화→지역→장소 목록→코스 담기가 연결됐고 R10에서 AI 변경안 전체 화면·diff·경고·적용 흐름을 마감한다. 장소 상세·이미지·공통 P0 상태의 전면 디자인 보완은 R10 범위가 아니다.
 
 ### 3.3 실제 API 검증 시 주의할 현재 사실
 
@@ -93,13 +98,13 @@ backend/src/utils/publicDataValidation.js
 | R1 | 머지 완료 — PR #6 (2026-07-23) | TourAPI 상세조회와 공개 장소 API 수직 연결 | PR #5 | R5 |
 | R2 | 머지 완료 — PR #7 (2026-07-23) | MySQL 장소 캐시와 장애 fallback | R1, 임수민과 스키마 합의 | R5 |
 | R3 | 머지 완료 — PR #8 (2026-07-24) | 연관 관광지 실데이터 연결 | R1, R2 | R4·R5 |
-| R4 | 구현·검증·독립 리뷰 완료 — `agent/datalab-region-score` | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
-| R5 | 대기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
-| R6 | 대기 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
-| R7 | 대기 | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
-| R8 | 대기 | RAG 검색·필터·평가 기반 | R7 | 제한적 |
-| R9 | 대기 | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
-| R10 | 대기 | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
+| R4 | 머지 완료 — PR #9 (2026-08-03) | DataLab 지역 통계와 지역 문화점수 기반 | R1, 지역 코드 계약 | R3·R5 |
+| R5 | 로컬 초안 보존·데스크탑 작업으로 연기 | Figma Make P0 디자인 시스템과 상태 명세 | 없음 | R1~R4 |
+| R6 | 팀원 구현으로 부분 연결·R5 후 보완 | Flutter 첫 실데이터 수직 흐름 연결 | R1, R5; 캐시 정책에 따라 R2 | 없음 |
+| R7 | 머지 완료 — PR #11 (2026-08-03) | Qdrant 컬렉션과 장소 인덱싱 | R2 | R5·R6 |
+| R8 | 머지 완료 — PR #12 (2026-08-04) | RAG 검색·필터·평가 기반 | R7 | 제한적 |
+| R9 | 머지 완료 — PR #13 (2026-08-04) | OpenRouter 기반 구조화 코스 변형 API | R8, 코스 계약 합의 | 제한적 |
+| R10 | 구현 중 — `agent/r10-ai-transform-ux` | AI 변경안 UI 통합과 품질·비용 마감 | R5, R6, R9 | 없음 |
 
 기본 원칙은 한 번에 하나의 코드 PR만 구현하는 것이다. R5 디자인은 코드 변경과 충돌하지 않는 범위에서 병렬 진행할 수 있지만, 저장소 변경은 별도 PR로 제출한다.
 
@@ -351,11 +356,18 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - Qdrant를 원본 DB로 사용하는 설계
 - LLM 응답 생성
 
-### 결정 필요
+### 확정된 결정
 
-- 임베딩 모델과 차원
-- 컬렉션 이름·버전 정책
-- 무료 티어 한도 내 초기 적재 범위
+- `baai/bge-m3`, 1024차원, Cosine을 사용한다.
+- 컬렉션은 `culturepath_places_v1`이며 모델·차원 변경 시 버전을 올린다.
+- 생산 원본은 MySQL `places_cache`이고 인덱싱 명령에서 TourAPI를 호출하지 않는다.
+- 장소당 하나의 문서와 결정적 UUID point를 사용한다.
+- SHA-256 문서 hash가 같은 장소는 임베딩과 upsert를 생략한다.
+- 기본 batch는 32이며 payload index는 실제 필터 필드만 만든다.
+- 삭제는 전체 원본 조회가 성공한 명시적 `--prune`에서만 수행한다.
+- 실제 smoke test는 자동 검증·독립 리뷰 후 별도 승인받아 임시 컬렉션 3건으로 제한한다.
+
+상세 계약은 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## 12. R8 — RAG 검색·필터·평가 기반
 
@@ -383,6 +395,17 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - Top-K와 최소 점수
 - 필터를 엄격 적용할지 결과 부족 시 완화할지
 - 품질 합격 기준과 평가 세트 소유자
+
+### 확정된 결정
+
+- 기본 Top-K는 8, 최대 10으로 제한한다.
+- 실제 점수 분포를 보기 전에는 최소 점수를 적용하지 않고 threshold sweep 후 확정한다.
+- 지역·문화와 명시적 콘텐츠 유형은 hard filter로 적용하고 자동으로 완화하지 않는다.
+- 우천·이동성·동행·반려동물·식이 조건은 구조화 근거가 없으면 의미 검색과 warning으로만 다룬다.
+- 기존 배열 반환 `search()`는 유지하고 내부 진단용 상세 경로를 추가한다.
+- 35개 고정 평가 세트의 소유자는 황찬우이며 Hit@8 0.80, MRR@8 0.50, routing·필터·신뢰 원본 1.00을 초기 기준으로 사용한다.
+- 기본 평가 명령은 Mock 전용이며 실제 호출은 별도 승인된 `--live`에서만 수행한다.
+- 상세 계약은 [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)을 따른다.
 
 ## 13. R9 — OpenRouter 기반 구조화 코스 변형 API
 
@@ -414,6 +437,18 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - 변경 가능한 코스 연산 종류
 - 사용자 확인 전 서버 저장 여부
 
+### 확정된 결정
+
+- 1차 모델은 `google/gemini-2.5-flash-lite`이며 모델 수준 fallback은 사용하지 않는다.
+- OpenRouter의 동일 모델 provider failover만 사용하고 애플리케이션 자동 재호출은 하지 않는다.
+- `response_format=json_schema`, `strict=true`, `require_parameters=true`로 구조를 강제한 뒤 Backend가 다시 검증한다.
+- 응답은 non-streaming으로 한 번에 받고 최대 출력은 기본 1,600토큰으로 제한한다.
+- 장소 삭제·순서 변경·Day 이동·검증 후보 추가를 허용하며 교체는 삭제+추가로 표현한다.
+- 검증할 수 없는 핵심 조건은 추측하지 않고 원본 코스와 warning을 반환한다.
+- 공개 요청·응답과 `/ai/edit-course` 호환 별칭은 유지하고 사용자 확인 전 DB를 변경하지 않는다.
+- 사용자별 기본 호출 제한은 60초에 3회다.
+- 실제 OpenRouter·Qdrant·MySQL 호출은 별도 승인 전까지 실행하지 않는다.
+
 ## 14. R10 — AI 변경안 UI 통합과 품질·비용 마감
 
 ### 목표
@@ -422,9 +457,9 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 
 ### 포함 범위
 
-- 변경 전·후 diff 표시
-- 추가·삭제·이동·교체 이유 표시
-- 전체 적용, 선택 적용, 취소, 원본 복구
+- 변경 전·후 semantic diff 표시
+- 제목·설명·추가·삭제·Day 이동·순서 변경과 전체 변경 요약 표시
+- 전체 변경안 편집, 취소, 저장 전 원본 복구
 - 로딩·부분 실패·재시도·사용량 제한 UX
 - 실제 `/ai/transform` 연동
 - 통합 테스트와 핵심 사용자 시나리오 회귀
@@ -436,11 +471,15 @@ MySQL의 장소 원본을 Qdrant에서 의미 검색할 수 있는 최소 비용
 - P2 개인화와 소셜 추천 고도화
 - 핵심 흐름과 무관한 신규 외부 API
 
-### 결정 필요
+### 확정된 결정
 
-- 변경안 적용 단위
-- AI 사용 횟수와 비용 안내 방식
-- 실패 시 원본 코스 보존 및 자동 저장 정책
+- Android 360~430dp에서 읽기 쉬운 전용 전체 화면을 사용한다.
+- 장소별 선택 적용은 만들지 않고 전체 변경안을 빌더에서 수동 조정한다.
+- 소유자 코스는 빌더 저장 전까지 DB를 바꾸지 않는다. 타인 코스는 명시적인 `내 코스로 저장하고 편집`에서만 Fork한다.
+- 일반 사용자에게 모델·토큰을 노출하지 않고 `429 Retry-After`와 안전한 오류 문구를 표시한다.
+- 코스·AI 계약은 최대 3-Day로 맞추고 빈 Day를 보존한다.
+- 실제 기기와 Release는 `--dart-define=API_BASE_URL=https://...`로 HTTPS 주소를 주입한다.
+- 실제 Qdrant·OpenRouter live smoke는 이 코드 PR에서 실행하지 않고 배포 전 별도 승인 게이트로 남긴다.
 
 ## 15. 의존 관계
 
@@ -488,17 +527,14 @@ R3과 R4는 R1 이후 병렬 가능하다. R5는 Backend 작업과 병렬 가능
 
 ## 18. 현재 세션 인수인계 포인트
 
-- 현재 작업은 **R4 — DataLab 지역 통계와 지역 문화점수 기반**이다.
-- 브랜치는 `agent/datalab-region-score`이며 PR #8 머지 커밋 `da0b8a5`에서 시작했다.
-- 사용자는 R4의 8개 결정사항을 모두 권장안으로 승인하고 서비스 계획서를 다시 읽도록 요청한 뒤 별도로 구현 시작을 지시했다.
-- 제품용 DataLab 정규화·전체 페이지 수집, 실제 달력 날짜 검증, 전용 MySQL 캐시와 single-flight·fail-open·stale fallback을 구현했다.
-- 현재 큐레이션 지역의 광역·기초 코드, 행정구역 개편 alias와 다중 자치구 그룹을 매핑하고 초기 40/30/30 점수를 구현했다.
-- 공개 `GET /cultures/:id/regions`의 배열 body는 유지하고 `X-Region-Data-Status`로 `HIT/REFRESHED/STALE/BYPASS/CURATED`만 공개한다.
-- 자동 테스트는 실제 키와 네트워크를 차단한다. 승인된 R4 smoke test는 재시도 없이 최대 4회만 실행하며 키와 전체 URL을 출력하지 않는다.
-- 2026-07-24 smoke는 `20260723`·`20260716` 기초·광역을 정확히 4회 호출했으며 모두 정상 빈 응답이었다. 추가 탐색 없이 검증된 `20210513`을 기준일로 유지했다.
-- Docker와 실제 MySQL은 이번 PR에서 실행하지 않는다.
-- 구현 계약은 [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md)을 기준으로 한다.
-- 네트워크 차단 백엔드 전체 테스트 118개가 통과했다.
-- 독립 `gpt-5.6-sol high` 1차 리뷰의 High 1건·Medium 3건·Low 1건을 모두 수정했고 최종 재리뷰 결과는 `APPROVE`, 남은 finding 0건이다.
-- 실제 MySQL 8 DDL·upsert와 다중 Node 인스턴스의 동시 갱신, 최근 유효 DataLab 날짜는 배포 전 별도 검증 위험으로 남아 있다.
+- 현재 작업은 **R10 — AI 변경안 UI 통합과 품질·비용 마감**이다.
+- 브랜치는 `agent/r10-ai-transform-ux`이며 PR #13 머지 커밋 `64f8512`에서 시작했다.
+- 사용자는 R10 권장안 1-A부터 10-A까지 전부 채택하고 구현 시작을 지시했다.
+- Backend는 최대 3-Day, 빈 Day 보존, 비밀값 없는 성공 사용량 로그로 정렬됐고 자동 테스트 204개가 통과했다.
+- Flutter는 전체 `/ai/transform` 응답, semantic diff, unchanged·warning·source, 오류별 UX와 전체 화면을 구현한다.
+- 적용은 자동 저장이 아니라 코스 빌더 편집이며 저장 전 원본 복구를 제공한다. 타인 코스는 명시적 Fork 후 같은 화면 세션에서 Fork를 재사용한다.
+- API 주소는 `API_BASE_URL` dart-define으로 주입하고 Release에서 HTTPS를 강제한다.
+- 이 PC에는 Flutter SDK가 없어 Flutter 검증은 GitHub CI와 데스크톱 실제 기기 QA로 수행한다.
+- Figma R5 로컬 초안은 `agent/figma-p0-design-system`에 보존하고 통째로 병합하지 않는다. R10 AI 전용 최신 명세는 [R10 AI 변경안 UX·Figma 명세](./R10_AI_TRANSFORM_UX.md)를 사용한다.
+- 실제 Qdrant 클러스터·OpenRouter 생성 모델·MySQL을 연결한 smoke와 live 품질 평가는 실행하지 않았다.
 - 전체 검증과 독립 `gpt-5.6-sol high` 리뷰가 끝나도 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.

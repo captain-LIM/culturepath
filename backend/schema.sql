@@ -24,12 +24,15 @@ CREATE TABLE IF NOT EXISTS courses (
   is_public              BOOLEAN DEFAULT FALSE,
   forked_from_course_id  INT DEFAULT NULL,
   forked_from_title      VARCHAR(255) DEFAULT NULL,
-  forked_from_author_id  VARCHAR(100) DEFAULT NULL,
-  area_code              VARCHAR(50) DEFAULT NULL,
+    forked_from_author_id  VARCHAR(100) DEFAULT NULL,
+    idempotency_key        VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    idempotency_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    area_code              VARCHAR(50) DEFAULT NULL,
   created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (forked_from_course_id) REFERENCES courses(id) ON DELETE SET NULL
+    FOREIGN KEY (forked_from_course_id) REFERENCES courses(id) ON DELETE SET NULL,
+    UNIQUE KEY uk_course_idempotency (user_id, idempotency_key)
 );
 
 -- ─── 코스 트랙 아이템 ─────────────────────────────────────────────────────────

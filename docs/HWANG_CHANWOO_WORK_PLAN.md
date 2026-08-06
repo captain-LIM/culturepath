@@ -8,7 +8,7 @@
 >
 > **기준일:** 2026-07-20
 >
-> **최종 갱신:** 2026-07-23
+> **최종 갱신:** 2026-08-04
 >
 > **관련 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](./TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
 
@@ -69,10 +69,10 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 | 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 장소 캐시 구현 중, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 실DB 검증과 연관 관광지 실데이터 연결 |
 | 지역·문화 데이터 | `regionsController.js`의 시드 맵 | 장소 밀도 + 방문자 데이터 + 큐레이션 | 점수 계산용 데이터 공급 |
 | 장소 이미지 | Flutter에서 이미지 준비 중 표시 | `detailImage2` 이미지 노출 | 이미지 필드와 fallback 규칙 정의 |
-| 벡터 검색 | Mock 문서 + Supabase TODO | Qdrant Cloud | Qdrant 클라이언트와 인덱싱 구현 |
-| LLM | Anthropic SDK 또는 Mock | OpenRouter | 호출부와 환경변수 교체 |
-| AI API | `POST /ai/chat` | `POST /ai/transform` | 구조화된 코스 변형 계약 구현 |
-| AI 화면 | 일반 채팅 문자열 표시 | 코스 변경 diff 미리보기 | 새 UX·응답 모델 설계 |
+| 벡터 검색 | Mock 문서 + Qdrant 검색 어댑터, 컬렉션 미적재 | Qdrant Cloud | 컬렉션 생성·인덱싱·평가·live 검증 |
+| LLM | OpenRouter 호출 어댑터 또는 Mock | OpenRouter | 모델 선택·비용 정책·제한 live 검증 |
+| AI API | 인증·호출 제한·장소 ID 검증이 있는 `POST /ai/transform`, 이전 경로 호환 | 구조화된 코스 변형 | 실제 Qdrant 후보와 OpenRouter 모델 품질 검증 |
+| AI 화면 | 변경 diff 미리보기와 타인 코스 적용 전 Fork | 안전한 코스 변경 UX | 선택 적용·원본 복구·사용량 안내 고도화 |
 | DB | `places_cache`·`place_query_cache` 스키마와 저장소 구현, AI 이력 테이블 없음 | 캐시·세션·메시지 저장 | 수민님과 스키마 공유 후 MySQL 8 통합 검증 |
 | 디자인 | 기본 컬러·폰트와 화면 구현 존재 | 통일된 Figma 원본·상태 명세 | 기존 UI 감사 후 개선안 전달 |
 
@@ -357,9 +357,9 @@ place_query_cache
 
 - [x] `GET /places/search`: 하드코딩 검색을 TourAPI/캐시 검색으로 교체
 - [x] `GET /places/:id`: 공통·소개·이미지 상세 결합
-- [ ] `GET /places/:id/related`: 연관 관광지 데이터 연결
-- [ ] `GET /regions/:code/spots?culture=`: 지역×문화 필터 적용
-- [ ] `GET /cultures/:id/regions`: 장소 밀도·방문자 추이 반영
+- [x] `GET /places/:id/related`: 연관 관광지 데이터 연결
+- [x] `GET /regions/:code/spots?culture=`: 지역×문화 필터 적용
+- [x] `GET /cultures/:id/regions`: 장소 밀도·방문자 추이 반영
 
 각 API는 기존 Flutter 모델을 깨지 않도록 현재 응답과 새 응답의 차이를 먼저 수민님에게 공유한다.
 
@@ -372,7 +372,7 @@ place_query_cache
 - [x] 서비스키 마스킹
 - [x] 동일 프로세스의 동일 요청 중복 호출 방지
 - [ ] 개발 환경에서 과도한 전체 데이터 수집 금지
-- [ ] 배치 수집 중 일부 실패가 전체 작업을 망치지 않도록 재개 지점 기록
+- [x] Qdrant 인덱싱은 완료 batch의 문서 hash를 재사용해 실패 후 재실행 비용 제한
 - [ ] 공공데이터 이미지 이용조건과 출처 표기 필요 여부 확인
 
 ---
@@ -402,22 +402,22 @@ Flutter diff 미리보기 → 적용/취소
 - MySQL에 상세 원본을 저장하고 Qdrant에는 벡터와 검색에 필요한 최소 payload만 저장한다.
 - 개발 중에는 Mock 모드를 유지하되, 실제 검색 검증 단계에서는 Mock 문서를 사용하지 않는다.
 - Qdrant Cloud 무료 클러스터로 시작한다.
-- 무료 Cloud Inference에 적합한 한국어/다국어 임베딩 모델이 있으면 먼저 품질을 평가한다.
-- 무료 모델 품질이 부족할 때만 OpenRouter 임베딩 비용을 사용한다.
+- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하고 R8 고정 평가 세트로 품질을 검증한다.
+- 무료 단일 공급자 모델의 가용성보다 변경분만 재임베딩하는 재현 가능한 저비용 계약을 우선한다.
 - LLM 호출은 모든 화면 조회가 아니라 사용자가 `AI 변형`을 요청했을 때만 수행한다.
 - 동일 입력·동일 코스에 대한 단기 결과 캐시 가능성을 검토한다.
 - 프롬프트에 관광지 전체 JSON을 넣지 않고 검색된 최소 문맥만 전달한다.
 
 ## B-2. 현재 코드에서 정리할 차이
 
-- [ ] `vectorStore.js`의 `supabaseSearch` TODO를 Qdrant 구현으로 교체
-- [ ] `@qdrant/js-client-rest` 등 확정한 공식 클라이언트 추가
-- [ ] Anthropic 직접 SDK를 OpenRouter 호출 방식으로 교체하거나 호환 계층 작성
-- [ ] `ANTHROPIC_API_KEY` 중심 설정을 `OPENROUTER_API_KEY` 중심으로 변경
-- [ ] `USE_MOCK_RAG`의 기본 동작과 운영 환경 금지 규칙 정의
+- [x] `vectorStore.js`의 `supabaseSearch` TODO를 Qdrant 검색 어댑터로 교체
+- [x] 새 의존성 없이 기존 native `fetch` 기반 Qdrant REST 클라이언트를 컬렉션·인덱싱 작업까지 확장
+- [x] Anthropic 직접 SDK를 OpenRouter 호출 방식으로 교체
+- [x] `ANTHROPIC_API_KEY` 중심 설정을 `OPENROUTER_API_KEY` 중심으로 변경
+- [x] `USE_MOCK_RAG`는 정확히 `false`일 때만 실서비스를 사용하고 기본 테스트는 강제로 Mock 유지
 - [ ] `/ai/chat`을 유지할지, `/ai/transform`으로 완전히 전환할지 수민님과 합의
-- [ ] 계획서의 핵심인 `/ai/transform`을 우선 구현
-- [ ] 문자열 한 개만 반환하는 Flutter `AiRepository` 계약을 구조화된 모델로 변경하도록 명세 전달
+- [x] 계획서의 핵심인 `/ai/transform` 구현
+- [x] Flutter `AiRepository`와 변경 전·후 미리보기의 구조화 계약 기반 연결
 
 ## B-3. Qdrant 컬렉션 설계
 
@@ -436,21 +436,23 @@ Distance: 임베딩 모델 권장값에 맞춤
 {
   "contentId": "123456",
   "title": "박경리기념관",
-  "region": "통영",
-  "areaCode": "36",
-  "sigunguCode": "17",
+  "regionName": "통영",
+  "areaCode": "tongyeong",
+  "lDongRegnCd": "48",
+  "lDongSignguCd": "220",
   "cultures": ["문학"],
-  "contentTypeId": "12",
-  "indoor": true,
-  "sourceUpdatedAt": "2026-07-20T00:00:00Z",
-  "documentVersion": 1
+  "contentTypeId": "14",
+  "sourceUpdatedAt": "20260801093000",
+  "documentVersion": "culturepath-place-v1",
+  "documentHash": "sha256...",
+  "embeddingModel": "baai/bge-m3"
 }
 ```
 
 ### 설계 규칙
 
 - 임베딩 모델을 바꾸면 벡터 차원과 의미공간이 달라지므로 컬렉션 버전을 올리고 전체 재인덱싱한다.
-- `region`, `areaCode`, `cultures`, `contentTypeId`처럼 필터에 사용할 필드는 payload index를 만든다.
+- `regionName`, `areaCode`, `cultures`, `contentTypeId`처럼 필터에 사용할 필드는 payload index를 만든다.
 - 상세 설명 전체를 payload에 중복 저장할지 여부는 크기와 응답 속도를 측정한 뒤 결정한다.
 - Qdrant 데이터는 삭제돼도 MySQL에서 재생성할 수 있어야 한다.
 - 무료 클러스터 비활성 삭제에 대비해 인덱싱 명령 하나로 복구 가능하게 만든다.
@@ -471,14 +473,14 @@ Distance: 임베딩 모델 권장값에 맞춤
 
 ### 할 일
 
-- [ ] 장소별 검색 문서 템플릿 작성
-- [ ] HTML과 불필요한 공백 제거
-- [ ] 결측값을 사실처럼 채우지 않도록 처리
-- [ ] 문화 카테고리 매핑 결과 포함
+- [x] 장소별 검색 문서 템플릿 작성
+- [x] 상류 TourAPI 정규화 후 제어문자와 불필요한 공백 제거
+- [x] 결측값을 사실처럼 채우지 않도록 처리
+- [x] 문화 카테고리 매핑 결과 포함
 - [ ] 연관 관광지를 검색 문서에 넣을지 별도 payload로 둘지 비교
-- [ ] 너무 긴 상세정보는 의미 단위로 나누되 초기에는 장소당 1~2문서를 우선 검증
-- [ ] 문서 내용 해시를 저장해 변경된 장소만 재임베딩
-- [ ] 삭제·비공개 처리된 장소를 Qdrant에서도 제거
+- [x] 초기 계약은 장소당 문서·벡터 하나로 고정
+- [x] 문서 내용 해시를 저장해 변경된 장소만 재임베딩
+- [x] 전체 성공 후 명시적 `--prune`으로 삭제된 장소를 Qdrant에서도 제거
 
 ## B-5. 인덱싱 파이프라인
 
@@ -486,20 +488,22 @@ Distance: 임베딩 모델 권장값에 맞춤
 
 ```text
 npm run rag:index        # 전체 또는 변경분 인덱싱
-npm run rag:reindex      # 새 컬렉션으로 전체 재구축
-npm run rag:smoke        # 대표 검색 질문 검증
+npm run rag:index -- --dry-run --limit=20
+npm run rag:index -- --prune
 ```
 
 ### 처리 흐름
 
-- [ ] MySQL에서 인덱싱 대상 조회
-- [ ] 검색 문서 생성
-- [ ] 배치 임베딩
-- [ ] Qdrant batch upsert
-- [ ] 성공·실패·스킵 건수 출력
-- [ ] 실패 항목 재시도 가능하게 기록
-- [ ] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
-- [ ] 문서 버전과 임베딩 모델 버전 기록
+- [x] MySQL에서 cursor 기반 인덱싱 대상 조회
+- [x] 검색 문서 생성
+- [x] OpenRouter batch 임베딩
+- [x] Qdrant batch upsert
+- [x] 처리·임베딩·스킵·삭제 건수와 입력 토큰 출력
+- [x] 완료 batch의 hash 비교로 실패 후 안전하게 재실행
+- [x] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
+- [x] 문서 버전과 임베딩 모델 기록
+
+구체적인 실행·삭제 안전장치와 payload는 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## B-6. 검색 전략
 
@@ -514,11 +518,13 @@ npm run rag:smoke        # 대표 검색 질문 검증
 
 ### 초기 파라미터
 
-- `topK`: 5~10 범위에서 평가
+- 기본 `topK`: 8, 최대 10
 - 지역이 명시됐으면 지역 필터 적용
 - 문화가 명시됐으면 문화 필터 적용
-- 결과가 부족하면 필터를 무조건 해제하지 말고 사용자에게 조건 완화를 알린다.
-- 점수 임계값은 임의로 확정하지 않고 평가 질문 결과를 보고 조정한다.
+- 명시적으로 전달된 TourAPI 콘텐츠 유형만 allowlist 검증 후 필터 적용
+- 결과가 3개 미만이어도 필터를 자동으로 해제하지 않고 부족 상태를 진단한다.
+- `QDRANT_SCORE_THRESHOLD`는 live 평가 전에는 비워 두고 threshold sweep 결과로 확정한다.
+- 우천·동행·이동성·반려동물·식이 조건은 구조화 근거가 없으면 hard filter로 단정하지 않는다.
 
 ### 2차 고도화 후보
 
@@ -544,26 +550,18 @@ npm run rag:smoke        # 대표 검색 질문 검증
     "mobility": "low",
     "dietary": [],
     "startRegion": "통영"
-  },
-  "currentTracks": [
-    {
-      "trackNumber": 1,
-      "sequence": 1,
-      "contentId": "123456",
-      "stayMinutes": 60
-    }
-  ]
+  }
 }
 ```
 
 ### 검증 규칙
 
-- [ ] `request` 빈 문자열 금지 및 길이 제한
-- [ ] `courseId`와 현재 사용자 권한 확인은 기존 인증 계층과 연결
-- [ ] `currentTracks`의 `contentId`가 실제 장소인지 검증
+- [x] `request` 빈 문자열 금지 및 길이 제한
+- [x] `courseId`로 서버 코스를 다시 조회하고 공개 여부·현재 사용자 권한 확인
+- [x] 클라이언트 `currentTracks`를 신뢰하지 않고 `courseId`로 서버 코스와 장소를 재조회
 - [ ] 허용된 제약 값과 자유 텍스트의 경계 정의
-- [ ] 최대 장소 수와 최대 대화·요청 크기 제한
-- [ ] 프롬프트 명령 삽입을 데이터와 지시문 분리로 완화
+- [x] 최대 장소 수와 최대 대화·요청 크기 제한
+- [x] 프롬프트 명령 삽입을 데이터와 지시문 분리로 완화
 
 ## B-8. `/ai/transform` 응답 계약
 
@@ -571,38 +569,29 @@ npm run rag:smoke        # 대표 검색 질문 검증
 
 ```json
 {
-  "summary": "야외 장소 1곳을 실내 문화시설로 교체했습니다.",
-  "assumptions": ["출발지는 통영 시내로 가정했습니다."],
-  "transformedTracks": [
-    {
-      "trackNumber": 1,
-      "sequence": 1,
-      "contentId": "123456",
-      "stayMinutes": 60,
-      "action": "keep",
-      "reason": "실내 관람이 가능하고 문학 테마에 적합합니다."
-    }
-  ],
-  "changes": [
-    {
-      "type": "replace",
-      "fromContentId": "old-id",
-      "toContentId": "new-id",
-      "reason": "우천 시 야외 이동을 줄이기 위해 교체했습니다."
-    }
-  ],
-  "sources": [
-    {
-      "contentId": "123456",
-      "title": "박경리기념관"
-    }
-  ],
-  "warnings": [],
+  "course": {
+    "id": 42,
+    "title": "통영 문학 당일 코스",
+    "description": "원본 설명",
+    "tracks": [
+      {
+        "trackNumber": 1,
+        "places": [
+          { "contentId": "123456", "title": "박경리기념관" }
+        ]
+      }
+    ]
+  },
+  "summary": "실내 여부를 검증할 수 없어 원본 코스를 유지했습니다.",
+  "explanation": "실내 여부를 검증할 수 없어 원본 코스를 유지했습니다.",
+  "sources": [],
+  "warnings": ["장소별 실내 여부 데이터가 없습니다."],
   "usage": {
-    "model": "provider/model",
+    "model": "google/gemini-2.5-flash-lite",
     "inputTokens": 0,
     "outputTokens": 0
-  }
+  },
+  "mock": false
 }
 ```
 
@@ -613,20 +602,22 @@ npm run rag:smoke        # 대표 검색 질문 검증
 - 변경 이유는 사용자에게 보여줄 수 있는 짧은 문장으로 제공한다.
 - 결과를 즉시 DB에 덮어쓰지 않고 사용자가 `적용`을 눌렀을 때만 저장한다.
 - 원본 코스는 변형 미리보기 단계에서 보존한다.
+- 내부 모델 출력의 `status`는 공개 응답에 추가하지 않아 기존 Flutter 파서를 유지한다.
+- 검증할 수 없는 핵심 조건은 원본 코스를 유지하고 `warnings`에 이유를 기록한다.
 
 ## B-9. OpenRouter 연동
 
 ### 할 일
 
-- [ ] `OPENROUTER_API_KEY` 환경변수 추가
-- [ ] 개발·운영 모델명을 환경변수로 분리
-- [ ] 타임아웃과 최대 출력 토큰 설정
-- [ ] 구조화된 출력 또는 JSON Schema 지원 모델 우선 검토
-- [ ] 모델 응답 JSON 파싱 실패 처리
-- [ ] 429, 5xx, 타임아웃 처리
-- [ ] 토큰 사용량과 요청별 예상 비용 기록
-- [ ] 운영 환경에서 Mock 응답이 노출되지 않도록 검증
-- [ ] 모델 교체 시 비즈니스 로직을 수정하지 않도록 `llmService` 인터페이스 유지
+- [x] `OPENROUTER_API_KEY` 환경변수 추가
+- [x] 개발·운영 모델명을 환경변수로 분리
+- [x] 타임아웃과 최대 출력 토큰 설정
+- [x] `google/gemini-2.5-flash-lite`와 strict JSON Schema 사용
+- [x] 모델 응답 JSON 파싱 실패 처리
+- [x] 429, 5xx, 타임아웃을 내부 오류로 정규화
+- [x] 입력·출력 토큰 기록과 기본 1,600 출력 토큰 상한 적용
+- [ ] 운영 환경에서 Mock 응답이 노출되지 않도록 배포 설정 검증
+- [x] 모델 교체 시 비즈니스 로직을 수정하지 않도록 `llmService` 인터페이스 유지
 
 ### 프롬프트 구성
 
@@ -641,7 +632,9 @@ User Request: 사용자의 원문
 
 ## B-10. RAG 평가 세트
 
-최소 30개의 고정 질문을 만들어 코드 변경 전·후 결과를 비교한다.
+황찬우 소유의 35개 고정 질문 `culturepath-rag-eval-v1`을 저장소에 두고 코드 변경 전·후
+결과를 비교한다. 기본 평가는 Mock 전용이며 실제 공급자 평가는 별도 승인된 `--live`에서만
+실행한다.
 
 ### 평가 범주
 
@@ -667,17 +660,21 @@ User Request: 사용자의 원문
 | 안정성 | 같은 입력에서 구조가 깨지지 않는가 |
 | 비용 | 불필요하게 긴 문맥과 출력을 사용하지 않는가 |
 
+초기 검색 합격 기준은 Hit@8 0.80 이상, MRR@8 0.50 이상, routing·hard filter·live MySQL
+원본 비율 1.00이다. 지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 실제 환경이 정해지기
+전에는 hard gate로 사용하지 않는다.
+
 ## B-11. RAG 완료 기준
 
 - [ ] Mock 문서가 아닌 TourAPI 기반 장소를 검색한다.
-- [ ] Qdrant가 비어 있으면 명확한 오류 또는 안전한 fallback을 반환한다.
-- [ ] 지역·문화 필터가 실제로 적용된다.
-- [ ] `/ai/transform` 응답이 합의된 JSON Schema를 항상 만족한다.
-- [ ] 존재하지 않는 장소를 결과에 포함하지 않는다.
-- [ ] 사용자가 적용하기 전 원본 코스를 변경하지 않는다.
-- [ ] 평가 세트 결과와 대표 실패 사례를 문서로 남긴다.
-- [ ] 요청별 모델·토큰·지연시간을 확인할 수 있다.
-- [ ] Qdrant 전체 재인덱싱이 가능하다.
+- [x] Qdrant가 비어 있으면 명확한 오류를 반환한다.
+- [x] 지역·문화·명시적 콘텐츠 유형 필터가 AND 조건으로 적용된다.
+- [x] `/ai/transform` 내부 모델 응답을 strict JSON Schema와 Backend 검증으로 제한한다.
+- [x] 존재하지 않는 장소를 결과에 포함하지 않는다.
+- [x] 사용자가 적용하기 전 원본 코스를 변경하지 않는다.
+- [ ] live 평가 세트 결과와 대표 실패 사례를 문서로 남긴다.
+- [x] 검색 요청별 임베딩 모델·입력 토큰·지연시간을 확인할 수 있다.
+- [x] Qdrant 전체 재인덱싱이 가능하다.
 
 ---
 
@@ -810,15 +807,15 @@ User Request: 사용자의 원문
 
 ### P1 AI 코스 변형
 
-- [ ] 자연어 입력
-- [ ] 빠른 조건 칩: 기간·날씨·동행·식이·이동
-- [ ] AI 처리 중 상태
-- [ ] 원본과 변경안 비교
-- [ ] 유지·추가·삭제·교체의 시각적 구분
-- [ ] 변경 이유
-- [ ] 데이터 부족 경고
-- [ ] 적용·다시 생성·취소
-- [ ] 적용 실패와 원본 복구 상태
+- [x] 최대 500자 자연어 입력
+- [x] 현재 근거로 수행 가능한 빠른 조건 칩
+- [x] AI 처리 중 상태와 중복 제출 차단
+- [x] 원본과 변경안 비교
+- [x] 유지·추가·삭제·Day 이동·순서 변경의 아이콘·라벨 구분
+- [x] 전체 변경 요약과 결정론적 변경 위치
+- [x] 데이터 부족 경고와 unchanged 상태
+- [x] 편집 화면 진입·다른 요청·취소
+- [x] 적용 실패와 저장 전 원본 복구 상태
 
 ## C-6. 핵심 컴포넌트
 
@@ -886,7 +883,7 @@ User Request: 사용자의 원문
 - [ ] 오류 코드와 사용자 메시지 구분
 - [ ] 페이지네이션 방식
 - [ ] 캐시 데이터의 최신성 표시 여부
-- [ ] `/ai/transform` JSON Schema
+- [x] `/ai/transform` JSON Schema와 기존 Flutter 호환 공개 응답
 - [ ] Figma 화면·컴포넌트·상태 명세
 
 ## D-2. 수민님에게 받아야 할 것
@@ -912,10 +909,10 @@ User Request: 사용자의 원문
 
 ## Phase 0 — 계약 고정
 
-- [ ] Qdrant + OpenRouter 사용 확정
+- [x] Qdrant + OpenRouter 사용 확정
 - [ ] 내부 장소 모델 합의
-- [ ] `/ai/transform` 초안 합의
-- [ ] `contentId` 공통 ID 사용 합의
+- [x] `/ai/transform` 초안 합의
+- [x] 숫자형 TourAPI `contentId` 공통 ID 사용 합의
 
 **완료 결과:** 구현 중 응답 형식이 반복해서 바뀌지 않는다.
 
@@ -932,9 +929,9 @@ User Request: 사용자의 원문
 ## Phase 2 — 캐시·연관·지역점수
 
 - [x] `places_cache`·`place_query_cache` 구현과 fake repository 테스트
-- [ ] 연관 관광지
-- [ ] 방문자 추이
-- [ ] 지역 문화점수 초기 버전
+- [x] 연관 관광지
+- [x] 방문자 추이
+- [x] 지역 문화점수 초기 버전
 - [x] TourAPI stale fallback과 MySQL fail-open
 - [ ] 실제 MySQL 8 통합 검증
 
@@ -954,33 +951,34 @@ User Request: 사용자의 원문
 ## Phase 4 — Qdrant 검색
 
 - [ ] 무료 클러스터
-- [ ] 컬렉션·payload index
-- [ ] 검색 문서 생성
-- [ ] 인덱싱·재인덱싱
-- [ ] 지역·문화 필터 검색
-- [ ] 검색 평가 세트
+- [x] 컬렉션·payload index 생성 계약
+- [x] 검색 문서 생성
+- [x] 증분 인덱싱·명시적 prune 명령
+- [x] 지역·문화 필터 검색 어댑터
+- [x] 35개 고정 검색 평가 세트와 Mock 회귀 실행기
+- [ ] 실제 Qdrant·OpenRouter live 검색 평가
 
 **완료 결과:** 사용자의 자연어 조건에 맞는 실제 장소를 안정적으로 찾는다.
 
 ## Phase 5 — AI 코스 변형
 
-- [ ] OpenRouter
-- [ ] 구조화 출력
-- [ ] `/ai/transform`
-- [ ] 후보·ID 검증
-- [ ] 변경 diff
-- [ ] 비용·사용량 기록
+- [x] OpenRouter 어댑터
+- [x] 구조화 출력
+- [x] `/ai/transform`
+- [x] 후보·ID 검증
+- [x] 변경 diff UI 기반
+- [x] 토큰 사용량 기록 기반
 
 **완료 결과:** 실제 코스를 자연어 조건에 맞게 변경하되 존재하지 않는 장소를 만들지 않는다.
 
 ## Phase 6 — AI UX와 통합
 
-- [ ] AI 변형 Figma
-- [ ] Flutter 모델·Repository 명세 전달
-- [ ] 변경 미리보기
-- [ ] 적용·취소
-- [ ] 오류·재시도
-- [ ] 디자인 QA
+- [x] AI 변형 Figma Make 프롬프트·상태 명세
+- [x] Flutter 모델·Repository 전체 응답 계약
+- [x] semantic diff 변경 미리보기
+- [x] 명시적 편집·취소·저장 전 원본 복구
+- [x] 상태코드별 오류·`Retry-After` 재시도
+- [ ] GitHub CI와 360·390·430dp 실제 디자인 QA
 
 **완료 결과:** 사용자가 AI 결과를 이해하고 통제할 수 있다.
 
@@ -1014,7 +1012,7 @@ User Request: 사용자의 원문
 - [ ] LLM 요청당 입력·출력 토큰 상한
 - [ ] 사용자별 요청 빈도 제한
 - [ ] 같은 버튼 중복 탭 방지
-- [ ] 검색 Top-K 과다 설정 금지
+- [x] 검색 Top-K 기본 8·최대 10 상한
 - [ ] 프롬프트에 불필요한 원본 JSON 제거
 - [ ] 임베딩은 내용이 바뀐 문서만 재생성
 - [ ] Qdrant에는 최소 payload만 저장

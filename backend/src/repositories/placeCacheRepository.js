@@ -76,6 +76,29 @@ function summaryValues(place, cachedAt, expiresAt) {
 function createPlaceCacheRepository(options = {}) {
   const database = options.pool || pool;
 
+  async function listPlacesPage({ afterContentId = null, limit = 200 } = {}) {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+      throw new TypeError('장소 페이지 limit은 1 이상 1000 이하의 정수여야 합니다.');
+    }
+    const hasCursor = afterContentId !== null && afterContentId !== undefined &&
+      String(afterContentId) !== '';
+    const [rows] = await database.query(
+      `SELECT ${PLACE_COLUMNS}
+         FROM places_cache
+        ${hasCursor ? 'WHERE content_id > ?' : ''}
+        ORDER BY content_id ASC
+        LIMIT ?`,
+      hasCursor ? [String(afterContentId), limit] : [limit],
+    );
+    const items = rows.map(mapPlaceRow);
+    return {
+      items,
+      nextCursor: rows.length === limit
+        ? String(rows[rows.length - 1].content_id)
+        : null,
+    };
+  }
+
   async function findPlace(contentId) {
     const [rows] = await database.query(
       `SELECT ${PLACE_COLUMNS}
@@ -87,7 +110,7 @@ function createPlaceCacheRepository(options = {}) {
     return mapPlaceRow(rows[0]);
   }
 
-  async function findPlaces(contentIds) {
+  async function findExistingPlaces(contentIds) {
     if (!contentIds.length) {
       return [];
     }
@@ -99,12 +122,12 @@ function createPlaceCacheRepository(options = {}) {
         WHERE content_id IN (${placeholders})`,
       contentIds,
     );
-    const placesById = new Map(
-      rows.map(row => {
-        const place = mapPlaceRow(row);
-        return [place.contentId, place];
-      }),
-    );
+    return rows.map(mapPlaceRow);
+  }
+
+  async function findPlaces(contentIds) {
+    const existing = await findExistingPlaces(contentIds);
+    const placesById = new Map(existing.map(place => [place.contentId, place]));
 
     const ordered = contentIds.map(contentId => placesById.get(contentId));
     return ordered.some(place => !place) ? null : ordered;
@@ -260,7 +283,10 @@ function createPlaceCacheRepository(options = {}) {
 
   return Object.freeze({
     findPlace,
+    findExistingPlaces,
+    findPlaces,
     findQuery,
+    listPlacesPage,
     saveDetail,
     saveQuery,
   });
@@ -278,7 +304,10 @@ function getDefaultRepository() {
 module.exports = {
   createPlaceCacheRepository,
   findPlace: contentId => getDefaultRepository().findPlace(contentId),
+  findExistingPlaces: contentIds => getDefaultRepository().findExistingPlaces(contentIds),
+  findPlaces: contentIds => getDefaultRepository().findPlaces(contentIds),
   findQuery: cacheKey => getDefaultRepository().findQuery(cacheKey),
+  listPlacesPage: options => getDefaultRepository().listPlacesPage(options),
   saveDetail: input => getDefaultRepository().saveDetail(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),
 };

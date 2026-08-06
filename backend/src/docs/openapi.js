@@ -53,6 +53,7 @@ module.exports = Object.freeze({
   tags: [
     { name: 'Regions', description: '문화별 지역 탐색과 지역점수' },
     { name: 'Places', description: '관광 장소 검색과 상세조회' },
+    { name: 'AI', description: '인증된 사용자의 RAG 기반 코스 변형' },
   ],
   paths: {
     '/cultures/{id}/regions': {
@@ -101,6 +102,145 @@ module.exports = Object.freeze({
               },
             },
           },
+        },
+      },
+    },
+    '/ai/transform': {
+      post: {
+        tags: ['AI'],
+        summary: '현재 코스를 자연어 조건으로 변형',
+        description:
+          '서버에서 다시 조회한 현재 코스와 사용자 요청을 바탕으로 검증된 변경안을 반환합니다. OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 하며 응답은 저장되지 않습니다. 검증할 수 없는 핵심 조건은 외부 AI 호출 없이 원본 코스와 warning으로 반환합니다.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CourseTransformRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: '검증된 코스 변경안',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CourseTransformResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'AI 코스 변형 요청 오류',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          401: {
+            description: '인증 필요',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          403: {
+            description: '비공개 코스 접근 권한 없음',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          404: {
+            description: '코스를 찾을 수 없음',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          429: {
+            description: '사용자별 AI 호출 제한 초과',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          502: {
+            description: 'OpenRouter 또는 Qdrant 응답 오류',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          503: {
+            description: 'AI/RAG 설정 누락',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          504: {
+            description: 'AI/RAG 응답 시간 초과',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          500: {
+            description: '서버 또는 데이터베이스 오류',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+        },
+      },
+    },
+    '/ai/chat': {
+      post: {
+        tags: ['AI'],
+        summary: 'RAG 기반 문화여행 상담',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['messages'],
+                properties: {
+                  messages: {
+                    type: 'array',
+                    minItems: 1,
+                    maxItems: 20,
+                    items: { $ref: '#/components/schemas/AiChatMessage' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'AI 상담 응답',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AiChatResponse' } } },
+          },
+          400: { description: '메시지 형식 또는 길이 오류' },
+          401: { description: '인증 필요' },
+          429: { description: '사용자별 AI 호출 제한 초과' },
+          500: { description: '서버 오류' },
+          502: { description: 'OpenRouter 또는 Qdrant 응답 오류' },
+          503: { description: 'AI/RAG 설정 누락' },
+          504: { description: 'AI/RAG 응답 시간 초과' },
+        },
+      },
+    },
+    '/ai/edit-course': {
+      post: {
+        tags: ['AI'],
+        summary: 'AI 코스 변형 호환 별칭',
+        description: '`POST /ai/transform`의 이전 Flutter 빌드 호환 별칭입니다.',
+        deprecated: true,
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                oneOf: [
+                  { $ref: '#/components/schemas/CourseTransformRequest' },
+                  { $ref: '#/components/schemas/LegacyCourseTransformRequest' },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: '검증된 코스 변경안',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/CourseTransformResponse' } } },
+          },
+          400: { description: '요청 오류' },
+          401: { description: '인증 필요' },
+          403: { description: '접근 권한 없음' },
+          404: { description: '코스를 찾을 수 없음' },
+          429: { description: '호출 제한 초과' },
+          500: { description: '서버 오류' },
+          502: { description: 'AI/RAG 응답 오류' },
+          503: { description: 'AI/RAG 설정 누락' },
+          504: { description: 'AI/RAG 응답 시간 초과' },
         },
       },
     },
@@ -237,6 +377,13 @@ module.exports = Object.freeze({
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
     parameters: {
       LDongRegnCd: {
         name: 'lDongRegnCd',
@@ -315,6 +462,143 @@ module.exports = Object.freeze({
           code: { type: 'string' },
           message: { type: 'string' },
           retryable: { type: 'boolean' },
+        },
+      },
+      CoursePlace: {
+        type: 'object',
+        required: ['contentId', 'title'],
+        properties: {
+          contentId: { type: 'string', minLength: 1, maxLength: 100 },
+          title: { type: 'string', minLength: 1, maxLength: 200 },
+          address: { type: 'string' },
+          category: { type: 'string' },
+          region: { type: 'string', nullable: true },
+          tel: { type: 'string' },
+          openTime: { type: 'string' },
+        },
+      },
+      CourseTrack: {
+        type: 'object',
+        required: ['trackNumber', 'places'],
+        properties: {
+          trackNumber: { type: 'integer', minimum: 1, maximum: 3 },
+          places: {
+            type: 'array',
+            maxItems: 20,
+            items: { $ref: '#/components/schemas/CoursePlace' },
+          },
+        },
+      },
+      CourseDraft: {
+        type: 'object',
+        required: ['title', 'description', 'tracks'],
+        properties: {
+          id: { type: 'integer', nullable: true },
+          title: { type: 'string', minLength: 1, maxLength: 120 },
+          description: { type: 'string', maxLength: 2000 },
+          isPublic: { type: 'boolean' },
+          tracks: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 3,
+            items: { $ref: '#/components/schemas/CourseTrack' },
+          },
+        },
+      },
+      CourseTransformRequest: {
+        type: 'object',
+        required: ['courseId', 'request'],
+        properties: {
+          courseId: { type: 'integer', minimum: 1 },
+          request: { type: 'string', minLength: 1, maxLength: 500 },
+          constraints: { $ref: '#/components/schemas/TransformConstraints' },
+        },
+      },
+      TransformConstraints: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          days: { type: 'integer', minimum: 1, maximum: 3 },
+          weather: { type: 'string', maxLength: 100 },
+          companions: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 100 } },
+          mobility: { type: 'string', maxLength: 100 },
+          dietary: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 100 } },
+          startRegion: { type: 'string', maxLength: 100 },
+        },
+      },
+      LegacyCourseTransformRequest: {
+        type: 'object',
+        deprecated: true,
+        required: ['course', 'userRequest'],
+        properties: {
+          course: {
+            allOf: [
+              { $ref: '#/components/schemas/CourseDraft' },
+              {
+                type: 'object',
+                required: ['id'],
+                properties: { id: { type: 'integer', minimum: 1 } },
+              },
+            ],
+          },
+          userRequest: { type: 'string', minLength: 1, maxLength: 500 },
+          constraints: { $ref: '#/components/schemas/TransformConstraints' },
+        },
+      },
+      AiChatMessage: {
+        type: 'object',
+        required: ['role', 'content'],
+        properties: {
+          role: { type: 'string', enum: ['user', 'assistant'] },
+          content: { type: 'string', minLength: 1, maxLength: 2000 },
+        },
+      },
+      AiChatResponse: {
+        type: 'object',
+        required: ['content', 'mock', 'retrievedDocs', 'routeInfo', 'suggestedCourse'],
+        properties: {
+          content: { type: 'string' },
+          mock: { type: 'boolean' },
+          retrievedDocs: { type: 'array', items: { type: 'object' } },
+          routeInfo: { type: 'object' },
+          suggestedCourse: { nullable: true },
+          usage: { type: 'object' },
+        },
+      },
+      CourseTransformResponse: {
+        type: 'object',
+        required: ['course', 'summary', 'explanation', 'sources', 'warnings', 'usage', 'mock'],
+        properties: {
+          course: { $ref: '#/components/schemas/CourseDraft' },
+          summary: { type: 'string', minLength: 1, maxLength: 500 },
+          explanation: { type: 'string', minLength: 1, maxLength: 500, description: '이전 Flutter 빌드 호환 필드' },
+          sources: {
+            type: 'array',
+            maxItems: 10,
+            items: {
+              type: 'object',
+              required: ['contentId', 'title'],
+              properties: {
+                contentId: { type: 'string', pattern: '^[0-9]+$' },
+                title: { type: 'string', minLength: 1, maxLength: 200 },
+              },
+            },
+          },
+          warnings: {
+            type: 'array',
+            maxItems: 5,
+            items: { type: 'string', minLength: 1, maxLength: 300 },
+          },
+          usage: {
+            type: 'object',
+            required: ['model', 'inputTokens', 'outputTokens'],
+            properties: {
+              model: { type: 'string' },
+              inputTokens: { type: 'integer', minimum: 0 },
+              outputTokens: { type: 'integer', minimum: 0 },
+            },
+          },
+          mock: { type: 'boolean' },
         },
       },
       PlaceSummary: {

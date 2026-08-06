@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +17,7 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
 
   void updateTitle(String v) => state = state.copyWith(title: v);
   void updateDescription(String v) => state = state.copyWith(description: v);
+  void replace(CourseItem course) => state = course;
 
   void addPlace(int trackIdx, PlaceItem place) {
     final tracks = List<CourseTrack>.from(state.tracks);
@@ -31,7 +35,6 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
   }
 
   void reorder(int trackIdx, int oldIdx, int newIdx) {
-    if (newIdx > oldIdx) newIdx--;
     final tracks = List<CourseTrack>.from(state.tracks);
     final places = List<PlaceItem>.from(tracks[trackIdx].places);
     places.insert(newIdx, places.removeAt(oldIdx));
@@ -48,8 +51,15 @@ final courseBuilderProvider = StateNotifierProvider.autoDispose
 
 class CourseBuilderScreen extends ConsumerStatefulWidget {
   final CourseItem? initialCourse;
+  final CourseItem? aiOriginalCourse;
+  final CourseRepository? courseRepository;
 
-  const CourseBuilderScreen({super.key, this.initialCourse});
+  const CourseBuilderScreen({
+    super.key,
+    this.initialCourse,
+    this.aiOriginalCourse,
+    this.courseRepository,
+  });
 
   @override
   ConsumerState<CourseBuilderScreen> createState() => _CourseBuilderScreenState();
@@ -58,6 +68,7 @@ class CourseBuilderScreen extends ConsumerStatefulWidget {
 class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   int _activeTrack = 0;
   bool _saving = false;
+  String? _lastGuestSave;
   late final TextEditingController _titleCtrl;
 
   @override
@@ -73,6 +84,16 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   }
 
   CourseItem? get _providerKey => widget.initialCourse;
+
+  bool _canSaveOffline(Object error) =>
+      error is DioException &&
+      error.type == DioExceptionType.connectionTimeout;
+
+  bool _isSaveOutcomeUncertain(Object error) =>
+      error is DioException &&
+      (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout);
 
   void _openAddPlaceSheet() {
     showModalBottomSheet(
@@ -106,17 +127,23 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     }
 
     setState(() => _saving = true);
-    final repo = CourseRepository();
+    final repo = widget.courseRepository ?? CourseRepository();
+    final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
     try {
       final loggedIn = await repo.isLoggedIn();
+      late final CourseItem savedCourse;
       if (loggedIn) {
         if (course.id != null) {
-          await repo.updateCourse(course);
+          savedCourse = await repo.updateCourse(course);
         } else {
-          await repo.createCourse(course);
+          savedCourse = await repo.createCourse(course);
         }
+        notifier.replace(savedCourse);
       } else {
+        final fingerprint = jsonEncode(course.toJson());
+        if (_lastGuestSave == fingerprint) return;
         await repo.saveGuestCourse(course);
+        _lastGuestSave = fingerprint;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,18 +154,44 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        if (course.id != null) Navigator.of(context).pop(true);
+        if (loggedIn && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(savedCourse);
+        }
       }
-    } catch (_) {
-      await repo.saveGuestCourse(course);
+    } catch (error) {
+      if (_canSaveOffline(error)) {
+        final fingerprint = jsonEncode(course.toJson());
+        if (_lastGuestSave != fingerprint) {
+          await repo.saveGuestCourse(course);
+          _lastGuestSave = fingerprint;
+        }
+      }
       if (mounted) {
+        final messageKey = _canSaveOffline(error)
+            ? 'course_saved_offline'
+            : _isSaveOutcomeUncertain(error)
+                ? 'course_save_uncertain'
+                : 'course_save_failed';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('course_saved_offline'.tr())),
+          SnackBar(
+            content: Text(messageKey.tr()),
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _restoreAiOriginal() {
+    final original = widget.aiOriginalCourse;
+    if (original == null) return;
+    ref.read(courseBuilderProvider(_providerKey).notifier).replace(original);
+    _titleCtrl.text = original.title;
+    setState(() => _activeTrack = 0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('ai_edit_original_restored'.tr())),
+    );
   }
 
   @override
@@ -184,6 +237,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                   ),
                 )
               : TextButton(
+                  key: const ValueKey('course-save-button'),
                   onPressed: _saveCourse,
                   child: Text(
                     'save'.tr(),
@@ -197,6 +251,24 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
         children: [
           if (isFork)
             _ForkBanner(originalTitle: course.forkedFrom!.title, authorId: course.forkedFrom!.authorId),
+          if (widget.aiOriginalCourse != null)
+            Material(
+              key: const ValueKey('ai-draft-banner'),
+              color: AppColors.accent.withValues(alpha: 0.08),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.auto_awesome, color: AppColors.accent),
+                title: Text(
+                  'ai_edit_draft_notice'.tr(),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                trailing: TextButton(
+                  key: const ValueKey('ai-restore-original'),
+                  onPressed: _saving ? null : _restoreAiOriginal,
+                  child: Text('ai_edit_restore_original'.tr()),
+                ),
+              ),
+            ),
           TrackTimeline(
             tracks: course.tracks,
             activeTrack: _activeTrack,
@@ -230,7 +302,8 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 100),
                     itemCount: course.tracks[_activeTrack].places.length,
-                    onReorder: (o, n) => notifier.reorder(_activeTrack, o, n),
+                    onReorderItem: (o, n) =>
+                        notifier.reorder(_activeTrack, o, n),
                     itemBuilder: (_, i) {
                       final place = course.tracks[_activeTrack].places[i];
                       return CoursePlaceCard(
