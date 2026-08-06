@@ -17,6 +17,22 @@ const CULTURE_CATEGORIES = Object.freeze([
 // 검증되지 않은 ID는 추측해서 추가하지 않는다.
 const CONTENT_ID_OVERRIDES = Object.freeze({});
 
+// lclsSystmCode2(신분류체계) 중분류·소분류 코드값은 getClassificationCodes()
+// 라이브 조회로 확인했다(2026-08-06). 우리 10개 문화 카테고리와 명확히
+// 일대일 대응되는 코드만 등록하고, 박물관/기념관/과학관처럼 애매한 코드는
+// 추가하지 않는다.
+const MID_CLASSIFICATION_CODE_RULES = Object.freeze({
+  FD05: '커피·카페', // 카페/찻집
+  EX02: '공예·공방', // 공예체험
+});
+
+const SUB_CLASSIFICATION_CODE_RULES = Object.freeze({
+  VE070600: '미술·갤러리', // 미술관/화랑
+  VE060100: '음악', // 공연장
+  VE060200: '영화·애니메이션', // 영화관
+  HS011100: '근대 문화유산', // 근대건축물
+});
+
 const KEYWORD_RULES = Object.freeze([
   ['독립서점·책방', /독립\s*서점|서점|책방|북스테이|헌책방|고서점/i],
   ['문학', /문학|문학관|작가|소설가|시인|박경리|유치환|청마/i],
@@ -52,6 +68,12 @@ function getTopLevelCode(item) {
   return code.slice(0, 2);
 }
 
+function getClassificationCode(item, camelKey, snakeKey) {
+  return String(item?.[camelKey] ?? item?.[snakeKey] ?? '')
+    .trim()
+    .toUpperCase();
+}
+
 function classifyTourPlace(item, options = {}) {
   const contentId = String(item?.contentid ?? item?.contentId ?? '').trim();
   const overrides = options.contentIdOverrides || CONTENT_ID_OVERRIDES;
@@ -73,6 +95,15 @@ function classifyTourPlace(item, options = {}) {
     if (categoryAllowed && pattern.test(title)) {
       matches.push(category);
     }
+  }
+
+  const midCode = getClassificationCode(item, 'lclsSystm2', 'lcls_systm2');
+  const subCode = getClassificationCode(item, 'lclsSystm3', 'lcls_systm3');
+  if (MID_CLASSIFICATION_CODE_RULES[midCode]) {
+    matches.push(MID_CLASSIFICATION_CODE_RULES[midCode]);
+  }
+  if (SUB_CLASSIFICATION_CODE_RULES[subCode]) {
+    matches.push(SUB_CLASSIFICATION_CODE_RULES[subCode]);
   }
 
   return normalizeCategories(matches);

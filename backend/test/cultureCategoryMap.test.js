@@ -61,3 +61,47 @@ test('keeps unmapped places without forcing a culture', () => {
     [],
   );
 });
+
+test('uses verified lclsSystm3 sub-codes even without a title keyword', () => {
+  assert.deepEqual(
+    classifyTourPlace({ title: '오션뷰', lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: 'VE070600' }),
+    ['미술·갤러리'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({ title: '오후의 시간', lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060100' }),
+    ['음악'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({ title: 'CGV', lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060200' }),
+    ['영화·애니메이션'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({ title: '구 벨기에 영사관', lclsSystm1: 'HS', lclsSystm2: 'HS01', lclsSystm3: 'HS011100' }),
+    ['근대 문화유산'],
+  );
+});
+
+test('uses verified lclsSystm2 mid-codes even without a title keyword', () => {
+  assert.deepEqual(
+    classifyTourPlace({ title: '온기', lclsSystm1: 'FD', lclsSystm2: 'FD05' }),
+    ['커피·카페'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({ title: '흙손', lclsSystm1: 'EX', lclsSystm2: 'EX02' }),
+    ['공예·공방'],
+  );
+});
+
+test('does not map unrelated TourAPI sub-codes such as generic museums', () => {
+  assert.deepEqual(
+    classifyTourPlace({ title: '지역 역사관', lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: 'VE070100' }),
+    [],
+  );
+});
+
+test('code-based and keyword-based matches for the same category do not duplicate', () => {
+  assert.deepEqual(
+    classifyTourPlace({ title: '동네 카페', lclsSystm1: 'FD', lclsSystm2: 'FD05' }),
+    ['커피·카페'],
+  );
+});
