@@ -37,6 +37,13 @@ class ApiClient {
         }
         handler.next(options);
       },
+      onError: (error, handler) {
+        debugPrint(
+          '[ApiClient] ${error.requestOptions.method} ${error.requestOptions.path} '
+          '=> ${error.response?.statusCode} ${error.response?.data ?? error.message}',
+        );
+        handler.next(error);
+      },
     ));
   }
 
