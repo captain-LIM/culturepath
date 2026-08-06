@@ -17,6 +17,22 @@ const CULTURE_CATEGORIES = Object.freeze([
 // 검증되지 않은 ID는 추측해서 추가하지 않는다.
 const CONTENT_ID_OVERRIDES = Object.freeze({});
 
+// culture만 지정되고 q가 없는 검색에서 searchKeyword2를 직접 호출할 때 쓰는
+// 대표 검색어. KEYWORD_RULES·TourAPI 공식 소분류 명칭과 겹치는 안전한
+// 단어만 사용한다.
+const CULTURE_SEARCH_KEYWORDS = Object.freeze({
+  '독립서점·책방': '서점',
+  '문학': '문학관',
+  '음악': '공연장',
+  '전통주·양조장': '양조장',
+  '로컬 미식': '전통시장',
+  '공예·공방': '공방',
+  '근대 문화유산': '근대건축물',
+  '미술·갤러리': '미술관',
+  '영화·애니메이션': '영화관',
+  '커피·카페': '카페',
+});
+
 // lclsSystmCode2(신분류체계) 중분류·소분류 코드값은 getClassificationCodes()
 // 라이브 조회로 확인했다(2026-08-06). 우리 10개 문화 카테고리와 명확히
 // 일대일 대응되는 코드만 등록하고, 박물관/기념관/과학관처럼 애매한 코드는
@@ -112,5 +128,6 @@ function classifyTourPlace(item, options = {}) {
 module.exports = {
   CONTENT_ID_OVERRIDES,
   CULTURE_CATEGORIES,
+  CULTURE_SEARCH_KEYWORDS,
   classifyTourPlace,
 };

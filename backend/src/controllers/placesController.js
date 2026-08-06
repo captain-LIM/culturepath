@@ -1,6 +1,7 @@
 const cachedPlacesService = require('../services/cachedPlacesService');
 const relatedPlacesService = require('../services/relatedPlacesService');
 const { ExternalApiError } = require('../utils/externalApiError');
+const { CULTURE_SEARCH_KEYWORDS } = require('../config/cultureCategoryMap');
 
 function toPublicPlace(place) {
   return {
@@ -131,14 +132,36 @@ function createPlacesController(options = {}) {
       const result = query
         ? await service.searchPlacesByKeyword({ ...request, keyword: query })
         : await service.getAreaBasedPlaces(request);
+
+      // q 없이 culture만 지정된 요청은 지역 목록을 사후 필터링만 하면
+      // 모수가 너무 작다. TourAPI에 culture 대표 키워드로 직접 검색한
+      // 결과를 합쳐서 실제로 존재하는 장소를 더 찾아낸다.
+      const cultureKeyword = culture && !query ? CULTURE_SEARCH_KEYWORDS[culture] : null;
+      let mergedItems = result.items;
+      let cacheStatus = result.cacheStatus;
+      if (cultureKeyword) {
+        const keywordResult = await service.searchPlacesByKeyword({
+          ...request,
+          keyword: cultureKeyword,
+        });
+        const seenContentIds = new Set(mergedItems.map(place => place.contentId));
+        mergedItems = [
+          ...mergedItems,
+          ...keywordResult.items.filter(place => !seenContentIds.has(place.contentId)),
+        ];
+        if (cacheStatus === 'STALE' || keywordResult.cacheStatus === 'STALE') {
+          cacheStatus = 'STALE';
+        }
+      }
+
       const filteredItems = culture
-        ? result.items.filter(place => place.cultures.includes(culture))
-        : result.items;
+        ? mergedItems.filter(place => place.cultures.includes(culture))
+        : mergedItems;
       const pagination = culture
         ? { ...result.pagination, totalCount: filteredItems.length }
         : result.pagination;
 
-      setCacheStatusHeader(res, result.cacheStatus);
+      setCacheStatusHeader(res, cacheStatus);
       setPaginationHeaders(res, pagination, filteredItems.length);
       return res.json(filteredItems.map(toPublicPlace));
     } catch (error) {

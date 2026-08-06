@@ -155,6 +155,95 @@ test('filters the current page by culture without changing the internal model', 
   assert.equal(sourceItems[0].address, null);
 });
 
+test('augments an area listing with a culture keyword search when q is absent', async () => {
+  const calls = { areaBased: 0, keyword: [] };
+  const controller = createPlacesController({
+    tourApiService: {
+      getAreaBasedPlaces: async () => {
+        calls.areaBased += 1;
+        return {
+          items: [place({ contentId: '1', cultures: ['문학'], category: '문학' })],
+          pagination: { pageNo: 1, numOfRows: 20, totalCount: 50 },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async options => {
+        calls.keyword.push(options.keyword);
+        return {
+          items: [
+            place({ contentId: '2', title: '봄날 카페', cultures: ['커피·카페'], category: '커피·카페' }),
+            place({ contentId: '1', cultures: ['문학'], category: '문학' }),
+          ],
+          pagination: { pageNo: 1, numOfRows: 20, totalCount: 3 },
+          cacheStatus: 'REFRESHED',
+        };
+      },
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { lDongRegnCd: '48', lDongSignguCd: '220', culture: '커피·카페' },
+  }, res);
+
+  assert.equal(calls.areaBased, 1);
+  assert.deepEqual(calls.keyword, ['카페']);
+  assert.equal(res.body.length, 1);
+  assert.equal(res.body[0].contentId, '2');
+  assert.equal(res.headers['X-Cache-Status'], 'HIT');
+});
+
+test('marks the response STALE when the culture keyword search falls back to stale data', async () => {
+  const controller = createPlacesController({
+    tourApiService: {
+      getAreaBasedPlaces: async () => ({
+        items: [],
+        pagination: { pageNo: 1, numOfRows: 20, totalCount: 0 },
+        cacheStatus: 'HIT',
+      }),
+      searchPlacesByKeyword: async () => ({
+        items: [place({ contentId: '2', cultures: ['커피·카페'], category: '커피·카페' })],
+        pagination: { pageNo: 1, numOfRows: 20, totalCount: 1 },
+        cacheStatus: 'STALE',
+      }),
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { lDongRegnCd: '48', culture: '커피·카페' },
+  }, res);
+
+  assert.equal(res.headers['X-Cache-Status'], 'STALE');
+});
+
+test('does not run a culture keyword search when q is already provided', async () => {
+  let keywordCalls = 0;
+  const controller = createPlacesController({
+    tourApiService: {
+      searchPlacesByKeyword: async () => {
+        keywordCalls += 1;
+        return {
+          items: [place({ cultures: ['문학'], category: '문학' })],
+          pagination: { pageNo: 1, numOfRows: 20, totalCount: 1 },
+          cacheStatus: 'HIT',
+        };
+      },
+      getAreaBasedPlaces: async () => {
+        throw new Error('should not call area listing when q is present');
+      },
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { q: '문화', culture: '문학' },
+  }, res);
+
+  assert.equal(keywordCalls, 1);
+  assert.equal(res.body.length, 1);
+});
+
 test('returns a compatible place detail and a structured 404', async () => {
   const foundController = createPlacesController({
     placesService: {
