@@ -42,6 +42,10 @@ jobs:
           channel: stable
           cache: true
           pub-cache: true
+      - name: Clear stale pub.dev credentials
+        run: |
+          rm -f "$HOME/.config/dart/pub-credentials.json"
+          rm -f "$HOME/.pub-cache/credentials.json"
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
