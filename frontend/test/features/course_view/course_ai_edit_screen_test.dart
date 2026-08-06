@@ -200,7 +200,7 @@ Future<void> waitForWidget(
   throw TestFailure('Timed out waiting for $finder');
 }
 
-Future<void> pumpScreen(
+Future<void> _pumpScreen(
   WidgetTester tester, {
   required CourseItem original,
   required _FakeAiRepository aiRepository,
@@ -298,7 +298,7 @@ void main() {
       (tester) async {
     final original = course([place('1'), place('2')]);
     final proposal = course([place('1')]);
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: _FakeAiRepository([result(proposal)]),
@@ -320,7 +320,7 @@ void main() {
   testWidgets('keeps warnings visible and hides apply for an unchanged result',
       (tester) async {
     final original = course([place('1')]);
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: _FakeAiRepository([
@@ -348,7 +348,7 @@ void main() {
       ),
       result(course([place('1')])),
     ]);
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: repository,
@@ -392,7 +392,7 @@ void main() {
       (tester) async {
     var unauthorizedCalls = 0;
     final original = course([place('1')]);
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: _FakeAiRepository([
@@ -406,7 +406,7 @@ void main() {
     expect(unauthorizedCalls, 1);
 
     var unavailableCalls = 0;
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: _FakeAiRepository([
@@ -417,7 +417,7 @@ void main() {
     await submitRequest(tester);
     expect(unavailableCalls, 1);
 
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       aiRepository: _FakeAiRepository([
@@ -451,7 +451,7 @@ void main() {
       forkedCourse: forked,
       forkFailuresRemaining: 1,
     );
-    await pumpScreen(
+    await _pumpScreen(
       tester,
       original: original,
       isOwner: false,
@@ -551,7 +551,7 @@ void main() {
           tester.platformDispatcher.clearTextScaleFactorTestValue();
         });
         final original = course([place('1'), place('2')]);
-        await pumpScreen(
+        await _pumpScreen(
           tester,
           original: original,
           aiRepository: _FakeAiRepository([

@@ -27,6 +27,7 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
 
   Future<void> _toggleLike() async {
     final loggedIn = await CourseRepository().isLoggedIn();
+    if (!mounted) return;
     if (!loggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

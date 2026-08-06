@@ -192,6 +192,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     if (widget.course.id == null) return;
 
     final loggedIn = await CourseRepository().isLoggedIn();
+    if (!mounted) return;
     if (!loggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

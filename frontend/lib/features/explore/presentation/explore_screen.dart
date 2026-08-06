@@ -55,7 +55,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
+        headerSliverBuilder: (_, _) => [
           SliverAppBar(
             pinned: true,
             floating: true,
