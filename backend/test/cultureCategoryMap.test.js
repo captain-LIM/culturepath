@@ -17,8 +17,15 @@ test('classifies with conservative official-code and keyword rules', () => {
     ['전통주·양조장', '커피·카페'],
   );
   assert.deepEqual(
-    classifyTourPlace({ title: '지역 음식점', lclsSystm1: 'FD' }),
+    classifyTourPlace({ title: '원조 할매국밥', lclsSystm1: 'FD' }),
     ['로컬 미식'],
+  );
+});
+
+test('no longer force-buckets unmatched food places into 로컬 미식', () => {
+  assert.deepEqual(
+    classifyTourPlace({ title: '지역 음식점', lclsSystm1: 'FD' }),
+    [],
   );
 });
 

@@ -18,16 +18,16 @@ const CULTURE_CATEGORIES = Object.freeze([
 const CONTENT_ID_OVERRIDES = Object.freeze({});
 
 const KEYWORD_RULES = Object.freeze([
-  ['독립서점·책방', /독립\s*서점|서점|책방|북스테이/i],
+  ['독립서점·책방', /독립\s*서점|서점|책방|북스테이|헌책방|고서점/i],
   ['문학', /문학|문학관|작가|소설가|시인|박경리|유치환|청마/i],
   ['음악', /음악|공연장|콘서트|국악|오페라|재즈|뮤직/i],
-  ['전통주·양조장', /전통주|막걸리|소주|양조장|브루어리/i],
-  ['로컬 미식', /향토\s*음식|로컬\s*푸드|맛집|전통시장|중앙시장/i],
+  ['전통주·양조장', /전통주|막걸리|소주|양조장|브루어리|주조장|와이너리|술도가/i],
+  ['로컬 미식', /향토\s*음식|로컬\s*푸드|맛집|전통시장|중앙시장|재래시장|원조|노포/i],
   ['공예·공방', /공예|공방|도예|나전칠기|한지|목공|금속공예/i],
-  ['근대 문화유산', /근대|개항|적산가옥|일제강점기/i],
+  ['근대 문화유산', /근대|개항|적산가옥|일제강점기|등록문화재/i],
   ['미술·갤러리', /미술|미술관|갤러리|아트센터|예술관/i],
   ['영화·애니메이션', /영화|극장|시네마|애니메이션|만화/i],
-  ['커피·카페', /커피|카페|로스터리/i],
+  ['커피·카페', /커피|카페|로스터리|다방/i],
 ]);
 
 const TOP_LEVEL_CANDIDATES = Object.freeze({
@@ -73,10 +73,6 @@ function classifyTourPlace(item, options = {}) {
     if (categoryAllowed && pattern.test(title)) {
       matches.push(category);
     }
-  }
-
-  if (matches.length === 0 && topLevelCode === 'FD') {
-    matches.push('로컬 미식');
   }
 
   return normalizeCategories(matches);
