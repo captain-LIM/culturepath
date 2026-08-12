@@ -15,6 +15,10 @@ import 'course_map_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
+final _courseDetailProvider = FutureProvider.autoDispose.family<CourseItem, int>(
+  (ref, id) => CourseRepository().getCourse(id),
+);
+
 class CourseViewScreen extends ConsumerStatefulWidget {
   final CourseItem course;
   final bool isOwner;
@@ -30,11 +34,13 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   late final TabController _tabCtrl;
   bool _forking = false;
   bool _completed = false;
+  late CourseItem _course;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: widget.course.tracks.length, vsync: this);
+    _course = widget.course;
+    _tabCtrl = TabController(length: _course.tracks.length, vsync: this);
   }
 
   @override
@@ -48,12 +54,12 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     final loggedIn = await repo.isLoggedIn();
 
     if (!loggedIn) {
-      final forkedLocally = widget.course.copyWith(
-        title: '${widget.course.title} ${'fork_suffix'.tr()}',
+      final forkedLocally = _course.copyWith(
+        title: '${_course.title} ${'fork_suffix'.tr()}',
         forkedFrom: ForkedFromInfo(
-          courseId: widget.course.id ?? 0,
-          title: widget.course.title,
-          authorId: widget.course.authorId ?? 'unknown_author'.tr(),
+          courseId: _course.id ?? 0,
+          title: _course.title,
+          authorId: _course.authorId ?? 'unknown_author'.tr(),
         ),
       );
       if (!mounted) return;
@@ -61,9 +67,9 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       return;
     }
 
-    if (widget.course.id == null) {
-      final forkedLocally = widget.course.copyWith(
-        title: '${widget.course.title} ${'fork_suffix'.tr()}',
+    if (_course.id == null) {
+      final forkedLocally = _course.copyWith(
+        title: '${_course.title} ${'fork_suffix'.tr()}',
       );
       if (!mounted) return;
       _navigateToEdit(forkedLocally);
@@ -72,7 +78,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
     setState(() => _forking = true);
     try {
-      final forked = await repo.forkCourse(widget.course.id!);
+      final forked = await repo.forkCourse(_course.id!);
       if (mounted) _navigateToEdit(forked);
     } catch (e) {
       if (mounted) {
@@ -91,7 +97,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   Future<void> _shareCourse() async {
     try {
-      final course = widget.course;
+      final course = _course;
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final buffer = StringBuffer()
         ..writeln('📍 ${course.title}')
@@ -110,7 +116,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     } catch (e) {
       debugPrint('Share error: $e');
       // 네이티브 공유 실패 시 클립보드 폴백
-      final course = widget.course;
+      final course = _course;
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final fallback = StringBuffer()
         ..writeln('📍 ${course.title}')
@@ -135,13 +141,13 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   Future<void> _handleEdit() async {
     final saved = await Navigator.of(context).push<CourseItem>(MaterialPageRoute(
-      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: widget.course)),
+      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: _course)),
     ));
     if (saved != null && mounted) Navigator.of(context).pop();
   }
 
   Future<void> _handleAiEdit() async {
-    if (widget.course.id == null) {
+    if (_course.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('save_before_ai'.tr())),
       );
@@ -158,8 +164,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     if (!mounted) return;
     final saved = await showCourseAiEditScreen(
       context,
-      widget.course,
-      isOwner: widget.isOwner || widget.course.isOwner,
+      _course,
+      isOwner: widget.isOwner || _course.isOwner,
       onUnauthorized: () async {
         await AuthRepository().clearExpiredSession();
         ref.invalidate(authStateProvider);
@@ -178,7 +184,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   String? _primaryCulture() {
     final counts = <String, int>{};
-    for (final track in widget.course.tracks) {
+    for (final track in _course.tracks) {
       for (final place in track.places) {
         if (place.category.isNotEmpty) {
           counts[place.category] = (counts[place.category] ?? 0) + 1;
@@ -190,7 +196,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   Future<void> _handleComplete() async {
-    if (widget.course.id == null) return;
+    if (_course.id == null) return;
 
     final loggedIn = await CourseRepository().isLoggedIn();
     if (!mounted) return;
@@ -206,8 +212,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
     final success = await showCompletionSheet(
       context,
-      courseId: widget.course.id!,
-      courseTitle: widget.course.title,
+      courseId: _course.id!,
+      courseTitle: _course.title,
       culture: _primaryCulture(),
     );
 
@@ -226,7 +232,15 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   @override
   Widget build(BuildContext context) {
-    final course = widget.course;
+    final courseId = _course.id;
+    if (courseId != null) {
+      ref.listen<AsyncValue<CourseItem>>(_courseDetailProvider(courseId), (previous, next) {
+        next.whenData((updated) {
+          if (mounted) setState(() => _course = updated);
+        });
+      });
+    }
+    final course = _course;
 
     return Scaffold(
       backgroundColor: AppColors.background,
