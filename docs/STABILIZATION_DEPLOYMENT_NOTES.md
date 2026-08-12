@@ -1,14 +1,21 @@
 # 안정화 변경 배포 메모
 
+> 최종 상태 갱신: 2026-08-12
+
 ## MySQL 마이그레이션
 
 신규 DB는 `backend/schema.sql`을 사용한다. 기존 DB는 백업 후
 `backend/migrations`의 SQL을 파일명 순서대로 반드시 실행한다. 상세 명령과
 재실행·동시 실행 정책은 `backend/migrations/README.md`를 따른다.
 
-이번 자동 검증에서는 노트북 자원 제약 때문에 실제 MySQL이나 Docker를 실행하지
-않았다. 운영 반영 전 빈 DB, 기존 DB, 동일 migration 2회 실행을 staging MySQL 8에서
-검증해야 한다.
+자동 테스트는 노트북 자원을 아끼기 위해 Docker나 실DB에 의존하지 않는다. 별도 수동
+검증에서는 로컬 MySQL 8.4.11에 `schema.sql`을 적용하고 migration 2개를 실행했으며,
+두 번째 migration 재실행도 성공했다. 최소 권한 `culturepath_app` 계정의 Backend 연결과
+실제 TourAPI 응답의 `places_cache`·`place_query_cache` 저장도 확인했다.
+
+이 결과는 로컬 환경 검증이며 배포 DB 검증을 대신하지 않는다. 운영 반영 전 staging 또는
+production과 동일한 MySQL 8 환경에서 백업, 기존 DB migration, 재실행과 복구 절차를 다시
+검증한다.
 
 ## 코스 생성과 Fork 재시도
 
@@ -27,6 +34,8 @@ limiter로 교체한 뒤 확장해야 한다.
 ## 아직 필요한 실환경 확인
 
 - Flutter SDK가 있는 환경의 `flutter analyze`와 `flutter test`
-- 실제 MySQL 8 migration 적용 및 재실행
-- 실제 Qdrant 컬렉션 인덱싱과 검색 품질 평가
-- 비용 한도를 설정한 OpenRouter/Qdrant smoke test
+- staging/production MySQL 8 migration·백업·복구 재현
+- Qdrant 환경·연결 이후 OpenRouter BGE-M3를 사용한 실제 장소 인덱싱과 검색 품질 평가
+- RAG Mock/live 평가 계약 분리와 실제 TourAPI `contentId` 중심 합격 기준 확정
+- 비용 한도를 설정한 OpenRouter 임베딩·코스 변형 smoke test
+- Android release 빌드, 실기기 UX와 HTTPS Backend 연결

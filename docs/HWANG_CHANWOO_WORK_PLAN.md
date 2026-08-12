@@ -8,7 +8,7 @@
 >
 > **기준일:** 2026-07-20
 >
-> **최종 갱신:** 2026-08-04
+> **최종 갱신:** 2026-08-12
 >
 > **관련 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](./TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
 
@@ -17,7 +17,7 @@
 ## 0. 이 문서의 사용법
 
 - 이 문서는 아이디어 목록이 아니라 **실제 작업 순서와 완료 조건을 관리하는 체크리스트**다.
-- 위에서 아래 순서대로 진행하되, FE 디자인은 API 연동과 병렬로 진행한다.
+- 완료된 기반 설명은 참고하고, 잔여 작업은 **이미지 → Figma P0 → Flutter 적용 → RAG 평가 계약 → OpenRouter → 배포** 순서로 진행한다.
 - 체크박스는 코드 작성만으로 완료 처리하지 않는다. 각 항목의 **완료 기준(Definition of Done)**을 만족해야 체크한다.
 - 외부 API 키, Qdrant API 키, OpenRouter API 키 등 비밀값은 이 문서와 Git에 절대 기록하지 않는다.
 - 수민님과 합의가 필요한 항목은 혼자 확정하지 않고 `협업 필요` 표시를 기준으로 먼저 인터페이스를 맞춘다.
@@ -62,19 +62,19 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 ### 2.2 2차 검토 — 현재 코드 기준
 
-현재 저장소는 기본 CRUD와 화면 뼈대가 상당 부분 구현돼 있지만, 내 담당 영역은 대부분 시드 또는 Mock 상태다.
+현재 저장소는 TourAPI·MySQL 캐시·Qdrant/RAG 코드·AI 변경안 UX까지 구현돼 있다. 남은 핵심은 이미지 수직 연결, 디자인 마감, 실제 데이터 평가 계약과 OpenRouter live 검증이다.
 
 | 구분 | 현재 상태 | 목표 상태 | 내가 해야 할 일 |
 | --- | --- | --- | --- |
-| 관광지 데이터 | `/places/search`·`/places/:id` TourAPI 연결, 장소 캐시 구현 중, 연관 장소는 시드 | TourAPI + MySQL 캐시 | 실DB 검증과 연관 관광지 실데이터 연결 |
-| 지역·문화 데이터 | `regionsController.js`의 시드 맵 | 장소 밀도 + 방문자 데이터 + 큐레이션 | 점수 계산용 데이터 공급 |
-| 장소 이미지 | Flutter에서 이미지 준비 중 표시 | `detailImage2` 이미지 노출 | 이미지 필드와 fallback 규칙 정의 |
-| 벡터 검색 | Mock 문서 + Qdrant 검색 어댑터, 컬렉션 미적재 | Qdrant Cloud | 컬렉션 생성·인덱싱·평가·live 검증 |
-| LLM | OpenRouter 호출 어댑터 또는 Mock | OpenRouter | 모델 선택·비용 정책·제한 live 검증 |
-| AI API | 인증·호출 제한·장소 ID 검증이 있는 `POST /ai/transform`, 이전 경로 호환 | 구조화된 코스 변형 | 실제 Qdrant 후보와 OpenRouter 모델 품질 검증 |
-| AI 화면 | 변경 diff 미리보기와 타인 코스 적용 전 Fork | 안전한 코스 변경 UX | 선택 적용·원본 복구·사용량 안내 고도화 |
-| DB | `places_cache`·`place_query_cache` 스키마와 저장소 구현, AI 이력 테이블 없음 | 캐시·세션·메시지 저장 | 수민님과 스키마 공유 후 MySQL 8 통합 검증 |
-| 디자인 | 기본 컬러·폰트와 화면 구현 존재 | 통일된 Figma 원본·상태 명세 | 기존 UI 감사 후 개선안 전달 |
+| 관광지 데이터 | 목록·상세·연관 장소와 MySQL 캐시 구현·실환경 저장 확인 | TourAPI + MySQL 캐시 | 현재 계약 유지와 이미지/상세 UI 연결 |
+| 지역·문화 데이터 | DataLab 점수와 TourAPI 장소 목록 연결 | 실데이터 + 안전한 큐레이션 fallback | 배포 전 표본·장애 시나리오 재검증 |
+| 장소 이미지 | Backend 상세에는 이미지가 있으나 Flutter 목록은 `이미지 준비 중` | 목록 썸네일 + 상세 갤러리 | nullable 필드·fallback·캐시·상세 이동 구현 |
+| 벡터 검색 | Qdrant 코드와 환경·연결 검증 완료, OpenRouter 실임베딩 미실행 | 실제 장소 의미 검색 | live 평가 계약 확정 후 최소 호출로 인덱싱·평가 |
+| LLM | OpenRouter 어댑터·Mock 구현, live 연결 연기 | OpenRouter | 이미지·디자인·평가 계약 뒤 모델·비용·제한 검증 |
+| AI API | 구조화 `POST /ai/transform`과 후보 검증 구현 | 실제 코스 변형 | Qdrant 후보와 OpenRouter 실모델 품질 검증 |
+| AI 화면 | 전체 변경안·diff·Fork·적용·취소·원본 복구 구현 | 안전한 코스 변경 UX | R13에서 P0 디자인과 실기기 QA 적용 |
+| DB | 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장 성공 | 배포 DB에서도 재현 가능 | staging/production migration·복구 절차 검증 |
+| 디자인 | 기본 UI와 AI 화면, 과거 Figma 초안 존재 | 최신 Flutter 기반 P0 원본·상태 명세 | 이미지 연결 후 Figma 확정, Flutter 적용·QA |
 
 ### 2.3 반드시 바로잡을 명칭
 
@@ -84,17 +84,16 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 ## 3. 전체 우선순위
 
+초기 기반 1~8은 구현됐다. 2026-08-12부터의 실제 잔여 순서는 다음과 같다.
+
 | 순서 | 단계 | 핵심 결과 |
 | --- | --- | --- |
-| 1 | API 키·호출 검증 | 승인받은 세 API에서 실제 JSON 응답 확인 |
-| 2 | API 공통 계층 | 인증·타임아웃·오류·로깅을 한곳에서 처리 |
-| 3 | 데이터 정규화·캐시 | TourAPI 데이터를 내부 형식과 MySQL에 안정적으로 저장 |
-| 4 | P0 화면 연동 | `문화 → 지역 → 관광지`가 실데이터로 동작 |
-| 5 | Qdrant 인덱싱 | MySQL 관광지를 검색 가능한 벡터로 구축 |
-| 6 | RAG 검색 검증 | 지역·문화 필터를 포함한 Top-K 검색 품질 확보 |
-| 7 | AI 코스 변형 | `/ai/transform`이 구조화된 코스 변경안을 반환 |
-| 8 | AI UX 통합 | Flutter에서 변경 전·후 확인 후 적용/취소 가능 |
-| 9 | 품질·비용 최적화 | 평가 세트, 캐시, 사용량 제한, 장애 복구 완성 |
+| 1 | 관광지 이미지·상세 연결 | 실제 썸네일·갤러리·연관 장소를 Flutter까지 전달 |
+| 2 | Figma Make P0 확정 | 실제 데이터 상태를 반영한 모바일 디자인·상태·토큰 확정 |
+| 3 | Flutter 디자인 적용·QA | P0 구현과 Android 실기기·release 검증 |
+| 4 | RAG 평가 계약 재정의 | Mock fixture와 실제 TourAPI live 기준 분리 |
+| 5 | OpenRouter live 통합 | BGE-M3·Qdrant 검색·AI 변형 품질과 비용 검증 |
+| 6 | 배포·제출 마감 | staging/production, 보안, Google Play, 공모전 데모 완성 |
 
 ### 3.1 PR 실행 단위
 
@@ -348,10 +347,10 @@ place_query_cache
 - [x] 캐시 만료 후 새 데이터로 갱신된다.
 - [x] 외부 API 장애 시 허용 기간 안의 기존 데이터로 핵심 화면을 유지할 수 있다.
 - [x] MySQL 장애 시 TourAPI 직통으로 공개 API를 유지한다.
-- [ ] 실제 MySQL 8에서 DDL·upsert·트랜잭션·인덱스를 통합 검증한다.
+- [x] 로컬 MySQL 8.4.11에서 schema·migration·최소 권한 연결과 실제 캐시 저장을 검증한다.
 - [ ] 캐시를 삭제해도 TourAPI에서 다시 만들 수 있는지 통합 환경에서 확인한다.
 
-구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 이번 자동 테스트는 fake repository와 mock TourAPI를 사용했고 Docker/MySQL과 live TourAPI는 실행하지 않았다.
+구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 자동 테스트는 외부 서비스 없이 실행하고, 별도의 수동 실환경 검증에서 로컬 MySQL 연결과 TourAPI 기반 캐시 저장을 확인했다. 배포 DB의 migration·삭제 후 재구축 검증은 R16에 남긴다.
 
 ## A-9. 내부 API 교체 순서
 
@@ -402,7 +401,7 @@ Flutter diff 미리보기 → 적용/취소
 - MySQL에 상세 원본을 저장하고 Qdrant에는 벡터와 검색에 필요한 최소 payload만 저장한다.
 - 개발 중에는 Mock 모드를 유지하되, 실제 검색 검증 단계에서는 Mock 문서를 사용하지 않는다.
 - Qdrant Cloud 무료 클러스터로 시작한다.
-- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하고 R8 고정 평가 세트로 품질을 검증한다.
+- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하되, R14에서 Mock/live 평가 계약을 분리한 뒤 실제 품질을 검증한다.
 - 무료 단일 공급자 모델의 가용성보다 변경분만 재임베딩하는 재현 가능한 저비용 계약을 우선한다.
 - LLM 호출은 모든 화면 조회가 아니라 사용자가 `AI 변형`을 요청했을 때만 수행한다.
 - 동일 입력·동일 코스에 대한 단기 결과 캐시 가능성을 검토한다.
@@ -496,8 +495,8 @@ npm run rag:index -- --prune
 
 - [x] MySQL에서 cursor 기반 인덱싱 대상 조회
 - [x] 검색 문서 생성
-- [x] OpenRouter batch 임베딩
-- [x] Qdrant batch upsert
+- [x] OpenRouter batch 임베딩 코드 구현
+- [x] Qdrant batch upsert 코드 구현
 - [x] 처리·임베딩·스킵·삭제 건수와 입력 토큰 출력
 - [x] 완료 batch의 hash 비교로 실패 후 안전하게 재실행
 - [x] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
@@ -633,8 +632,9 @@ User Request: 사용자의 원문
 ## B-10. RAG 평가 세트
 
 황찬우 소유의 35개 고정 질문 `culturepath-rag-eval-v1`을 저장소에 두고 코드 변경 전·후
-결과를 비교한다. 기본 평가는 Mock 전용이며 실제 공급자 평가는 별도 승인된 `--live`에서만
-실행한다.
+Mock 결과를 비교한다. 실제 TourAPI title·culture와 정답 계약이 다르므로 이 fixture를 그대로
+live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 live fixture를 별도로 확정한 뒤
+승인된 `--live` 평가를 실행한다.
 
 ### 평가 범주
 
@@ -660,9 +660,9 @@ User Request: 사용자의 원문
 | 안정성 | 같은 입력에서 구조가 깨지지 않는가 |
 | 비용 | 불필요하게 긴 문맥과 출력을 사용하지 않는가 |
 
-초기 검색 합격 기준은 Hit@8 0.80 이상, MRR@8 0.50 이상, routing·hard filter·live MySQL
-원본 비율 1.00이다. 지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 실제 환경이 정해지기
-전에는 hard gate로 사용하지 않는다.
+기존 Mock 회귀의 초기 검색 기준은 Hit@8 0.80 이상, MRR@8 0.50 이상, routing·hard filter
+1.00이다. live MySQL 원본 비율은 1.00을 요구하되 Hit/MRR 정답과 title·alias 판정은 R14에서
+확정한다. 지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 R15 전에는 hard gate로 사용하지 않는다.
 
 ## B-11. RAG 완료 기준
 
@@ -907,84 +907,89 @@ User Request: 사용자의 원문
 
 # Part E. 단계별 실행 일정
 
-## Phase 0 — 계약 고정
+과거 Phase 번호는 구현 이력을 설명하기 위해 보존한다. 현재 실제 PR 순서와 범위는 로드맵 `R11`~`R16`이 우선한다.
+
+## Phase 0~2 — 완료된 데이터 기반
 
 - [x] Qdrant + OpenRouter 사용 확정
 - [ ] 내부 장소 모델 합의
 - [x] `/ai/transform` 초안 합의
 - [x] 숫자형 TourAPI `contentId` 공통 ID 사용 합의
-
-**완료 결과:** 구현 중 응답 형식이 반복해서 바뀌지 않는다.
-
-## Phase 1 — API 실연동
-
-- [ ] 세 API Smoke Test
-- [ ] 공통 외부 API 클라이언트
-- [ ] 통영×문학 목록·상세·이미지
-- [ ] 응답 정규화
-- [ ] Flutter 카드 실데이터 노출
-
-**완료 결과:** 하드코딩 없이 통영 문학 관광지를 탐색하고 코스에 담을 수 있다.
-
-## Phase 2 — 캐시·연관·지역점수
-
+- [x] 세 API smoke와 공통 외부 API 클라이언트
+- [x] TourAPI 목록·상세·연관 장소와 응답 정규화
 - [x] `places_cache`·`place_query_cache` 구현과 fake repository 테스트
 - [x] 연관 관광지
 - [x] 방문자 추이
 - [x] 지역 문화점수 초기 버전
 - [x] TourAPI stale fallback과 MySQL fail-open
-- [ ] 실제 MySQL 8 통합 검증
+- [x] 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장
 
-**완료 결과:** 핵심 탐색이 외부 API 상태에 과도하게 의존하지 않는다.
+**남은 계약:** 내부 장소 JSON의 새 nullable 이미지 필드는 R11에서 Backend·Swagger·Flutter를 함께 맞춘다.
 
-## Phase 3 — 디자인 P0
+## Phase 3A / R11 — 이미지·상세·연관 장소
 
-- [ ] 디자인 시스템
-- [ ] 홈
-- [ ] 카테고리 상세
-- [ ] 지역 상세
-- [ ] 코스 빌더·상세
-- [ ] 수민님 핸드오프
+- [ ] 지역 장소 목록에 `thumbnailUrl`·`imageUrl` 전달
+- [ ] Flutter 카드 네트워크 이미지와 placeholder
+- [ ] 장소 상세·이미지 갤러리
+- [ ] 연관 장소 UI와 상세 이동
+- [ ] 빈 URL·실패·긴 제목·느린 네트워크 상태
+- [ ] Backend·Swagger·Flutter 모델·테스트 동시 갱신
 
-**완료 결과:** P0 화면의 디자인 기준과 모든 주요 상태가 확정된다.
+**완료 결과:** 실제 TourAPI 이미지와 상세정보를 휴대폰에서 안정적으로 탐색한다.
 
-## Phase 4 — Qdrant 검색
+## Phase 3B / R12 — Figma Make 디자인 P0
 
-- [ ] 무료 클러스터
-- [x] 컬렉션·payload index 생성 계약
-- [x] 검색 문서 생성
-- [x] 증분 인덱싱·명시적 prune 명령
-- [x] 지역·문화 필터 검색 어댑터
-- [x] 35개 고정 검색 평가 세트와 Mock 회귀 실행기
-- [ ] 실제 Qdrant·OpenRouter live 검색 평가
+- [ ] 최신 Flutter와 서비스 계획서 감사
+- [ ] 색·타입·간격·radius·elevation 토큰
+- [ ] 홈·문화·지역·장소·코스·AI P0 화면
+- [ ] loading·empty·error·offline/stale·이미지 없음 상태
+- [ ] Android 360·390·430dp 명세
+- [ ] Figma Make 프롬프트·검수표·수민님 핸드오프
 
-**완료 결과:** 사용자의 자연어 조건에 맞는 실제 장소를 안정적으로 찾는다.
+**완료 결과:** 실제 데이터 길이와 이미지 비율을 반영한 구현 가능한 P0 디자인이 확정된다.
 
-## Phase 5 — AI 코스 변형
+## Phase 3C / R13 — Flutter 디자인 적용과 모바일 QA
 
-- [x] OpenRouter 어댑터
-- [x] 구조화 출력
-- [x] `/ai/transform`
-- [x] 후보·ID 검증
-- [x] 변경 diff UI 기반
-- [x] 토큰 사용량 기록 기반
+- [ ] 공통 Theme·컴포넌트와 P0 화면 적용
+- [ ] 접근성·긴 한국어·text scale·safe area 대응
+- [ ] 360·390·430dp와 Android 실제 기기 QA
+- [ ] `flutter analyze`, `flutter test`, release 빌드
+- [ ] Figma 명세와 구현 캡처 비교
 
-**완료 결과:** 실제 코스를 자연어 조건에 맞게 변경하되 존재하지 않는 장소를 만들지 않는다.
+**완료 결과:** Google Play 대상 휴대폰 화면에서 핵심 흐름과 디자인이 안정적으로 동작한다.
 
-## Phase 6 — AI UX와 통합
+## Phase 4A / R14 — RAG 평가 계약 확정
 
-- [x] AI 변형 Figma Make 프롬프트·상태 명세
-- [x] Flutter 모델·Repository 전체 응답 계약
-- [x] semantic diff 변경 미리보기
-- [x] 명시적 편집·취소·저장 전 원본 복구
-- [x] 상태코드별 오류·`Retry-After` 재시도
-- [ ] GitHub CI와 360·390·430dp 실제 디자인 QA
+- [x] 35개 Mock 회귀 fixture와 실행기
+- [ ] Mock fixture와 live fixture 분리
+- [ ] 실제 TourAPI 기준 `contentId` 중심 정답 계약
+- [ ] title alias·canonicalization·`cultures=[]` 판정 규칙
+- [ ] 검증된 `CONTENT_ID_OVERRIDES`의 근거·변경 절차
+- [ ] live 합격 지표와 fixture 버전 관리
 
-**완료 결과:** 사용자가 AI 결과를 이해하고 통제할 수 있다.
+**완료 결과:** 실제 데이터 차이를 모델 실패로 오판하지 않는 평가 기준이 생긴다.
 
-## Phase 7 — 제출 품질
+## Phase 4B / R15 — OpenRouter live RAG·AI
 
-- [ ] 5개 대표 지역 시드 데이터
+- [x] Qdrant 환경·연결 검증
+- [x] 컬렉션·payload index·증분 인덱싱 코드
+- [x] 지역·문화 필터 검색과 MySQL 원본 재검증 코드
+- [x] OpenRouter 어댑터·구조화 `/ai/transform`·후보 ID 검증 코드
+- [ ] OpenRouter 모델 이용 가능 여부·가격·예산 확인
+- [ ] 장소 1건 실임베딩과 1024차원 확인
+- [ ] 제한된 증분 인덱싱과 document hash skip 확인
+- [ ] R14 live fixture 전체 검색 평가
+- [ ] 실제 `/ai/transform` 최소 smoke와 비용·latency 기록
+
+**완료 결과:** 실제 장소만 사용한 의미 검색과 구조화 코스 변형이 승인된 품질·비용 범위에서 동작한다.
+
+## Phase 5 / R16 — 배포·제출 품질
+
+- [ ] staging/production MySQL과 migration·복구 runbook
+- [ ] HTTPS Backend·CORS·환경변수·비밀값 관리
+- [ ] Qdrant 재구축과 OpenRouter 예산·rate limit·장애 정책
+- [ ] Android application ID·서명·권한·release 빌드
+- [ ] 대표 지역 실데이터 표본
 - [ ] API·RAG 장애 시나리오 검증
 - [ ] 비용 상한 검증
 - [ ] 대표 평가 결과 정리
@@ -992,7 +997,7 @@ User Request: 사용자의 원문
 - [ ] 시연용 사용자 시나리오
 - [ ] 최종 UI 정리
 
-**완료 결과:** 공모전 심사에서 TourAPI 활용, RAG 차별성, 디자인 완성도를 실제 동작으로 설명할 수 있다.
+**완료 결과:** 공모전 심사에서 TourAPI 활용, RAG 차별성, 디자인 완성도를 실제 동작으로 설명하고 Google Play 제출을 준비할 수 있다.
 
 ---
 
@@ -1008,16 +1013,17 @@ User Request: 사용자의 원문
 
 ## 필수 비용 방어선
 
-- [ ] 개발 환경의 기본값은 Mock 또는 명시적 실호출 모드로 설정
-- [ ] LLM 요청당 입력·출력 토큰 상한
-- [ ] 사용자별 요청 빈도 제한
+- [x] 개발 환경의 기본값은 Mock 또는 명시적 실호출 모드로 설정
+- [x] LLM 요청당 입력·출력 토큰 상한
+- [x] 사용자별 요청 빈도 제한
 - [ ] 같은 버튼 중복 탭 방지
 - [x] 검색 Top-K 기본 8·최대 10 상한
-- [ ] 프롬프트에 불필요한 원본 JSON 제거
-- [ ] 임베딩은 내용이 바뀐 문서만 재생성
-- [ ] Qdrant에는 최소 payload만 저장
-- [ ] 외부 API와 LLM 사용량 로그
-- [ ] 무료 Qdrant 삭제 시 MySQL에서 재구축 가능
+- [x] 프롬프트에 불필요한 원본 JSON 제거
+- [x] 임베딩은 내용이 바뀐 문서만 재생성하도록 코드 구현
+- [x] Qdrant에는 최소 payload만 저장하도록 계약·코드 구현
+- [x] 외부 API와 LLM 사용량 로그 기반 구현
+- [x] 무료 Qdrant 삭제 시 MySQL에서 재구축 가능한 명령 구현
+- [ ] 실제 OpenRouter 호출로 위 비용 방어선 검증
 
 ## 비용이 발생하기 시작할 때 판단 순서
 
@@ -1048,30 +1054,26 @@ User Request: 사용자의 원문
 
 # Part H. 지금 바로 실행할 체크리스트
 
-다음 항목이 현재 가장 먼저 할 일이다.
+다음 항목을 위에서 아래로 진행한다. 상세 PR 범위는 잔여 PR 로드맵을 따른다.
 
-- [x] 1. 공공데이터포털에서 승인된 세 API의 서비스키 확인
-- [x] 2. Swagger/Postman으로 국문 관광정보 `searchKeyword2` 호출
-- [x] 3. 통영 지역의 `areaBasedList2` 호출
-- [x] 4. 장소 한 곳의 `detailCommon2`, `detailIntro2`, `detailImage2` 호출
-- [x] 5. 연관 관광지 API 한 건 호출
-- [x] 6. 지역별 방문자 수 API 한 건 호출
-- [x] 7. 응답 샘플과 검증 결과를 비밀값 제거 후 문서화
-- [ ] 8. 수민님과 내부 표준 장소 JSON 합의
-- [x] 9. `tourApiService.js`와 공통 클라이언트 구현 시작
-- [ ] 10. 동시에 현재 Flutter 핵심 화면 캡처 및 Figma 감사 시작
+- [ ] 1. R11 관광지 이미지·상세·연관 장소 수직 연결
+- [ ] 2. R12 최신 Flutter 감사와 Figma Make P0 확정
+- [ ] 3. R13 Flutter 디자인 적용과 Android 모바일 QA
+- [ ] 4. R14 Mock/live RAG 평가 계약 분리
+- [ ] 5. R15 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증
+- [ ] 6. R16 배포 환경·보안·Google Play·공모전 데모 마감
 
-## 첫 번째 주간 완료 목표
+## 다음 사용자 가시 완료 목표
 
 ```text
-통영 × 문학
-→ 실제 TourAPI 장소 목록
-→ 상세정보와 이미지
-→ MySQL 캐시
-→ Flutter 관광지 카드 표시
+문화 → 지역 → 실제 TourAPI 장소 목록
+→ 썸네일 카드
+→ 장소 상세와 이미지 갤러리
+→ 연관 장소 이동
+→ 코스 담기
 ```
 
-## 첫 번째 RAG 완료 목표
+## 최종 RAG 완료 목표
 
 ```text
 “비 오는 날 통영 문학 실내 코스로 바꿔줘”
@@ -1081,6 +1083,8 @@ User Request: 사용자의 원문
 → Flutter가 변경 전·후 미리보기 표시
 → 사용자가 적용 또는 취소
 ```
+
+OpenRouter가 준비되기 전까지 이 흐름은 Mock 회귀로만 확인한다. 실제 의미 검색과 실제 AI 생성 완료 표시는 R14 계약 확정과 R15 live 검증 뒤에만 한다.
 
 ---
 

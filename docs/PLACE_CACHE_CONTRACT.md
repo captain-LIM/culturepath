@@ -111,10 +111,10 @@ PLACE_CACHE_DB_FAILURE_COOLDOWN_SECONDS=30
 - 목록 갱신 시 상세 JSON 보존
 - 설정 검증, 컨트롤러 헤더, Swagger 계약
 
-노트북 자원 제약 때문에 Docker, 실제 MySQL과 live TourAPI는 이번 PR 검증에서 실행하지 않는다. 따라서 배포 전 통합 환경에서 다음을 추가 확인해야 한다.
+이번 PR 당시 자동 검증은 Docker, 실제 MySQL과 live TourAPI를 사용하지 않았다. 이후 별도 수동 검증에서 로컬 MySQL 8.4.11의 `schema.sql`, migration 2개와 재실행, 최소 권한 Backend 연결, 실제 TourAPI 기반 두 캐시 저장이 성공했다. 따라서 아래 항목 중 배포 환경과 운영 부하에 관한 검증은 여전히 남는다.
 
-- MySQL 8.0+에 `backend/schema.sql`이 정상 적용되는지
-- JSON·`DATETIME(3)` 저장과 조회, upsert SQL, 트랜잭션 rollback이 실제 드라이버와 일치하는지
+- staging/production MySQL 8에 `backend/schema.sql`과 기존 DB migration이 정상 적용되는지
+- JSON·`DATETIME(3)` 저장과 조회, upsert SQL, 트랜잭션 rollback이 배포 환경의 실제 드라이버와 일치하는지
 - 인덱스 사용과 데이터 증가 시 조회 성능
 - 여러 서버 인스턴스에서 동시에 같은 키가 갱신될 때 허용 가능한 외부 호출량인지
 - 만료 데이터 정리 작업과 운영 모니터링 정책
