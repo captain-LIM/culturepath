@@ -2,6 +2,8 @@
 
 > 기준일: 2026-08-03
 >
+> 최종 상태 갱신: 2026-08-12
+>
 > 소유자: 황찬우
 >
 > 범위: R7 — MySQL `places_cache`에서 Qdrant 장소 컬렉션을 재생성할 수 있는 최소 비용 인덱싱 파이프라인
@@ -153,8 +155,9 @@ RAG_INDEX_PAGE_SIZE=200
 ## 8. 검증 상태와 남은 위험
 
 - 기본 검증은 fake MySQL repository와 가짜 OpenRouter·Qdrant HTTP 응답만 사용한다.
-- 실제 키·네트워크·Docker·MySQL은 자동 테스트에서 사용하지 않는다.
-- 실제 Qdrant Cloud smoke test는 구현·리뷰 후 황찬우의 별도 승인으로 임시
-  컬렉션과 최대 3개 fixture 장소만 사용한다.
-- 운영 컬렉션 적재 전에는 실제 MySQL 8에 장소 캐시가 존재하는지 확인해야 한다.
-- 검색 적합성, 점수 임계값, 결과 부족 시 필터 완화는 R8 평가 결과로 확정한다.
+- 실제 키·네트워크·MySQL은 자동 테스트에서 사용하지 않고 수동 승인 smoke에서만 사용한다.
+- 황찬우가 Qdrant 환경·연결과 로컬 MySQL 8.4.11의 장소 캐시 저장을 검증했다.
+- OpenRouter는 아직 연결하지 않았으므로 `baai/bge-m3` 실벡터 생성, 실제 MySQL 장소의 production-contract upsert와 재실행 hash skip은 완료로 간주하지 않는다.
+- 제한된 live 인덱싱은 R14의 Mock/live 평가 계약을 확정하고 OpenRouter 키·비용 한도를 준비한 뒤 R15에서 수행한다.
+- 기존 35개 Mock fixture만으로 검색 적합성이나 점수 임계값을 확정하지 않는다. 실제 TourAPI `contentId` 중심 live fixture 결과로 확정한다.
+- Qdrant가 삭제돼도 MySQL에서 재구축한다는 원칙과 컬렉션 차원·distance 계약은 그대로 유지한다.
