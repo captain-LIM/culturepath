@@ -1,4 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/app_theme.dart';
@@ -116,6 +118,9 @@ class _DayMapView extends StatelessWidget {
       ),
       markers: _markersFor(pinned),
       myLocationButtonEnabled: false,
+      gestureRecognizers: {
+        Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
+      },
       onMapCreated: (controller) {
         if (pinned.length > 1) {
           controller.animateCamera(CameraUpdate.newLatLngBounds(_boundsFor(pinned), 48));
