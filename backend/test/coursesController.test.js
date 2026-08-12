@@ -68,6 +68,58 @@ test('allows guests to read a public course and filters private courses in SQL',
   assert.deepEqual(queries[0].params, [7]);
 });
 
+test('maps stored place coordinates into the course response', async () => {
+  await withQueryStub(async (sql) => {
+    if (sql.includes('FROM courses c')) return [[courseRow()]];
+    if (sql.includes('FROM course_tracks')) {
+      return [[{
+        course_id: 7,
+        track_number: 1,
+        content_id: '100',
+        place_title: '좌표 있는 장소',
+        place_address: '주소',
+        place_category: '문학',
+        place_region: '강릉',
+        place_latitude: '37.7519000',
+        place_longitude: '128.8761000',
+      }]];
+    }
+    throw new Error(`Unexpected query: ${sql}`);
+  }, async () => {
+    const res = responseRecorder();
+    await getCourse({ params: { id: '7' } }, res);
+    const place = res.body.tracks[0].places[0];
+    assert.equal(place.latitude, 37.7519);
+    assert.equal(place.longitude, 128.8761);
+  });
+});
+
+test('leaves coordinates null when a stored place has none', async () => {
+  await withQueryStub(async (sql) => {
+    if (sql.includes('FROM courses c')) return [[courseRow()]];
+    if (sql.includes('FROM course_tracks')) {
+      return [[{
+        course_id: 7,
+        track_number: 1,
+        content_id: '100',
+        place_title: '좌표 없는 장소',
+        place_address: '주소',
+        place_category: '문학',
+        place_region: '강릉',
+        place_latitude: null,
+        place_longitude: null,
+      }]];
+    }
+    throw new Error(`Unexpected query: ${sql}`);
+  }, async () => {
+    const res = responseRecorder();
+    await getCourse({ params: { id: '7' } }, res);
+    const place = res.body.tracks[0].places[0];
+    assert.equal(place.latitude, null);
+    assert.equal(place.longitude, null);
+  });
+});
+
 test('allows an authenticated owner to read a private course', async () => {
   await withQueryStub(async (sql, params) => {
     if (sql.includes('FROM courses c')) {

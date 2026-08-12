@@ -38,6 +38,8 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
       address: t.place_address || '',
       category: t.place_category || '',
       region: t.place_region || null,
+      latitude: t.place_latitude != null ? Number(t.place_latitude) : null,
+      longitude: t.place_longitude != null ? Number(t.place_longitude) : null,
       tel: '',
       openTime: '',
     });
@@ -133,11 +135,13 @@ async function saveTracks(conn, courseId, tracks) {
       const p = places[i];
       await conn.query(
         `INSERT INTO course_tracks
-           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [courseId, track.trackNumber || 1, i + 1,
          p.contentId || null, p.title || null, p.address || null,
-         p.category || null, p.region || null]
+         p.category || null, p.region || null,
+         Number.isFinite(p.latitude) ? p.latitude : null,
+         Number.isFinite(p.longitude) ? p.longitude : null]
       );
     }
   }
@@ -417,10 +421,11 @@ async function forkCourse(req, res) {
     for (const t of origTracks) {
       await conn.query(
         `INSERT INTO course_tracks
-           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, stay_minutes, memo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude, stay_minutes, memo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [newId, t.track_number, t.sequence, t.content_id, t.place_title,
-         t.place_address, t.place_category, t.place_region, t.stay_minutes, t.memo]
+         t.place_address, t.place_category, t.place_region,
+         t.place_latitude, t.place_longitude, t.stay_minutes, t.memo]
       );
     }
     await conn.commit();

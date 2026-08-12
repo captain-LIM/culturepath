@@ -7,6 +7,8 @@ class PlaceItem {
   final String category;
   final String? areaCode;
   final String? region;
+  final double? latitude;
+  final double? longitude;
 
   const PlaceItem({
     required this.contentId,
@@ -17,7 +19,11 @@ class PlaceItem {
     required this.category,
     this.areaCode,
     this.region,
+    this.latitude,
+    this.longitude,
   });
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   factory PlaceItem.fromJson(Map<String, dynamic> json) => PlaceItem(
         contentId: json['contentId'] as String,
@@ -28,6 +34,8 @@ class PlaceItem {
         category: json['category'] as String,
         areaCode: json['areaCode'] as String?,
         region: json['region'] as String?,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,5 +47,7 @@ class PlaceItem {
         'category': category,
         if (areaCode != null) 'areaCode': areaCode,
         if (region != null) 'region': region,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       };
 }

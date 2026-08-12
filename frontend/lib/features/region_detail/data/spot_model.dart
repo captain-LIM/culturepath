@@ -5,6 +5,8 @@ class SpotItem {
   final String tel;
   final String openTime;
   final String category;
+  final double? latitude;
+  final double? longitude;
 
   const SpotItem({
     required this.contentId,
@@ -13,6 +15,8 @@ class SpotItem {
     required this.tel,
     required this.openTime,
     required this.category,
+    this.latitude,
+    this.longitude,
   });
 
   factory SpotItem.fromJson(Map<String, dynamic> json) => SpotItem(
@@ -22,5 +26,7 @@ class SpotItem {
         tel: json['tel'] as String,
         openTime: json['openTime'] as String,
         category: json['category'] as String,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
       );
 }

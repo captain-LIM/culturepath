@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS course_tracks (
   place_address  VARCHAR(500) DEFAULT NULL,
   place_category VARCHAR(100) DEFAULT NULL,
   place_region   VARCHAR(100) DEFAULT NULL,
+  place_latitude  DECIMAL(10,7) DEFAULT NULL,
+  place_longitude DECIMAL(10,7) DEFAULT NULL,
   stay_minutes   INT DEFAULT 60,
   memo           TEXT,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,

@@ -11,6 +11,7 @@ import '../../course_builder/presentation/course_builder_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
 import 'course_ai_edit_screen.dart';
+import 'course_map_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
@@ -245,6 +246,13 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.map_outlined, color: Colors.white),
+            tooltip: 'course_map'.tr(),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => CourseMapScreen(course: course)),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),
             tooltip: 'share_course'.tr(),

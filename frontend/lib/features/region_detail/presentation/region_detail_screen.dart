@@ -53,6 +53,8 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
         category: spot.category,
         areaCode: widget.region.areaCode,
         region: widget.region.name,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
       );
 
   void _openCourseBuilder() {
