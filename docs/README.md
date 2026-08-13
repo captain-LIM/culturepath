@@ -9,7 +9,7 @@ CulturePath(문화여행·따라가방)의 기획과 협업 문서를 관리하�
 | [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) | 서비스 컨셉, 사용자 흐름, 기능, 데이터, 기술 구조, 디자인 시스템 및 로드맵 |
 | [팀 역할 및 협업 기준](./TEAM_ROLES.md) | 임수민과 황찬우의 담당 범위, 연동 지점, 일정별 산출물 및 협업 원칙 |
 | [황찬우 전용 실행계획](./HWANG_CHANWOO_WORK_PLAN.md) | 황찬우가 담당하는 RAG, 외부 API 연동, FE 디자인의 상세 작업과 완료 기준 |
-| [황찬우 전용 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | R1~R10 완료 이력과 R11~R18 실행 순서(문화 관련도→이미지→다국어→Figma→Flutter·지도→RAG 평가→OpenRouter→배포), 팀원 요청 추적과 세션 인수인계 |
+| [황찬우 전용 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | R1~R11 완료 이력과 R12~R18 실행 순서(이미지→다국어→Figma→Flutter·지도→RAG 평가→OpenRouter→배포), 팀원 요청 추적과 세션 인수인계 |
 | [외부 관광 API 검증 체크리스트](./API_VALIDATION_CHECKLIST.md) | 국문·연관·DataLab 검증 완료 내역과 영·일·중문 TourAPI 활용 신청·실호출·locale 계약 체크리스트 |
 | [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md) | TourAPI 목록·검색·상세 파라미터, PlaceSummary·PlaceDetail, 공개 장소 API와 오류 계약 |
 | [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md) | 장소·검색 2단계 캐시, TTL·stale·fail-open 정책, 로컬 MySQL 검증과 잔여 배포 환경 검증 |

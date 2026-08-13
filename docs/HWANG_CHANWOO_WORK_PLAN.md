@@ -67,7 +67,7 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 | 구분 | 현재 상태 | 목표 상태 | 내가 해야 할 일 |
 | --- | --- | --- | --- |
 | 관광지 데이터 | 목록·상세·연관 장소와 MySQL 캐시 구현·실환경 저장 확인 | TourAPI + MySQL 캐시 | 현재 계약 유지와 이미지/상세 UI 연결 |
-| 문화 관련도 | `/regions/:code/spots`의 culture 키워드 결과를 재검증하지 않고 category를 덮어씀 | 근거 기반 필터·안정 정렬 | 일반 탐색과 `/places/search`의 판정 일치·fixture 검증 |
+| 문화 관련도 | R11 후보 재분류·오탐 제거·근거 강도 정렬 구현 | 근거 기반 필터·안정 정렬 | 실제 데이터 커버리지 감사 전까지 결정론적 fixture 회귀 유지 |
 | 지역·문화 데이터 | DataLab 점수와 TourAPI 장소 목록 연결 | 실데이터 + 안전한 큐레이션 fallback | 배포 전 표본·장애 시나리오 재검증 |
 | 장소 이미지 | Backend 상세에는 이미지가 있으나 Flutter 목록은 `이미지 준비 중` | 목록 썸네일 + 상세 갤러리 | nullable 필드·fallback·캐시·상세 이동 구현 |
 | 다국어 관광 데이터 | Flutter 고정 문구만 `ko/en/ja/zh` 번역, TourAPI 데이터는 한국어 | locale별 공식 데이터 + 안전한 한국어 fallback | 공급원·ID 매핑·locale 캐시·표시 계약 구현 |
@@ -933,16 +933,16 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [x] 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장
 - [x] 코스 좌표 migration·응답과 Day별 Google Map 기반
 
-**남은 계약:** 문화 관련도는 R11, 이미지 필드는 R12, locale별 관광 데이터는 R13에서 Backend·Swagger·Flutter를 함께 맞춘다.
+**남은 계약:** 문화 관련도 R11은 완료됐다. 이미지 필드는 R12, locale별 관광 데이터는 R13에서 Backend·Swagger·Flutter를 함께 맞춘다.
 
 ## Phase 3A / R11 — 문화 관련도·정렬 품질
 
-- [ ] culture 키워드 결과의 공식 분류·제목 규칙 재검증
-- [ ] 선택 culture를 무조건 category로 덮어쓰는 동작 제거
-- [ ] 지역 목록·키워드 후보 병합과 `contentId` 중복 제거
-- [ ] 근거 강도 기반 안정 정렬과 오탐 제거
-- [ ] 10개 문화별 정상·오탐·빈 결과 fixture
-- [ ] `/regions/:code/spots`·`/places/search` 판정 일관성
+- [x] culture 키워드 결과의 공식 분류·제목 규칙 재검증
+- [x] 선택 culture를 무조건 category로 덮어쓰는 동작 제거
+- [x] 지역 목록·키워드 후보 병합과 `contentId` 중복 제거
+- [x] 근거 강도 기반 안정 정렬과 오탐 제거
+- [x] 10개 문화별 정상·오탐·빈 결과 fixture
+- [x] `/regions/:code/spots`·`/places/search` 판정 일관성
 
 **완료 결과:** 사용자가 문화를 누르면 관련 없는 장소가 제거되고 근거가 강한 실제 관광지가 먼저 나온다.
 
@@ -1100,7 +1100,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 
 다음 항목을 위에서 아래로 진행한다. 상세 PR 범위는 잔여 PR 로드맵을 따른다.
 
-- [ ] 1. R11 문화별 관광지 관련도·정렬 품질
+- [x] 1. R11 문화별 관광지 관련도·정렬 품질
 - [ ] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
 - [ ] 3. R13 다국어 관광지 데이터 계약과 연결
 - [ ] 4. R14 Figma Make 정보구조·P0 디자인·지도 UX 확정
