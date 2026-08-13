@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _EmptyAssetLoader extends AssetLoader {
   const _EmptyAssetLoader();
@@ -163,7 +164,10 @@ GoRouter _regionRouter(PlaceDetailRepository repository) => GoRouter(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(EasyLocalization.ensureInitialized);
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await EasyLocalization.ensureInitialized();
+  });
 
   testWidgets('returns a detail add result to the calling basket screen',
       (tester) async {

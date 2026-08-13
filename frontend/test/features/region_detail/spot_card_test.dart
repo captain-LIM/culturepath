@@ -3,6 +3,7 @@ import 'package:culturepath/features/region_detail/presentation/widgets/spot_car
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _EmptyAssetLoader extends AssetLoader {
   const _EmptyAssetLoader();
@@ -14,7 +15,10 @@ class _EmptyAssetLoader extends AssetLoader {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(EasyLocalization.ensureInitialized);
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await EasyLocalization.ensureInitialized();
+  });
 
   testWidgets('keeps image, title, and add actions independent', (tester) async {
     var openCount = 0;

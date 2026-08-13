@@ -9,6 +9,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _EmptyAssetLoader extends AssetLoader {
   const _EmptyAssetLoader();
@@ -54,7 +55,10 @@ PlaceDetailItem detail() => const PlaceDetailItem(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(EasyLocalization.ensureInitialized);
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await EasyLocalization.ensureInitialized();
+  });
 
   testWidgets('captures an early related failure while detail is still loading',
       (tester) async {
