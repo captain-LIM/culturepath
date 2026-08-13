@@ -4,6 +4,7 @@ const {
   CULTURE_CATEGORIES,
   MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
+const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
 
 const errorResponses = Object.freeze({
   400: {
@@ -523,6 +524,8 @@ module.exports = Object.freeze({
           'category',
           'latitude',
           'longitude',
+          'imageUrl',
+          'thumbnailUrl',
         ],
         properties: {
           contentId: { type: 'string' },
@@ -536,6 +539,8 @@ module.exports = Object.freeze({
           },
           latitude: { type: 'number', format: 'double', nullable: true },
           longitude: { type: 'number', format: 'double', nullable: true },
+          imageUrl: { type: 'string', format: 'uri', nullable: true },
+          thumbnailUrl: { type: 'string', format: 'uri', nullable: true },
         },
       },
       ApiError: {
@@ -733,6 +738,7 @@ module.exports = Object.freeze({
               parking: { type: 'string', nullable: true },
               images: {
                 type: 'array',
+                maxItems: MAX_PLACE_DETAIL_IMAGES,
                 items: { $ref: '#/components/schemas/PlaceImage' },
               },
               additionalInfo: {

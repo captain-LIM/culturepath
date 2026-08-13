@@ -1,18 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/place_network_image.dart';
 import '../../data/spot_model.dart';
 
 class SpotCard extends StatelessWidget {
   final SpotItem spot;
   final bool isSelected;
   final VoidCallback onAdd;
+  final VoidCallback onOpen;
 
   const SpotCard({
     super.key,
     required this.spot,
     required this.isSelected,
     required this.onAdd,
+    required this.onOpen,
   });
 
   @override
@@ -36,29 +39,52 @@ class SpotCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 140,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.12)
-                  : AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+          InkWell(
+            key: ValueKey('spot-open-image-${spot.contentId}'),
+            onTap: onOpen,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: SizedBox(
+              height: 140,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Icon(
-                    Icons.image_outlined,
-                    size: 36,
-                    color: AppColors.primary.withValues(alpha: 0.3),
+                  PlaceNetworkImage(
+                    placeTitle: spot.title,
+                    thumbnailUrl: spot.thumbnailUrl,
+                    imageUrl: spot.imageUrl,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '이미지 준비 중',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.primary.withValues(alpha: 0.4),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x99000000)],
+                        stops: [0.55, 1],
+                      ),
+                    ),
+                  ),
+                  const Positioned(
+                    right: 12,
+                    bottom: 10,
+                    child: Row(
+                      children: [
+                        Icon(Icons.open_in_new, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          '상세 보기',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -90,12 +116,19 @@ class SpotCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  spot.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                InkWell(
+                  key: ValueKey('spot-open-title-${spot.contentId}'),
+                  onTap: onOpen,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text(
+                      spot.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -106,6 +139,7 @@ class SpotCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
+                    key: ValueKey('spot-add-${spot.contentId}'),
                     onPressed: onAdd,
                     icon: Icon(isSelected ? Icons.check : Icons.add, size: 16),
                     label: Text(isSelected ? 'spot_added'.tr() : 'spot_add'.tr()),

@@ -102,6 +102,8 @@ function tourPlace(overrides = {}) {
     lclsSystmCodes: ['VE'],
     latitude: null,
     longitude: null,
+    imageUrl: 'https://example.com/place.jpg',
+    thumbnailUrl: 'https://example.com/place-thumb.jpg',
     ...overrides,
   };
 }
@@ -153,6 +155,11 @@ test('merges region and keyword candidates, removes false positives, and ranks e
 
   assert.deepEqual(res.body.map(item => item.contentId), ['1']);
   assert.equal(res.body[0].category, '문학');
+  assert.equal(res.body[0].imageUrl, 'https://example.com/place.jpg');
+  assert.equal(
+    res.body[0].thumbnailUrl,
+    'https://example.com/place-thumb.jpg',
+  );
   assert.equal(res.headers['X-Cache-Status'], 'STALE');
   assert.equal(calls[0][1].lDongRegnCd, '48');
   assert.equal(calls[1][1].keyword, '문학관');
@@ -229,4 +236,27 @@ test('returns structured external errors instead of synthetic culture fallback',
     message: '관광정보 응답 시간이 초과되었습니다.',
     retryable: true,
   });
+});
+
+test('keeps the image contract when the unfiltered region request falls back', async () => {
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => {
+        throw new Error('TourAPI unavailable');
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: {} },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.length > 0, true);
+  assert.equal(Object.hasOwn(res.body[0], 'imageUrl'), true);
+  assert.equal(Object.hasOwn(res.body[0], 'thumbnailUrl'), true);
+  assert.equal(res.body[0].imageUrl, null);
+  assert.equal(res.body[0].thumbnailUrl, null);
 });

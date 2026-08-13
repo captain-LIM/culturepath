@@ -8,6 +8,7 @@ const { normalizeTourPlace } = require('../utils/normalizeTourPlace');
 const {
   normalizeTourPlaceDetail,
 } = require('../utils/normalizeTourPlaceDetail');
+const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
 const {
   normalizePagination,
   requireOneOf,
@@ -381,7 +382,7 @@ function createTourApiService(options = {}) {
   async function getPlaceDetail({
     contentId,
     includeInfo = false,
-    imageRows = 20,
+    imageRows = MAX_PLACE_DETAIL_IMAGES,
   } = {}) {
     const context = operationContext('detailCommon2');
     const requestedContentId = normalizeContentId(contentId, context);
@@ -412,9 +413,15 @@ function createTourApiService(options = {}) {
       contentId: responseContentId,
       contentTypeId,
     });
+    const normalizedImageRows = normalizePagination(
+      1,
+      Math.min(Number(imageRows), MAX_PLACE_DETAIL_IMAGES),
+      context,
+      { maxNumOfRows: MAX_PLACE_DETAIL_IMAGES },
+    ).numOfRows;
     const imagePromise = getDetailImages({
       contentId: responseContentId,
-      numOfRows: imageRows,
+      numOfRows: normalizedImageRows,
     });
     const infoPromise = includeInfo
       ? getInfoDetail({ contentId: responseContentId, contentTypeId })

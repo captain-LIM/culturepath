@@ -9,6 +9,8 @@ class PlaceItem {
   final String? region;
   final double? latitude;
   final double? longitude;
+  final String? imageUrl;
+  final String? thumbnailUrl;
 
   const PlaceItem({
     required this.contentId,
@@ -21,6 +23,8 @@ class PlaceItem {
     this.region,
     this.latitude,
     this.longitude,
+    this.imageUrl,
+    this.thumbnailUrl,
   });
 
   bool get hasCoordinates => latitude != null && longitude != null;
@@ -36,6 +40,8 @@ class PlaceItem {
         region: json['region'] as String?,
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
+        imageUrl: json['imageUrl'] as String?,
+        thumbnailUrl: json['thumbnailUrl'] as String?,
       );
 
   Map<String, dynamic> toJson() => {

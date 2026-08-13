@@ -91,6 +91,16 @@ test('documents strict culture filtering for region spots', () => {
   assert.ok(spots.responses[502]);
   assert.ok(spots.responses[503]);
   assert.ok(spots.responses[504]);
+  const regionSpot = openApiDocument.components.schemas.RegionSpot;
+  assert.ok(regionSpot.required.includes('imageUrl'));
+  assert.ok(regionSpot.required.includes('thumbnailUrl'));
+  assert.equal(regionSpot.properties.imageUrl.nullable, true);
+  assert.equal(regionSpot.properties.thumbnailUrl.nullable, true);
+  assert.equal(
+    openApiDocument.components.schemas.PlaceDetail.allOf[1]
+      .properties.images.maxItems,
+    10,
+  );
 });
 
 test('documents the authenticated structured AI transform contract', () => {

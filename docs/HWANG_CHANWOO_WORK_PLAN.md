@@ -948,12 +948,12 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 
 ## Phase 3B / R12 — 이미지·상세·연관 장소
 
-- [ ] 지역 장소 목록에 `thumbnailUrl`·`imageUrl` 전달
-- [ ] Flutter 카드 네트워크 이미지와 placeholder
-- [ ] 장소 상세·이미지 갤러리
-- [ ] 연관 장소 UI와 상세 이동
-- [ ] 빈 URL·실패·긴 제목·느린 네트워크 상태
-- [ ] Backend·Swagger·Flutter 모델·테스트 동시 갱신
+- [x] 지역 장소 목록에 `thumbnailUrl`·`imageUrl` 전달
+- [x] Flutter 카드 네트워크 이미지와 placeholder
+- [x] 장소 상세·최대 10장 이미지 갤러리
+- [x] 연관 장소 UI와 상세 이동
+- [x] 빈 URL·HTTP·실패·느린 네트워크 fallback
+- [x] Backend·Swagger·Flutter 모델·테스트 동시 갱신
 
 **완료 결과:** 실제 TourAPI 이미지와 상세정보를 휴대폰에서 안정적으로 탐색한다.
 
@@ -1101,7 +1101,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 다음 항목을 위에서 아래로 진행한다. 상세 PR 범위는 잔여 PR 로드맵을 따른다.
 
 - [x] 1. R11 문화별 관광지 관련도·정렬 품질
-- [ ] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
+- [x] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
 - [ ] 3. R13 다국어 관광지 데이터 계약과 연결
 - [ ] 4. R14 Figma Make 정보구조·P0 디자인·지도 UX 확정
 - [ ] 5. R15 Flutter 디자인·지도 적용과 Android 모바일 QA

@@ -7,6 +7,8 @@ class SpotItem {
   final String category;
   final double? latitude;
   final double? longitude;
+  final String? imageUrl;
+  final String? thumbnailUrl;
 
   const SpotItem({
     required this.contentId,
@@ -17,6 +19,8 @@ class SpotItem {
     required this.category,
     this.latitude,
     this.longitude,
+    this.imageUrl,
+    this.thumbnailUrl,
   });
 
   factory SpotItem.fromJson(Map<String, dynamic> json) => SpotItem(
@@ -28,5 +32,7 @@ class SpotItem {
         category: json['category'] as String,
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
+        imageUrl: json['imageUrl'] as String?,
+        thumbnailUrl: json['thumbnailUrl'] as String?,
       );
 }

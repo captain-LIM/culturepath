@@ -104,6 +104,21 @@ function setRegionDataStatusHeader(res, status) {
   res.setHeader?.('X-Region-Data-Status', status);
 }
 
+function toPublicSpot(place) {
+  return {
+    contentId: place.contentId,
+    title: place.title,
+    address: place.address || '',
+    tel: place.tel || '',
+    openTime: place.openTime || '',
+    category: place.category || '기타',
+    latitude: place.latitude ?? null,
+    longitude: place.longitude ?? null,
+    imageUrl: place.imageUrl ?? null,
+    thumbnailUrl: place.thumbnailUrl ?? null,
+  };
+}
+
 function createRegionsController(options = {}) {
   const service = options.regionScoreService || regionScoreService;
   const placesService = options.placesService || cachedPlacesService;
@@ -192,16 +207,7 @@ function createRegionsController(options = {}) {
         res.set({ 'X-Cache-Status': cacheStatus });
       }
 
-      return res.json(items.map(place => ({
-        contentId: place.contentId,
-        title: place.title,
-        address: place.address || '',
-        tel: place.tel || '',
-        openTime: place.openTime || '',
-        category: place.category || '기타',
-        latitude: place.latitude ?? null,
-        longitude: place.longitude ?? null,
-      })));
+      return res.json(items.map(toPublicSpot));
     } catch (error) {
       if (cultureFilter) {
         const response = publicPlaceError(error);
@@ -214,7 +220,7 @@ function createRegionsController(options = {}) {
       }
 
       // 문화 필터가 없는 이전 흐름은 가용성을 위해 기존 seed fallback을 유지한다.
-      return res.json(SPOT_MAP[code] || []);
+      return res.json((SPOT_MAP[code] || []).map(toPublicSpot));
     }
   }
 
