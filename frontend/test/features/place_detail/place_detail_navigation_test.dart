@@ -116,7 +116,7 @@ class _SelectionHostState extends State<_SelectionHost> {
 
 GoRouter _router(PlaceDetailRepository repository) => GoRouter(
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const _SelectionHost()),
+        GoRoute(path: '/', builder: (_, _) => const _SelectionHost()),
         GoRoute(
           path: '/places/:id',
           builder: (_, state) => PlaceDetailScreen(
@@ -132,7 +132,7 @@ GoRouter _regionRouter(PlaceDetailRepository repository) => GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => const RegionDetailScreen(
+          builder: (_, _) => const RegionDetailScreen(
             region: RegionItem(
               areaCode: 'tongyeong',
               name: '통영',

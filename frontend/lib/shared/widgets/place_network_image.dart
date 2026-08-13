@@ -75,11 +75,11 @@ class PlaceNetworkImage extends StatelessWidget {
                 maxWidthDiskCache: 1600,
                 maxHeightDiskCache: 1600,
                 fadeInDuration: const Duration(milliseconds: 180),
-                placeholder: (_, __) => _PlaceImagePlaceholder(
+                placeholder: (_, _) => _PlaceImagePlaceholder(
                   placeTitle: placeTitle,
                   loading: true,
                 ),
-                errorWidget: (_, __, ___) =>
+                errorWidget: (_, _, _) =>
                     _PlaceImagePlaceholder(placeTitle: placeTitle),
               );
             },
