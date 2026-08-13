@@ -82,6 +82,11 @@ void main() {
 
     detailCompleter.complete(detail());
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('연관 장소를 불러오지 못했습니다.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('연관 장소를 불러오지 못했습니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -104,6 +109,12 @@ void main() {
 
     expect(find.text('박경리기념관'), findsOneWidget);
     expect(find.text('작가의 삶과 작품을 소개합니다.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('연관 장소를 불러오지 못했습니다.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
     expect(find.text('연관 장소를 불러오지 못했습니다.'), findsOneWidget);
   });
 
@@ -120,6 +131,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이 장소를 코스에 담기'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     await tester.tap(find.text('이 장소를 코스에 담기'));
 
@@ -148,7 +164,8 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
 
     final image = tester.widget<CachedNetworkImage>(
       find.byType(CachedNetworkImage).first,
@@ -181,6 +198,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이 장소를 코스에 담기'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     await tester.tap(find.text('이 장소를 코스에 담기'));
     await tester.pumpAndSettle();

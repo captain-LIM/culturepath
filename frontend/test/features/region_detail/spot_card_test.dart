@@ -58,6 +58,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('spot-open-image-1')));
     await tester.tap(find.byKey(const ValueKey('spot-open-title-1')));

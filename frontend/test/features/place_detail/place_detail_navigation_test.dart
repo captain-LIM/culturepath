@@ -174,9 +174,15 @@ void main() {
     final router = _router(_RoutingRepository());
     addTearDown(router.dispose);
     await tester.pumpWidget(_localizedRouter(router));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('open-detail')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이 장소를 코스에 담기'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('이 장소를 코스에 담기'));
     await tester.pumpAndSettle();
 
@@ -211,6 +217,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('spot-open-image-1')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이 장소를 코스에 담기'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('이 장소를 코스에 담기'));
     await tester.pumpAndSettle();
 
@@ -223,11 +234,22 @@ void main() {
     final router = _router(_RoutingRepository(includeRelated: true));
     addTearDown(router.dispose);
     await tester.pumpWidget(_localizedRouter(router));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('open-detail')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('연관 장소 2'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('연관 장소 2').last);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이 장소를 코스에 담기'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('이 장소를 코스에 담기'));
     await tester.pumpAndSettle();
 
