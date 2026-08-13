@@ -136,7 +136,15 @@ test('rejects missing and one-character searches without calling TourAPI', async
 });
 
 test('filters the current page by culture without changing the internal model', async () => {
-  const sourceItems = [place(), place({ contentId: '2', cultures: ['음악'], category: '음악' })];
+  const sourceItems = [
+    place(),
+    place({
+      contentId: '2',
+      title: '야외 음악 공연장',
+      cultures: ['음악'],
+      category: '음악',
+    }),
+  ];
   const controller = createPlacesController({
     tourApiService: {
       searchPlacesByKeyword: async () => ({
@@ -171,7 +179,13 @@ test('augments an area listing with a culture keyword search when q is absent', 
         calls.keyword.push(options.keyword);
         return {
           items: [
-            place({ contentId: '2', title: '봄날 카페', cultures: ['커피·카페'], category: '커피·카페' }),
+            place({
+              contentId: '2',
+              title: '봄날 카페',
+              lclsSystmCodes: ['FD', 'FD05'],
+              cultures: ['커피·카페'],
+              category: '커피·카페',
+            }),
             place({ contentId: '1', cultures: ['문학'], category: '문학' }),
           ],
           pagination: { pageNo: 1, numOfRows: 20, totalCount: 3 },
@@ -190,7 +204,36 @@ test('augments an area listing with a culture keyword search when q is absent', 
   assert.deepEqual(calls.keyword, ['카페']);
   assert.equal(res.body.length, 1);
   assert.equal(res.body[0].contentId, '2');
-  assert.equal(res.headers['X-Cache-Status'], 'HIT');
+  assert.equal(res.headers['X-Cache-Status'], 'REFRESHED');
+});
+
+test('clamps culture-filtered search results and headers to 20', async () => {
+  const items = Array.from({ length: 25 }, (_, index) =>
+    place({
+      contentId: String(index + 1),
+      title: `문학관 ${index + 1}`,
+      cultures: ['문학'],
+      category: '문학',
+    }),
+  );
+  const controller = createPlacesController({
+    tourApiService: {
+      searchPlacesByKeyword: async () => ({
+        items,
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 25 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { q: '문학관', culture: '문학', numOfRows: '50' },
+  }, res);
+
+  assert.equal(res.body.length, 20);
+  assert.equal(res.headers['X-Num-Of-Rows'], 20);
+  assert.equal(res.headers['X-Total-Count'], 20);
 });
 
 test('marks the response STALE when the culture keyword search falls back to stale data', async () => {
@@ -202,7 +245,13 @@ test('marks the response STALE when the culture keyword search falls back to sta
         cacheStatus: 'HIT',
       }),
       searchPlacesByKeyword: async () => ({
-        items: [place({ contentId: '2', cultures: ['커피·카페'], category: '커피·카페' })],
+        items: [place({
+          contentId: '2',
+          title: '바다 카페',
+          lclsSystmCodes: ['FD', 'FD05'],
+          cultures: ['커피·카페'],
+          category: '커피·카페',
+        })],
         pagination: { pageNo: 1, numOfRows: 20, totalCount: 1 },
         cacheStatus: 'STALE',
       }),
@@ -242,6 +291,25 @@ test('does not run a culture keyword search when q is already provided', async (
 
   assert.equal(keywordCalls, 1);
   assert.equal(res.body.length, 1);
+});
+
+test('rejects an unsupported culture before calling the place service', async () => {
+  let calls = 0;
+  const controller = createPlacesController({
+    tourApiService: {
+      searchPlacesByKeyword: async () => { calls += 1; },
+      getAreaBasedPlaces: async () => { calls += 1; },
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { q: '문화', culture: '관광지' },
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.code, 'VALIDATION_ERROR');
+  assert.equal(calls, 0);
 });
 
 test('returns a compatible place detail and a structured 404', async () => {

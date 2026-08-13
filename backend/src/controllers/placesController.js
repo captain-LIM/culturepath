@@ -1,7 +1,16 @@
 const cachedPlacesService = require('../services/cachedPlacesService');
 const relatedPlacesService = require('../services/relatedPlacesService');
 const { ExternalApiError } = require('../utils/externalApiError');
-const { CULTURE_SEARCH_KEYWORDS } = require('../config/cultureCategoryMap');
+const {
+  CULTURE_SEARCH_KEYWORDS,
+  MAX_CULTURE_RESULTS,
+} = require('../config/cultureCategoryMap');
+const {
+  combineCultureCacheStatus,
+  isSupportedCulture,
+  selectPlacesForCulture,
+} = require('../services/culturePlaceSelection');
+const { publicPlaceError } = require('../utils/publicPlaceError');
 
 function toPublicPlace(place) {
   return {
@@ -41,54 +50,7 @@ function setCacheStatusHeader(res, cacheStatus) {
   res.setHeader?.('X-Cache-Status', cacheStatus);
 }
 
-function publicError(error) {
-  if (!(error instanceof ExternalApiError)) {
-    return {
-      status: 500,
-      body: {
-        code: 'INTERNAL_ERROR',
-        message: '서버 오류가 발생했습니다.',
-        retryable: false,
-      },
-    };
-  }
-
-  if (error.code === 'VALIDATION_ERROR') {
-    return {
-      status: 400,
-      body: { code: error.code, message: error.message, retryable: false },
-    };
-  }
-  if (error.code === 'CONFIG_ERROR') {
-    return {
-      status: 503,
-      body: {
-        code: 'TOUR_API_UNAVAILABLE',
-        message: '관광정보 서비스를 사용할 수 없습니다.',
-        retryable: false,
-      },
-    };
-  }
-  if (error.code === 'TIMEOUT') {
-    return {
-      status: 504,
-      body: {
-        code: 'EXTERNAL_API_TIMEOUT',
-        message: '관광정보 응답 시간이 초과되었습니다.',
-        retryable: true,
-      },
-    };
-  }
-
-  return {
-    status: 502,
-    body: {
-      code: 'EXTERNAL_API_ERROR',
-      message: '관광정보를 불러오지 못했습니다.',
-      retryable: error.retryable === true,
-    },
-  };
-}
+const publicError = publicPlaceError;
 
 function createPlacesController(options = {}) {
   const service =
@@ -120,6 +82,13 @@ function createPlacesController(options = {}) {
           operation: 'placesSearch',
         });
       }
+      if (culture && !isSupportedCulture(culture)) {
+        throw new ExternalApiError('지원하지 않는 문화 카테고리입니다.', {
+          code: 'VALIDATION_ERROR',
+          service: 'tour',
+          operation: 'placesSearch',
+        });
+      }
 
       const request = {
         lDongRegnCd,
@@ -137,28 +106,38 @@ function createPlacesController(options = {}) {
       // 모수가 너무 작다. TourAPI에 culture 대표 키워드로 직접 검색한
       // 결과를 합쳐서 실제로 존재하는 장소를 더 찾아낸다.
       const cultureKeyword = culture && !query ? CULTURE_SEARCH_KEYWORDS[culture] : null;
-      let mergedItems = result.items;
+      const placeGroups = [result.items];
       let cacheStatus = result.cacheStatus;
       if (cultureKeyword) {
         const keywordResult = await service.searchPlacesByKeyword({
           ...request,
           keyword: cultureKeyword,
         });
-        const seenContentIds = new Set(mergedItems.map(place => place.contentId));
-        mergedItems = [
-          ...mergedItems,
-          ...keywordResult.items.filter(place => !seenContentIds.has(place.contentId)),
-        ];
-        if (cacheStatus === 'STALE' || keywordResult.cacheStatus === 'STALE') {
-          cacheStatus = 'STALE';
-        }
+        placeGroups.push(keywordResult.items);
+        cacheStatus = combineCultureCacheStatus(
+          cacheStatus,
+          keywordResult.cacheStatus,
+        );
       }
 
+      const requestedCultureLimit = Number(
+        result.pagination?.numOfRows || request.numOfRows,
+      );
+      const cultureLimit = Number.isInteger(requestedCultureLimit) &&
+        requestedCultureLimit > 0
+        ? Math.min(requestedCultureLimit, MAX_CULTURE_RESULTS)
+        : MAX_CULTURE_RESULTS;
       const filteredItems = culture
-        ? mergedItems.filter(place => place.cultures.includes(culture))
-        : mergedItems;
+        ? selectPlacesForCulture(placeGroups, culture, {
+            limit: cultureLimit,
+          })
+        : result.items;
       const pagination = culture
-        ? { ...result.pagination, totalCount: filteredItems.length }
+        ? {
+            ...result.pagination,
+            numOfRows: cultureLimit,
+            totalCount: filteredItems.length,
+          }
         : result.pagination;
 
       setCacheStatusHeader(res, cacheStatus);

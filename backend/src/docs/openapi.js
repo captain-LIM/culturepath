@@ -1,5 +1,10 @@
 'use strict';
 
+const {
+  CULTURE_CATEGORIES,
+  MAX_CULTURE_RESULTS,
+} = require('../config/cultureCategoryMap');
+
 const errorResponses = Object.freeze({
   400: {
     description: '요청 파라미터 오류',
@@ -102,6 +107,56 @@ module.exports = Object.freeze({
               },
             },
           },
+        },
+      },
+    },
+    '/regions/{code}/spots': {
+      get: {
+        tags: ['Regions'],
+        summary: '지역별 관광 장소 조회',
+        description:
+          '`culture`가 있으면 지역 일반 목록과 문화 대표 키워드 검색 후보를 합친 뒤, contentId override·공식 분류 코드·제목 규칙으로 다시 검증해 관련 장소만 반환합니다. 관련도 점수는 내부 정렬에만 사용합니다.',
+        parameters: [
+          {
+            name: 'code',
+            in: 'path',
+            required: true,
+            description: 'CulturePath 지역 slug',
+            schema: { type: 'string', example: 'tongyeong' },
+          },
+          {
+            name: 'culture',
+            in: 'query',
+            description: '허용된 내부 문화 카테고리. 지정하면 엄격한 관련도 필터를 적용합니다.',
+            schema: {
+              type: 'string',
+              enum: [...CULTURE_CATEGORIES],
+            },
+          },
+        ],
+        responses: {
+          200: {
+            description: '관련도 근거가 강한 순서의 장소 배열. 일치 장소가 없으면 빈 배열입니다.',
+            headers: { 'X-Cache-Status': cacheStatusHeader },
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  maxItems: MAX_CULTURE_RESULTS,
+                  items: { $ref: '#/components/schemas/RegionSpot' },
+                },
+              },
+            },
+          },
+          404: {
+            description: '지원하지 않는 지역',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MessageError' },
+              },
+            },
+          },
+          ...errorResponses,
         },
       },
     },
@@ -249,7 +304,7 @@ module.exports = Object.freeze({
         tags: ['Places'],
         summary: '장소 목록 또는 키워드 검색',
         description:
-          '`q`가 있으면 키워드 검색, `q` 없이 `lDongRegnCd`가 있으면 지역 목록을 반환합니다. 둘 다 없으면 400입니다.',
+          '`q`가 있으면 키워드 검색, `q` 없이 `lDongRegnCd`가 있으면 지역 목록을 반환합니다. culture가 있으면 허용된 문화인지 검증하고, q가 없는 경우 지역 목록과 대표 키워드 검색을 합친 뒤 엄격하게 재분류합니다. 문화 필터 결과는 최대 20개입니다.',
         parameters: [
           {
             name: 'q',
@@ -260,8 +315,8 @@ module.exports = Object.freeze({
           {
             name: 'culture',
             in: 'query',
-            description: '현재 페이지 결과에 적용할 내부 문화 분류',
-            schema: { type: 'string' },
+            description: '허용된 내부 문화 분류. 그 외 값은 400입니다.',
+            schema: { type: 'string', enum: [...CULTURE_CATEGORIES] },
           },
           { $ref: '#/components/parameters/LDongRegnCd' },
           { $ref: '#/components/parameters/LDongSignguCd' },
@@ -283,6 +338,8 @@ module.exports = Object.freeze({
               'application/json': {
                 schema: {
                   type: 'array',
+                  maxItems: 50,
+                  'x-culture-filter-max-items': MAX_CULTURE_RESULTS,
                   items: { $ref: '#/components/schemas/PlaceSummary' },
                 },
               },
@@ -453,6 +510,32 @@ module.exports = Object.freeze({
             maximum: 100,
             description: '초기 문화 적합도 점수',
           },
+        },
+      },
+      RegionSpot: {
+        type: 'object',
+        required: [
+          'contentId',
+          'title',
+          'address',
+          'tel',
+          'openTime',
+          'category',
+          'latitude',
+          'longitude',
+        ],
+        properties: {
+          contentId: { type: 'string' },
+          title: { type: 'string' },
+          address: { type: 'string', description: '누락 시 빈 문자열' },
+          tel: { type: 'string', description: '누락 시 빈 문자열' },
+          openTime: { type: 'string', description: '누락 시 빈 문자열' },
+          category: {
+            type: 'string',
+            description: '선택값을 덮어쓰지 않은 실제 내부 대표 문화 분류',
+          },
+          latitude: { type: 'number', format: 'double', nullable: true },
+          longitude: { type: 'number', format: 'double', nullable: true },
         },
       },
       ApiError: {

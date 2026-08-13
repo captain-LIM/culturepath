@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
   CULTURE_CATEGORIES,
+  CULTURE_MATCH_STRENGTH,
   classifyTourPlace,
+  getCultureMatchStrength,
 } = require('../src/config/cultureCategoryMap');
 
 test('classifies with conservative official-code and keyword rules', () => {
@@ -104,4 +106,64 @@ test('code-based and keyword-based matches for the same category do not duplicat
     classifyTourPlace({ title: '동네 카페', lclsSystm1: 'FD', lclsSystm2: 'FD05' }),
     ['커피·카페'],
   );
+});
+
+test('ranks override, official code, and title evidence without exposing search terms as evidence', () => {
+  assert.equal(
+    getCultureMatchStrength(
+      { contentId: '123', title: '분류 불가능 장소' },
+      '문학',
+      { contentIdOverrides: { 123: ['문학'] } },
+    ),
+    CULTURE_MATCH_STRENGTH.CONTENT_ID_OVERRIDE,
+  );
+  assert.equal(
+    getCultureMatchStrength(
+      { title: '오후의 시간', lclsSystmCodes: ['VE', 'VE06', 'VE060100'] },
+      '음악',
+    ),
+    CULTURE_MATCH_STRENGTH.OFFICIAL_CLASSIFICATION,
+  );
+  assert.equal(
+    getCultureMatchStrength({ title: '작은 음악 공연장' }, '음악'),
+    CULTURE_MATCH_STRENGTH.TITLE_KEYWORD,
+  );
+  assert.equal(
+    getCultureMatchStrength(
+      { title: '음악분수', lclsSystmCodes: ['NA'] },
+      '음악',
+    ),
+    CULTURE_MATCH_STRENGTH.NONE,
+  );
+});
+
+test('classifies normalized PlaceSummary code arrays with the same rules as raw TourAPI rows', () => {
+  assert.deepEqual(
+    classifyTourPlace({
+      contentId: '1',
+      title: '오션뷰',
+      lclsSystmCodes: ['VE', 'VE07', 'VE070600'],
+    }),
+    ['미술·갤러리'],
+  );
+});
+
+test('keeps one deterministic positive fixture for every supported culture', () => {
+  const fixtures = [
+    ['독립서점·책방', { title: '바다 독립서점' }],
+    ['문학', { title: '지역 문학관', lclsSystmCodes: ['VE'] }],
+    ['음악', { title: '오후의 시간', lclsSystmCodes: ['VE', 'VE06', 'VE060100'] }],
+    ['전통주·양조장', { title: '마을 양조장', lclsSystmCodes: ['FD'] }],
+    ['로컬 미식', { title: '중앙 전통시장', lclsSystmCodes: ['FD'] }],
+    ['공예·공방', { title: '흙손', lclsSystmCodes: ['EX', 'EX02'] }],
+    ['근대 문화유산', { title: '옛 건물', lclsSystmCodes: ['HS', 'HS01', 'HS011100'] }],
+    ['미술·갤러리', { title: '오션뷰', lclsSystmCodes: ['VE', 'VE07', 'VE070600'] }],
+    ['영화·애니메이션', { title: '시네마', lclsSystmCodes: ['VE', 'VE06', 'VE060200'] }],
+    ['커피·카페', { title: '온기', lclsSystmCodes: ['FD', 'FD05'] }],
+  ];
+
+  assert.equal(fixtures.length, CULTURE_CATEGORIES.length);
+  for (const [culture, item] of fixtures) {
+    assert.ok(classifyTourPlace(item).includes(culture), culture);
+  }
 });
