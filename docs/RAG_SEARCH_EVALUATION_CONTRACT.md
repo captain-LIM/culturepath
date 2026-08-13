@@ -28,7 +28,7 @@
 - 실제 TourAPI title이 `오죽헌`이 아니라 `강릉 오죽헌·시립박물관`으로 오면 현재 비교에서는 같은 장소로 판정되지 않는다.
 - 실제 장소의 `cultures=[]`는 분류 규칙에 걸리지 않은 정상적인 보수적 결과다. 그러나 culture hard filter가 있는 기존 fixture에서는 검색 후보가 될 수 없다.
 
-따라서 현재 35개 fixture는 **Mock 회귀 기준**으로 유지한다. 같은 fixture를 live 품질 gate로 확정하지 않으며, R14에서 실제 TourAPI 표본에 기반한 별도 live fixture와 `contentId` 중심 판정 계약을 승인받아 추가한다. 그전에는 fixture, Mock 문서, title, culture rule, `CONTENT_ID_OVERRIDES`, Qdrant schema를 임의로 변경하지 않는다.
+따라서 현재 35개 fixture는 **Mock 회귀 기준**으로 유지한다. 같은 fixture를 live 품질 gate로 확정하지 않으며, R16에서 실제 TourAPI 표본에 기반한 별도 live fixture와 `contentId` 중심 판정 계약을 승인받아 추가한다. 그전에는 fixture, Mock 문서, title, culture rule, `CONTENT_ID_OVERRIDES`, Qdrant schema를 임의로 변경하지 않는다.
 
 ## 2. 확정된 검색 정책
 
@@ -146,7 +146,7 @@ filter에 맞는 장소가 없는 것은 정상적인 빈 결과이며 필터를
 - 범주: 지역+문화, 지역만, 문화만, alias, 명시적 콘텐츠 유형, 우천·동행 soft 조건, 후보 없음
 - 기대값: 12개 Mock 문서의 canonical title 또는 명시적인 빈 결과
 
-아래 값은 기존 Mock 회귀의 초기 기준이다. live 평가에는 R14에서 별도 fixture와 판정 단위를 확정한 뒤 적용한다.
+아래 값은 기존 Mock 회귀의 초기 기준이다. live 평가에는 R16에서 별도 fixture와 판정 단위를 확정한 뒤 적용한다.
 
 | 지표 | 기준 |
 | --- | --- |
@@ -155,11 +155,11 @@ filter에 맞는 장소가 없는 것은 정상적인 빈 결과이며 필터를
 | routing 정확도 | `1.00` |
 | hard filter 준수율 | `1.00` |
 | 기대 빈 결과 정확도 | `1.00` |
-| MySQL 신뢰 원본 비율 | R14 live 계약 확정 뒤 `1.00` |
+| MySQL 신뢰 원본 비율 | R16 live 계약 확정 뒤 `1.00` |
 
 제한 실행은 smoke 용도이므로 `complete=false`, `passed=false`로 기록한다. 전체 35건을
 실행해야 **Mock 회귀** 합격으로 판정한다. 이 결과를 live 품질 합격으로 표현하지 않는다.
-live에서는 지연시간 p50·p95와 임베딩 입력 토큰을 기록하되 R14/R15에서 hard gate 여부를 결정한다.
+live에서는 지연시간 p50·p95와 임베딩 입력 토큰을 기록하되 R16/R17에서 hard gate 여부를 결정한다.
 
 제한 smoke는 품질 합격 판정과 별개로 처리한다. 실행 case 중 운영 오류가 하나라도 있으면
 프로세스는 실패 코드로 종료하고, 오류 없이 제한된 case를 마친 경우에만 성공 종료한다.
@@ -204,6 +204,6 @@ QDRANT_COLLECTION=culturepath_places_v1
 - 중복·잘못된 ID·MySQL 누락·원본 필터 불일치를 제거하는 경로를 자동 테스트한다.
 - 로컬 MySQL과 Qdrant 환경·연결 검증은 완료됐다. OpenRouter는 아직 연결하지 않았다.
 - OpenRouter BGE-M3 실임베딩, 실제 장소 전체 인덱싱과 live 의미 검색 평가는 실행하지 않았다.
-- 기존 fixture를 그대로 live에 사용하면 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 발생할 수 있다. R14 전에는 이를 공식 live 합격/실패로 해석하지 않는다.
+- 기존 fixture를 그대로 live에 사용하면 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 발생할 수 있다. R16 전에는 이를 공식 live 합격/실패로 해석하지 않는다.
 - Qdrant 결과를 정답으로 다시 등록하거나 fixture를 현재 검색 결과에 맞춰 바꿔 평가를 통과시키지 않는다.
 - `QDRANT_SCORE_THRESHOLD` 최종값과 live 지연시간 기준은 전체 live 평가 후 확정한다.
