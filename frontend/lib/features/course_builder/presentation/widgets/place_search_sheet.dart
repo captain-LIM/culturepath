@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/place_item.dart';
 import '../../data/course_repository.dart';
+import '../../../../shared/widgets/place_network_image.dart';
 
 class PlaceSearchSheet extends StatefulWidget {
   final void Function(PlaceItem) onPlaceSelected;
@@ -152,14 +153,15 @@ class _PlaceResultTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      leading: Container(
+      leading: SizedBox(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
+        child: PlaceNetworkImage(
+          placeTitle: place.title,
+          thumbnailUrl: place.thumbnailUrl,
+          imageUrl: place.imageUrl,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.place_outlined, color: AppColors.primary, size: 20),
       ),
       title: Text(
         place.title,

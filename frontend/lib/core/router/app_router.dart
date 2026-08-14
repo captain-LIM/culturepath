@@ -8,6 +8,8 @@ import '../../features/home/data/culture_model.dart';
 import '../../features/culture_detail/data/region_model.dart';
 import '../../features/culture_detail/presentation/culture_detail_screen.dart';
 import '../../features/region_detail/presentation/region_detail_screen.dart';
+import '../../features/place_detail/presentation/place_detail_screen.dart';
+import '../../features/course_builder/data/place_item.dart';
 import '../../features/course_builder/data/course_model.dart';
 import '../../features/course_builder/data/course_repository.dart';
 import '../../features/course_builder/presentation/course_builder_screen.dart';
@@ -40,6 +42,17 @@ final appRouter = GoRouter(
         return RegionDetailScreen(
           region: extra['region'] as RegionItem,
           culture: extra['culture'] as CultureCategory,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/places/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        if (!RegExp(r'^\d+$').hasMatch(id)) return const _ErrorScreen();
+        return PlaceDetailScreen(
+          contentId: id,
+          initialPlace: state.extra as PlaceItem?,
         );
       },
     ),

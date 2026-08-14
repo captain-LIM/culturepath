@@ -347,6 +347,31 @@ test('returns a compatible place detail and a structured 404', async () => {
   assert.equal(missing.headers['X-Cache-Status'], 'BYPASS');
 });
 
+test('caps a cached place detail gallery at ten public images', async () => {
+  const images = Array.from({ length: 12 }, (_, index) => ({
+    imageUrl: `https://example.com/${index + 1}.jpg`,
+    thumbnailUrl: null,
+    name: null,
+    copyrightType: null,
+    serialNumber: String(index + 1),
+  }));
+  const controller = createPlacesController({
+    placesService: {
+      getPlaceDetail: async () => ({
+        item: place({ overview: '개요', images }),
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = createResponse();
+
+  await controller.getPlaceDetail({ params: { id: '1' } }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.images.length, 10);
+  assert.equal(res.body.images[9].serialNumber, '10');
+});
+
 test('returns related TourAPI place cards with cache status and a structured 404', async () => {
   const controller = createPlacesController({
     relatedPlacesService: {

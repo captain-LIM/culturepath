@@ -11,9 +11,10 @@ const {
   selectPlacesForCulture,
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
+const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
 
 function toPublicPlace(place) {
-  return {
+  const result = {
     ...place,
     address: place.address || '',
     tel: place.tel || '',
@@ -21,6 +22,10 @@ function toPublicPlace(place) {
     category: place.category || '기타',
     region: place.regionName || null,
   };
+  if (Array.isArray(result.images)) {
+    result.images = result.images.slice(0, MAX_PLACE_DETAIL_IMAGES);
+  }
+  return result;
 }
 
 function setPaginationHeaders(res, pagination, returnedCount) {
