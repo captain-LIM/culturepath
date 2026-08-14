@@ -238,19 +238,35 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('open-detail')));
     await tester.pumpAndSettle();
+    final verticalScrollable = find.byWidgetPredicate(
+      (widget) => widget is Scrollable &&
+          (widget.axisDirection == AxisDirection.down ||
+              widget.axisDirection == AxisDirection.up),
+    ).first;
+    final relatedTitle = find.text('연관 장소 2').last;
     await tester.scrollUntilVisible(
-      find.text('연관 장소 2'),
+      relatedTitle,
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: verticalScrollable,
     );
-    await tester.tap(find.text('연관 장소 2').last);
     await tester.pumpAndSettle();
+    expect(relatedTitle.hitTestable(), findsOneWidget);
+    await tester.tap(relatedTitle.hitTestable());
+    await tester.pumpAndSettle();
+    final relatedDetailScrollable = find.byWidgetPredicate(
+      (widget) => widget is Scrollable &&
+          (widget.axisDirection == AxisDirection.down ||
+              widget.axisDirection == AxisDirection.up),
+    ).last;
+    final addButton = find.text('이 장소를 코스에 담기');
     await tester.scrollUntilVisible(
-      find.text('이 장소를 코스에 담기'),
+      addButton,
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: relatedDetailScrollable,
     );
-    await tester.tap(find.text('이 장소를 코스에 담기'));
+    await tester.pumpAndSettle();
+    expect(addButton.hitTestable(), findsOneWidget);
+    await tester.tap(addButton.hitTestable());
     await tester.pumpAndSettle();
 
     expect(find.text('연관 장소 2'), findsOneWidget);

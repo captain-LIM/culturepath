@@ -208,6 +208,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Day 1'), findsWidgets);
-    expect(find.text('박경리기념관'), findsOneWidget);
+    final dayOnePlace = find.byKey(const ValueKey('1_0'));
+    expect(dayOnePlace, findsOneWidget);
+    expect(
+      find.descendant(
+        of: dayOnePlace,
+        matching: find.text('박경리기념관'),
+      ),
+      findsOneWidget,
+    );
   });
 }
