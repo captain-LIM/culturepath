@@ -103,40 +103,62 @@ class _PlaceImagePlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: AppColors.primary.withValues(alpha: 0.08),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (loading)
-                const SizedBox.square(
-                  dimension: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                Icon(
-                  Icons.photo_outlined,
-                  size: 32,
-                  color: AppColors.primary.withValues(alpha: 0.42),
-                ),
-              const SizedBox(height: 8),
-              Text(
-                loading
-                    ? '$placeTitle 사진을 불러오는 중'
-                    : '$placeTitle 사진 없음',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.primary.withValues(alpha: 0.62),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.hasBoundedHeight && constraints.maxHeight < 80;
+          if (compact) {
+            return Center(
+              child: loading
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      Icons.photo_outlined,
+                      size: 24,
+                      color: AppColors.primary.withValues(alpha: 0.42),
+                    ),
+            );
+          }
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (loading)
+                    const SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(
+                      Icons.photo_outlined,
+                      size: 32,
+                      color: AppColors.primary.withValues(alpha: 0.42),
+                    ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: Text(
+                      loading
+                          ? '$placeTitle 사진을 불러오는 중'
+                          : '$placeTitle 사진 없음',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primary.withValues(alpha: 0.62),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
