@@ -354,6 +354,8 @@ _type=json  # 백엔드 또는 직접 호출에서 수동으로 추가
 
 ## 7. 다국어 관광정보 서비스 (`EngService2`·`JpnService2`·`ChsService2`·`ChtService2`)
 
+> **담당자:** 임수민. 활용 신청·실호출·locale 계약·Backend/Flutter 구현을 포함하며 황찬우 잔여 PR 범위에서는 제외한다. 황찬우는 머지 후 RAG의 canonical `contentId` 호환성만 확인한다.
+
 2026-08-13 공공데이터포털의 현재 서비스 페이지와 변경 공지에서 영문·일문·중문 간체·중문 번체 `Service2` 및 Base URL의 존재를 확인했다. 이는 **서비스 존재 확인**일 뿐, CulturePath 인증키의 활용 신청·승인이나 실제 응답 검증이 끝났다는 뜻은 아니다.
 
 ### 7.1 현재 상태
