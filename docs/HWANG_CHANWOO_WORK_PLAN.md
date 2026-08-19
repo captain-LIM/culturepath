@@ -26,7 +26,7 @@
 
 ## 1. 내 역할 한 문장 정의
 
-**한국관광공사 API의 실제 데이터를 안정적으로 수집·가공하고, 그 데이터를 Qdrant 기반 RAG와 OpenRouter LLM에 연결하며, 사용자가 이 기능을 편하게 경험하도록 Figma Make 기반 UI/UX를 설계한다.**
+**한국관광공사 API의 실제 데이터를 안정적으로 수집·가공하고, 그 데이터를 Qdrant 기반 RAG와 OpenRouter LLM에 연결하며, 사용자가 이 기능을 편하게 경험하도록 Manus 프로토타입과 Figma 원본 기반 UI/UX를 설계한다.**
 
 다만 2026-08-18 역할 재확인에 따라 **다국어 관광 데이터 구현과 지도 고도화는 임수민 담당**이며 황찬우의 구현 범위에서 제외한다.
 
@@ -45,7 +45,7 @@ Qdrant 의미 검색                      │
         ↓                              │
 OpenRouter 코스 변형 ──────────────→ AI 변형 UX
 
-Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Flutter 구현
+Manus 프로토타입 ─→ Figma 디자인 시스템·화면·상태 명세 ─→ 수민님 Flutter 구현
 ```
 
 ## 2. 두 차례 검토 결과
@@ -59,7 +59,7 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 - `places_cache` 적재·갱신과 외부 API 장애 대응
 - Qdrant 검색, OpenRouter LLM, 프롬프트 및 코스 변형 로직
 - `POST /ai/transform` 요청·응답 설계와 구현
-- Figma Make를 활용한 디자인 시스템 및 핵심 화면 설계
+- Manus를 활용한 반복 프로토타입과 Figma 기반 디자인 시스템·핵심 화면 설계
 - AI 변형 결과의 변경 전·후 비교, 적용, 취소 UX 설계
 - 수민님에게 API 명세와 디자인 명세를 전달하고 통합 결과 검수
 
@@ -94,7 +94,7 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 | 순서 | 단계 | 핵심 결과 |
 | --- | --- | --- |
-| 1 | Figma Make P0 | 홈·탐색 정보구조와 비-AI형 시각 언어 확정 |
+| 1 | Manus 프로토타입·Figma P0 | 홈·탐색 정보구조와 비-AI형 시각 언어 확정 |
 | 2 | Flutter 디자인 적용·QA | P0 구현과 Android 실기기·release 검증 |
 | 3 | RAG 평가 계약 | Mock fixture와 실제 TourAPI live 기준 분리 |
 | 4 | OpenRouter live | BGE-M3·Qdrant 검색·AI 변형 품질과 비용 검증 |
@@ -747,19 +747,19 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [ ] Mobile/Web breakpoint
 - [ ] Motion duration과 easing 기본값
 
-## C-4. Figma Make 활용 순서
+## C-4. Manus·Figma 활용 순서
 
-1. 현재 Flutter 화면 캡처와 서비스 계획서를 참고자료로 준비한다.
-2. 한 번에 앱 전체가 아니라 한 사용자 흐름씩 프롬프트를 작성한다.
-3. Figma Make가 생성한 시안을 디자인 시스템에 맞춰 수동 정리한다.
-4. 실제 Flutter로 구현하기 어려운 효과와 과도한 애니메이션을 제거한다.
-5. 컴포넌트와 Variant로 반복 UI를 통합한다.
-6. 기본·로딩·빈 상태·오류·선택·비활성 상태를 추가한다.
-7. Prototype으로 핵심 전환을 연결한다.
-8. 수민님에게 시안을 전달하고 구현 난이도 피드백을 받는다.
+1. 현재 Flutter 화면 감사 결과, P0 디자인 명세와 검수표를 Manus 참고자료로 준비한다.
+2. Manus에서 외부 API·저장소와 격리된 Android 모바일 프로토타입을 한 사용자 흐름씩 만든다.
+3. 360·390·430px, 긴 글자와 loading·empty·error·stale·image-missing 상태를 실제로 눌러본다.
+4. Manus 자체 검수를 두 번 실행한 뒤 황찬우가 같은 검수표로 다시 판정한다.
+5. 승인된 화면·토큰·상태·핸드오프만 Figma로 옮긴다.
+6. Figma 무료 AI 크레딧은 변수·컴포넌트·Variant·Auto Layout·Prototype 정리에 우선 사용한다.
+7. 실제 Flutter로 구현하기 어려운 효과와 과도한 애니메이션을 제거한다.
+8. 수민님에게 최종 Figma 원본을 전달하고 구현 난이도 피드백을 받는다.
 9. 구현본을 캡처해 Figma와 비교하고 차이를 기록한다.
 
-### Figma Make 프롬프트에 항상 포함할 내용
+### Manus·Figma 프롬프트에 항상 포함할 내용
 
 - 서비스 목적과 대상 사용자
 - 현재 화면의 목적 하나
@@ -892,7 +892,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [ ] 페이지네이션 방식
 - [ ] 캐시 데이터의 최신성 표시 여부
 - [x] `/ai/transform` JSON Schema와 기존 Flutter 호환 공개 응답
-- [ ] Figma 화면·컴포넌트·상태 명세
+- [x] Figma 화면·컴포넌트·상태 명세
 
 ## D-2. 수민님에게 받아야 할 것
 
@@ -963,19 +963,26 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - 황찬우는 팀원 변경이 머지된 후 긴 다국어 문구의 디자인 대응과 canonical `contentId`·RAG 평가 호환성만 확인한다.
 - R13을 황찬우 잔여 PR 수나 완료율에 포함하지 않는다.
 
-## Phase 3D / R14 — Figma Make 정보구조·디자인 P0
+## Phase 3D / R14 — Manus 프로토타입·Figma 정보구조·디자인 P0
 
-- [ ] 최신 Flutter와 서비스 계획서 감사
-- [ ] 탐색의 `내 코스 / 커뮤니티 / 인기 코스` 정보구조
-- [ ] 홈 빈 공간을 실제 데이터 섹션으로 보완
-- [ ] 색·타입·간격·radius·elevation 토큰
-- [ ] 홈·문화·지역·장소·코스·AI P0 화면
-- [ ] loading·empty·error·offline/stale·이미지 없음 상태
-- [ ] 반복 카드·pill·gradient·과한 그림자를 줄이는 휴먼 디자인 검수
-- [ ] Android 360·390·430dp 명세
-- [ ] Figma Make 프롬프트·검수표·수민님 핸드오프
+- [x] 최신 Flutter와 서비스 계획서 감사
+- [x] 탐색의 `내 코스 / 커뮤니티 / 인기` 정보구조
+- [x] 홈 빈 공간을 실제 데이터 기반 `내 코스 이어보기`로 보완
+- [x] 색·타입·간격·radius·elevation 토큰 명세
+- [x] 홈·문화·지역·장소·코스·AI P0 화면 명세
+- [x] loading·empty·error·offline/stale·이미지 없음 상태 명세
+- [x] 반복 카드·pill·gradient·과한 그림자를 줄이는 휴먼 디자인 기준
+- [x] Android 360·390·430dp 명세
+- [x] Manus 단계별 프로토타입·교정·2회 자체검수 프롬프트
+- [x] Figma 최종 정리 프롬프트·수민님 핸드오프 기준
+- [ ] Manus에서 P0 흐름·상태·반응형 프로토타입 생성
+- [ ] 검수표의 차단 항목 0개 확인
+- [ ] 승인 결과를 Figma 변수·컴포넌트·Variant·Prototype으로 정리
+- [ ] 황찬우 최종 시안 승인
 
 **제외 범위:** 지역 목록/지도 전환, 마커·카드 연동, 번호 마커, Day 표시, 순서선과 경로 계산은 임수민 담당이다.
+
+**현재 상태:** [P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md), [Manus 프로토타입 실행 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md), [Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md), [디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) 작성 완료. 실제 Manus 생성·검수와 Figma 정리·승인은 대기 중이다.
 
 **완료 결과:** 홈·탐색 요구와 실제 데이터 길이를 반영한 구현 가능한 P0 디자인이 확정된다.
 
@@ -1097,7 +1104,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [x] 1. R11 문화별 관광지 관련도·정렬 품질
 - [x] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
 - [→ 임수민] R13 다국어 관광지 데이터 계약과 연결
-- [ ] 3. R14 Figma Make 정보구조·P0 디자인 확정
+- [ ] 3. R14 Manus 프로토타입·Figma 정보구조·P0 디자인 확정
 - [ ] 4. R15 Flutter 디자인 적용과 Android 모바일 QA
 - [ ] 5. R16 Mock/live RAG 평가 계약 분리
 - [ ] 6. R17 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증

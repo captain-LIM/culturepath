@@ -9,7 +9,11 @@ CulturePath(문화여행·따라가방)의 기획과 협업 문서를 관리하�
 | [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) | 서비스 컨셉, 사용자 흐름, 기능, 데이터, 기술 구조, 디자인 시스템 및 로드맵 |
 | [팀 역할 및 협업 기준](./TEAM_ROLES.md) | 임수민과 황찬우의 담당 범위, 연동 지점, 일정별 산출물 및 협업 원칙 |
 | [황찬우 전용 실행계획](./HWANG_CHANWOO_WORK_PLAN.md) | 황찬우가 담당하는 RAG, 외부 API 연동, FE 디자인의 상세 작업과 완료 기준 |
-| [황찬우 전용 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | R1~R12 구현 이력과 황찬우 R14~R18 실행 순서(Figma→Flutter 디자인→RAG 평가→OpenRouter→배포), 임수민 담당 R13 다국어·지도 경계와 세션 인수인계 |
+| [황찬우 전용 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | R1~R12 구현 이력과 황찬우 R14~R18 실행 순서(Manus 프로토타입→Figma→Flutter 디자인→RAG 평가→OpenRouter→배포), 임수민 담당 R13 다국어·지도 경계와 세션 인수인계 |
+| [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) | 최신 Flutter·서비스 계획서 기준 홈·탐색 정보구조, 문화 여행 편집지 시각 언어, 토큰·컴포넌트·상태·반응형 계약 |
+| [R14 Manus 프로토타입 실행 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) | 외부 서비스와 격리된 Android 모바일 프로토타입을 기반→화면→상태→2회 자체검수 순서로 만드는 주 실행 프롬프트 |
+| [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md) | 승인된 Manus 결과를 Figma 변수·컴포넌트·Variant·Auto Layout·Prototype으로 정리하는 후속 프롬프트 |
+| [R14 프로토타입·Figma 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) | Manus와 Figma 결과의 정보구조·실데이터·비-AI형 시각 언어·접근성·Flutter 핸드오프를 두 번 검수하는 승인 기준 |
 | [관광지 이미지·상세·연관 장소 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md) | R12 목록 썸네일, 최대 10장 상세 갤러리, 안전한 캐시·placeholder, 연관 장소와 코스 담기 흐름 |
 | [외부 관광 API 검증 체크리스트](./API_VALIDATION_CHECKLIST.md) | 국문·연관·DataLab 검증 완료 내역과 영·일·중문 TourAPI 활용 신청·실호출·locale 계약 체크리스트 |
 | [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md) | TourAPI 목록·검색·상세 파라미터, PlaceSummary·PlaceDetail, 공개 장소 API와 오류 계약 |
