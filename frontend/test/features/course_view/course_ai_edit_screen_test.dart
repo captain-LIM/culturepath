@@ -339,30 +339,33 @@ void main() {
   testWidgets('shows semantic changes and an explicit builder action',
       (tester) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
-    final original = course([place('1'), place('2')]);
-    final proposal = course([place('1')]);
-    await _pumpScreen(
-      tester,
-      original: original,
-      aiRepository: _FakeAiRepository([result(proposal)]),
-    );
-    final liveStatus = tester.widget<Semantics>(
-      find.byKey(const ValueKey('ai-live-status')),
-    );
-    expect(liveStatus.properties.liveRegion, isTrue);
+    try {
+      final original = course([place('1'), place('2')]);
+      final proposal = course([place('1')]);
+      await _pumpScreen(
+        tester,
+        original: original,
+        aiRepository: _FakeAiRepository([result(proposal)]),
+      );
+      final liveStatus = tester.widget<Semantics>(
+        find.byKey(const ValueKey('ai-live-status')),
+      );
+      expect(liveStatus.properties.liveRegion, isTrue);
 
-    await tester.enterText(
-      find.byKey(const ValueKey('ai-request-field')),
-      '마지막 장소 빼줘',
-    );
-    await tester.tap(find.byKey(const ValueKey('ai-send-button')));
-    await tester.pump();
-    await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai-request-field')),
+        '마지막 장소 빼줘',
+      );
+      await tester.tap(find.byKey(const ValueKey('ai-send-button')));
+      await tester.pump();
+      await tester.pump();
 
-    expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
-    expect(find.text('변경안 편집하기'), findsOneWidget);
-    expect(find.textContaining('Day 1에서 삭제'), findsOneWidget);
+      expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
+      expect(find.text('변경안 편집하기'), findsOneWidget);
+      expect(find.textContaining('Day 1에서 삭제'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('keeps warnings visible and hides apply for an unchanged result',
