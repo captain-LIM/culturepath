@@ -95,11 +95,15 @@ function combineCacheStatuses(statuses) {
 }
 
 function localizedName(entry, lang) {
-  return lang === 'en' && entry.nameEn ? entry.nameEn : entry.name;
+  if (lang === 'en' && entry.nameEn) return entry.nameEn;
+  if (lang === 'ja' && entry.nameJa) return entry.nameJa;
+  return entry.name;
 }
 
 function localizedDescription(entry, lang) {
-  return lang === 'en' && entry.descriptionEn ? entry.descriptionEn : entry.description;
+  if (lang === 'en' && entry.descriptionEn) return entry.descriptionEn;
+  if (lang === 'ja' && entry.descriptionJa) return entry.descriptionJa;
+  return entry.description;
 }
 
 function curatedResult(entries, lang) {

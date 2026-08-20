@@ -537,21 +537,33 @@ function getDefaultService() {
   return defaultService;
 }
 
-let defaultEngService;
+// 국문(KorService2) 외 언어별 TourAPI 서비스. 국문과 별개의 contentId 공간을
+// 쓰기 때문에 키워드+좌표로 매칭해야 하며(cachedPlacesService 참고), 각 서비스는
+// externalApis.js에 등록된 이름(tourEng/tourJpn)의 baseUrl·인증키를 그대로 쓴다.
+const TRANSLATION_SERVICE_NAMES = Object.freeze({
+  en: 'tourEng',
+  ja: 'tourJpn',
+});
 
-function getDefaultEngService() {
-  if (!defaultEngService) {
-    defaultEngService = createTourApiService({ serviceName: 'tourEng' });
+const translationServices = {};
+
+function getTranslationService(lang) {
+  const serviceName = TRANSLATION_SERVICE_NAMES[lang];
+  if (!serviceName) {
+    throw new Error(`지원하지 않는 번역 언어입니다: ${lang}`);
   }
-  return defaultEngService;
+  if (!translationServices[lang]) {
+    translationServices[lang] = createTourApiService({ serviceName });
+  }
+  return translationServices[lang];
 }
 
-function getPlaceDetailEng(options) {
-  return getDefaultEngService().getPlaceDetail(options);
+function getPlaceDetailTranslated(lang, options) {
+  return getTranslationService(lang).getPlaceDetail(options);
 }
 
-function searchPlacesByKeywordEng(options) {
-  return getDefaultEngService().searchPlacesByKeyword(options);
+function searchPlacesByKeywordTranslated(lang, options) {
+  return getTranslationService(lang).searchPlacesByKeyword(options);
 }
 
 function getAreaCodes(options) {
@@ -602,12 +614,12 @@ module.exports = {
   getIntroDetail,
   getLegalDistrictCodes,
   getPlaceDetail,
-  getPlaceDetailEng,
+  getPlaceDetailTranslated,
   getAreaBasedPlaces,
   getAreaCodes,
   getClassificationCodes,
   normalizeAreaBasedPlaceOptions,
   normalizeKeywordPlaceOptions,
   searchPlacesByKeyword,
-  searchPlacesByKeywordEng,
+  searchPlacesByKeywordTranslated,
 };

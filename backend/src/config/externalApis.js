@@ -11,6 +11,7 @@ const DEFAULTS = Object.freeze({
   retryDelayMs: 200,
   tourApiBaseUrl: 'https://apis.data.go.kr/B551011/KorService2',
   tourApiEngBaseUrl: 'https://apis.data.go.kr/B551011/EngService2',
+  tourApiJpnBaseUrl: 'https://apis.data.go.kr/B551011/JpnService2',
   relatedTourApiBaseUrl: 'https://apis.data.go.kr/B551011/TarRlteTarService1',
   dataLabApiBaseUrl: 'https://apis.data.go.kr/B551011/DataLabService',
 });
@@ -49,8 +50,13 @@ function getExternalApiConfig(env = process.env) {
       tourEng: {
         name: 'tourEng',
         baseUrl: env.TOUR_API_ENG_BASE_URL?.trim() || DEFAULTS.tourApiEngBaseUrl,
-        // EngService2는 KorService2와 별도로 발급되는 인증키를 쓴다.
+        // EngService2/JpnService2는 KorService2와 별도로 발급되는 인증키를 쓴다.
         apiKey: env.TOUR_API_ENG_KEY?.trim() || '',
+      },
+      tourJpn: {
+        name: 'tourJpn',
+        baseUrl: env.TOUR_API_JPN_BASE_URL?.trim() || DEFAULTS.tourApiJpnBaseUrl,
+        apiKey: env.TOUR_API_JPN_KEY?.trim() || '',
       },
       relatedTour: {
         name: 'relatedTour',

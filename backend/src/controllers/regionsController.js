@@ -212,8 +212,8 @@ function createRegionsController(options = {}) {
         res.set({ 'X-Cache-Status': cacheStatus });
       }
 
-      const publicItems = lang === 'en'
-        ? await placesService.attachEnglishOverlay(items)
+      const publicItems = lang !== 'ko'
+        ? await placesService.attachTranslationOverlay(items, lang)
         : items;
       return res.json(publicItems.map(toPublicSpot));
     } catch (error) {
@@ -229,8 +229,8 @@ function createRegionsController(options = {}) {
 
       // 문화 필터가 없는 이전 흐름은 가용성을 위해 기존 seed fallback을 유지한다.
       const fallbackItems = SPOT_MAP[code] || [];
-      const publicFallback = lang === 'en'
-        ? await placesService.attachEnglishOverlay(fallbackItems)
+      const publicFallback = lang !== 'ko'
+        ? await placesService.attachTranslationOverlay(fallbackItems, lang)
         : fallbackItems;
       return res.json(publicFallback.map(toPublicSpot));
     }

@@ -81,11 +81,12 @@ function canUseStale(error) {
   );
 }
 
-// EngService2는 KorService2와 별개의 contentId 공간을 쓰기 때문에(같은 장소도
-// 서로 다른 ID), 국문 contentId로 영문 상세를 직접 조회할 수 없다. 대신 국문
-// 제목으로 영문 서비스를 키워드 검색한 뒤, 좌표가 가장 가까운 결과를 같은
-// 장소로 판단한다.
-const MAX_ENGLISH_MATCH_DISTANCE_METERS = 150;
+// EngService2/JpnService2는 KorService2와 별개의 contentId 공간을 쓰기 때문에
+// (같은 장소도 서로 다른 ID), 국문 contentId로 번역 서비스 상세를 직접 조회할
+// 수 없다. 대신 국문 제목으로 번역 서비스를 키워드 검색한 뒤, 좌표가 가장
+// 가까운 결과를 같은 장소로 판단한다.
+const SUPPORTED_TRANSLATION_LANGS = Object.freeze(new Set(['en', 'ja']));
+const MAX_TRANSLATION_MATCH_DISTANCE_METERS = 150;
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371000;
@@ -98,7 +99,7 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const ENGLISH_OVERLAY_FIELDS = Object.freeze([
+const TRANSLATION_OVERLAY_FIELDS = Object.freeze([
   'title',
   'address',
   'overview',
@@ -108,19 +109,19 @@ const ENGLISH_OVERLAY_FIELDS = Object.freeze([
   'parking',
 ]);
 
-function applyEnglishOverlay(korItem, engItem) {
-  if (!engItem) {
-    return { ...korItem, hasEnglishInfo: false };
+function applyTranslationOverlay(korItem, translatedItem) {
+  if (!translatedItem) {
+    return { ...korItem, hasTranslatedInfo: false };
   }
 
-  const overlaid = { ...korItem, hasEnglishInfo: true };
-  for (const field of ENGLISH_OVERLAY_FIELDS) {
-    if (engItem[field]) {
-      overlaid[field] = engItem[field];
+  const overlaid = { ...korItem, hasTranslatedInfo: true };
+  for (const field of TRANSLATION_OVERLAY_FIELDS) {
+    if (translatedItem[field]) {
+      overlaid[field] = translatedItem[field];
     }
   }
-  if (engItem.additionalInfo?.length) {
-    overlaid.additionalInfo = engItem.additionalInfo;
+  if (translatedItem.additionalInfo?.length) {
+    overlaid.additionalInfo = translatedItem.additionalInfo;
   }
   return overlaid;
 }
@@ -329,12 +330,12 @@ function createCachedPlacesService(options = {}) {
     });
   }
 
-  async function findEnglishContentId(korItem) {
+  async function findTranslatedContentId(korItem, lang) {
     if (!korItem.title || korItem.latitude == null || korItem.longitude == null) {
       return null;
     }
 
-    const searchResult = await upstream.searchPlacesByKeywordEng({
+    const searchResult = await upstream.searchPlacesByKeywordTranslated(lang, {
       keyword: korItem.title,
       numOfRows: 10,
     });
@@ -357,25 +358,27 @@ function createCachedPlacesService(options = {}) {
       }
     }
 
-    return bestDistance <= MAX_ENGLISH_MATCH_DISTANCE_METERS ? bestContentId : null;
+    return bestDistance <= MAX_TRANSLATION_MATCH_DISTANCE_METERS ? bestContentId : null;
   }
 
-  async function getEnglishDetail(contentId, korItem) {
+  async function getTranslatedDetail(contentId, korItem, lang) {
+    const cacheOperation = `placeDetail:${lang}`;
     const timestamp = now();
     const cacheRead = await readCache(
       'findPlace',
       contentId,
-      'placeDetailEn',
+      cacheOperation,
       timestamp,
     );
     const cachedPlace = cacheRead.value;
-    // detailCachedAtEn이 있으면 "조회는 해봤다"는 뜻이라, detailEn이 null이어도
-    // (번역이 없다고 확인된 상태) 캐시 히트로 취급해 API를 다시 호출하지 않는다.
-    const cached = cachedPlace?.detailCachedAtEn != null
+    const cachedTranslation = cachedPlace?.translations?.[lang];
+    // cachedAt이 있으면 "조회는 해봤다"는 뜻이라, detail이 null이어도(번역이
+    // 없다고 확인된 상태) 캐시 히트로 취급해 API를 다시 호출하지 않는다.
+    const cached = cachedTranslation?.cachedAt != null
       ? {
-        item: cachedPlace.detailEn,
-        cachedAt: cachedPlace.detailCachedAtEn,
-        expiresAt: cachedPlace.detailExpiresAtEn,
+        item: cachedTranslation.detail,
+        cachedAt: cachedTranslation.cachedAt,
+        expiresAt: cachedTranslation.expiresAt,
       }
       : null;
 
@@ -383,22 +386,23 @@ function createCachedPlacesService(options = {}) {
       return { item: cached.item, cacheStatus: CACHE_STATUS.HIT };
     }
 
-    return runSingleFlight(`detailEn:${contentId}`, async () => {
+    return runSingleFlight(`detail:${lang}:${contentId}`, async () => {
       try {
-        const matchedContentId = await findEnglishContentId(korItem);
+        const matchedContentId = await findTranslatedContentId(korItem, lang);
         const item = matchedContentId
-          ? await upstream.getPlaceDetailEng({ contentId: matchedContentId })
+          ? await upstream.getPlaceDetailTranslated(lang, { contentId: matchedContentId })
           : null;
         const refreshedAt = now();
         await writeCache(
-          'saveDetailEn',
+          'saveDetailTranslation',
           {
             contentId,
+            lang,
             item,
             cachedAt: new Date(refreshedAt),
             expiresAt: new Date(refreshedAt + config.ttlMs),
           },
-          'placeDetailEn',
+          cacheOperation,
           refreshedAt,
         );
         return {
@@ -408,15 +412,15 @@ function createCachedPlacesService(options = {}) {
       } catch (error) {
         const failedAt = now();
         if (isStaleUsable(cached, failedAt) && canUseStale(error)) {
-          logger?.warn?.('TourAPI 장애로 오래된 장소 영문 상세 캐시를 반환합니다.', {
-            cacheOperation: 'placeDetailEn',
+          logger?.warn?.('TourAPI 장애로 오래된 장소 번역 상세 캐시를 반환합니다.', {
+            cacheOperation,
             errorName: error.name,
           });
           return { item: cached.item, cacheStatus: CACHE_STATUS.STALE };
         }
-        // 영문 상세 조회 실패는 전체 요청을 실패시키지 않는다. 국문 정보로 대체한다.
-        logger?.warn?.('영문 장소 상세 조회에 실패해 국문 정보로 대체합니다.', {
-          cacheOperation: 'placeDetailEn',
+        // 번역 상세 조회 실패는 전체 요청을 실패시키지 않는다. 국문 정보로 대체한다.
+        logger?.warn?.('번역 장소 상세 조회에 실패해 국문 정보로 대체합니다.', {
+          cacheOperation,
           errorName: error?.name || 'Error',
         });
         return { item: null, cacheStatus: CACHE_STATUS.BYPASS };
@@ -432,28 +436,28 @@ function createCachedPlacesService(options = {}) {
     }
 
     const korResult = await getKoreanDetail(input, contentId);
-    if (!korResult.item || input.lang !== 'en') {
+    if (!korResult.item || !SUPPORTED_TRANSLATION_LANGS.has(input.lang)) {
       return korResult;
     }
 
-    const engResult = await getEnglishDetail(contentId, korResult.item);
+    const translated = await getTranslatedDetail(contentId, korResult.item, input.lang);
     return {
-      item: applyEnglishOverlay(korResult.item, engResult.item),
+      item: applyTranslationOverlay(korResult.item, translated.item),
       cacheStatus: korResult.cacheStatus,
     };
   }
 
   // 지역 장소 목록처럼 여러 건을 한 번에 보여줄 때 쓰는 가벼운 버전이다.
   // 상세 화면과 같은 검색+좌표 매칭·캐시 로직을 재사용한다.
-  async function attachEnglishOverlay(items) {
+  async function attachTranslationOverlay(items, lang) {
     return Promise.all(
       items.map(async item => {
         const contentId = canonicalScalar(item.contentId);
         if (!contentId) {
           return item;
         }
-        const engResult = await getEnglishDetail(contentId, item);
-        return applyEnglishOverlay(item, engResult.item);
+        const translated = await getTranslatedDetail(contentId, item, lang);
+        return applyTranslationOverlay(item, translated.item);
       }),
     );
   }
@@ -480,7 +484,7 @@ function createCachedPlacesService(options = {}) {
       );
     },
     getPlaceDetail,
-    attachEnglishOverlay,
+    attachTranslationOverlay,
     async searchPlacesByKeyword(input) {
       const normalized = normalizeKeywordPlaceOptions(input);
       return getQuery(
@@ -509,7 +513,8 @@ module.exports = {
   getCachedQuery: input => getDefaultService().getCachedQuery(input),
   getAreaBasedPlaces: input => getDefaultService().getAreaBasedPlaces(input),
   getPlaceDetail: input => getDefaultService().getPlaceDetail(input),
-  attachEnglishOverlay: items => getDefaultService().attachEnglishOverlay(items),
+  attachTranslationOverlay: (items, lang) =>
+    getDefaultService().attachTranslationOverlay(items, lang),
   searchPlacesByKeyword: input =>
     getDefaultService().searchPlacesByKeyword(input),
 };

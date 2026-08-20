@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:culturepath/features/course_builder/data/place_item.dart';
@@ -7,15 +8,44 @@ import 'package:culturepath/features/place_detail/data/place_detail_repository.d
 import 'package:culturepath/features/place_detail/presentation/place_detail_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _EmptyAssetLoader extends AssetLoader {
-  const _EmptyAssetLoader();
+class _UncachedRootBundleAssetLoader extends AssetLoader {
+  const _UncachedRootBundleAssetLoader();
 
   @override
-  Future<Map<String, dynamic>> load(String path, Locale locale) async => {};
+  Future<Map<String, dynamic>> load(String path, Locale locale) async {
+    final localeName = locale.toString().replaceAll('_', '-');
+    final contents = await rootBundle.loadString(
+      '$path/$localeName.json',
+      cache: false,
+    );
+    return (jsonDecode(contents) as Map).cast<String, dynamic>();
+  }
+}
+
+Widget _wrapWithLocale(Widget child) {
+  return EasyLocalization(
+    supportedLocales: const [Locale('ko')],
+    path: 'assets/translations',
+    assetLoader: const _UncachedRootBundleAssetLoader(),
+    fallbackLocale: const Locale('ko'),
+    startLocale: const Locale('ko'),
+    saveLocale: false,
+    child: Builder(
+      builder: (context) => ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          home: child,
+        ),
+      ),
+    ),
+  );
 }
 
 class _FakePlaceDetailRepository extends PlaceDetailRepository {
@@ -64,8 +94,8 @@ void main() {
       (tester) async {
     final detailCompleter = Completer<PlaceDetailItem>();
     await tester.pumpWidget(
-      MaterialApp(
-        home: PlaceDetailScreen(
+      _wrapWithLocale(
+        PlaceDetailScreen(
           contentId: '1',
           repository: _FakePlaceDetailRepository(
             detail: detail(),
@@ -94,8 +124,8 @@ void main() {
   testWidgets('keeps the place detail visible when related places fail',
       (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: PlaceDetailScreen(
+      _wrapWithLocale(
+        PlaceDetailScreen(
           contentId: '1',
           repository: _FakePlaceDetailRepository(
             detail: detail(),
@@ -122,8 +152,8 @@ void main() {
       (tester) async {
     PlaceItem? selected;
     await tester.pumpWidget(
-      MaterialApp(
-        home: PlaceDetailScreen(
+      _wrapWithLocale(
+        PlaceDetailScreen(
           contentId: '1',
           repository: _FakePlaceDetailRepository(detail: detail()),
           onAdd: (place) => selected = place,
@@ -155,8 +185,8 @@ void main() {
       imageUrl: 'https://example.com/list.jpg',
     );
     await tester.pumpWidget(
-      MaterialApp(
-        home: PlaceDetailScreen(
+      _wrapWithLocale(
+        PlaceDetailScreen(
           contentId: '1',
           initialPlace: listPlace,
           repository: _FakePlaceDetailRepository(detail: detail()),
@@ -176,24 +206,10 @@ void main() {
   testWidgets('starts a course builder when the standalone detail has no caller',
       (tester) async {
     await tester.pumpWidget(
-      EasyLocalization(
-        supportedLocales: const [Locale('ko')],
-        path: 'unused',
-        assetLoader: const _EmptyAssetLoader(),
-        startLocale: const Locale('ko'),
-        saveLocale: false,
-        child: Builder(
-          builder: (context) => ProviderScope(
-            child: MaterialApp(
-              localizationsDelegates: context.localizationDelegates,
-              supportedLocales: context.supportedLocales,
-              locale: context.locale,
-              home: PlaceDetailScreen(
-                contentId: '1',
-                repository: _FakePlaceDetailRepository(detail: detail()),
-              ),
-            ),
-          ),
+      _wrapWithLocale(
+        PlaceDetailScreen(
+          contentId: '1',
+          repository: _FakePlaceDetailRepository(detail: detail()),
         ),
       ),
     );

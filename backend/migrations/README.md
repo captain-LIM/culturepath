@@ -11,6 +11,7 @@ mysql --host=<host> --user=<user> --password --database=<database> --execute="so
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260803_add_course_idempotency.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260812_add_course_track_coordinates.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260820_add_places_cache_english_detail.sql"
+mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260820_add_places_cache_japanese_detail.sql"
 ```
 
 The 2026-08-03 migration is repeatable and uses a MySQL advisory lock so two

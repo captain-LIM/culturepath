@@ -1,6 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/place_network_image.dart';
 import '../../course_builder/data/course_model.dart';
@@ -127,7 +127,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.initialPlace?.title ?? '관광지 상세'),
+        title: Text(widget.initialPlace?.title ?? 'place_detail_title_fallback'.tr()),
       ),
       body: FutureBuilder<_DetailLoadResult>(
         future: _detailFuture,
@@ -138,7 +138,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
           final result = snapshot.data;
           if (result == null || result.error != null || result.value == null) {
             return _FailureState(
-              message: '관광지 상세 정보를 불러올 수 없습니다.',
+              message: 'place_detail_load_failed'.tr(),
               onRetry: _retryDetail,
             );
           }
@@ -177,7 +177,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (appLocaleCode == 'en' && detail.hasEnglishInfo == false)
+              if (detail.hasTranslatedInfo == false)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Container(
@@ -187,26 +187,26 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      "No English info is available for this place, so it's shown in Korean.",
+                      'place_detail_no_translation_notice'.tr(),
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                   ),
                 ),
               if (detail.address.isNotEmpty)
-                _DetailRow(Icons.place_outlined, '주소', detail.address),
+                _DetailRow(Icons.place_outlined, 'place_detail_address'.tr(), detail.address),
               if (detail.openTime.isNotEmpty)
-                _DetailRow(Icons.schedule_outlined, '운영시간', detail.openTime),
+                _DetailRow(Icons.schedule_outlined, 'place_detail_open_time'.tr(), detail.openTime),
               if ((detail.restDate ?? '').isNotEmpty)
-                _DetailRow(Icons.event_busy_outlined, '휴무일', detail.restDate!),
+                _DetailRow(Icons.event_busy_outlined, 'place_detail_rest_date'.tr(), detail.restDate!),
               if (detail.tel.isNotEmpty)
-                _DetailRow(Icons.phone_outlined, '전화', detail.tel),
+                _DetailRow(Icons.phone_outlined, 'place_detail_tel'.tr(), detail.tel),
               if ((detail.parking ?? '').isNotEmpty)
-                _DetailRow(Icons.local_parking_outlined, '주차', detail.parking!),
+                _DetailRow(Icons.local_parking_outlined, 'place_detail_parking'.tr(), detail.parking!),
               if ((detail.homepage ?? '').isNotEmpty)
-                _DetailRow(Icons.language_outlined, '홈페이지', detail.homepage!),
+                _DetailRow(Icons.language_outlined, 'place_detail_homepage'.tr(), detail.homepage!),
               if ((detail.overview ?? '').isNotEmpty) ...[
                 const SizedBox(height: 22),
-                const _SectionTitle('이곳 소개'),
+                _SectionTitle('place_detail_overview_title'.tr()),
                 const SizedBox(height: 10),
                 Text(
                   detail.overview!,
@@ -218,10 +218,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 ),
               ],
               const SizedBox(height: 26),
-              const _SectionTitle('연관 방문 장소'),
+              _SectionTitle('place_detail_related_title'.tr()),
               const SizedBox(height: 4),
               Text(
-                '차량 이동 데이터를 바탕으로 함께 방문한 장소예요.',
+                'place_detail_related_subtitle'.tr(),
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
               const SizedBox(height: 12),
@@ -237,7 +237,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('이 장소를 코스에 담기'),
+                  label: Text('place_detail_add_button'.tr()),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                   ),
@@ -317,9 +317,9 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               Flexible(
                 child: Text(
                   [
-                    '이미지·관광정보: 한국관광공사 TourAPI',
+                    'place_detail_image_credit'.tr(),
                     if ((active.copyrightType ?? '').isNotEmpty)
-                      '저작권 유형 ${active.copyrightType}',
+                      'place_detail_copyright_type'.tr(namedArgs: {'type': active.copyrightType!}),
                   ].join(' · '),
                   textAlign: TextAlign.end,
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 10),
@@ -355,8 +355,8 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
-              '확인된 연관 방문 장소가 없습니다.',
+            child: Text(
+              'place_detail_related_empty'.tr(),
               textAlign: TextAlign.center,
             ),
           );
@@ -423,7 +423,7 @@ class _LoadingState extends StatelessWidget {
         SizedBox(
           height: 220,
           child: PlaceNetworkImage(
-            placeTitle: initialPlace?.title ?? '관광지',
+            placeTitle: initialPlace?.title ?? 'place_detail_generic'.tr(),
             thumbnailUrl: initialPlace?.thumbnailUrl,
             imageUrl: initialPlace?.imageUrl,
           ),
@@ -452,7 +452,7 @@ class _FailureState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onRetry, child: const Text('다시 시도')),
+            OutlinedButton(onPressed: onRetry, child: Text('retry'.tr())),
           ],
         ),
       ),
@@ -476,8 +476,8 @@ class _InlineFailure extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Expanded(child: Text('연관 장소를 불러오지 못했습니다.')),
-          TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+          Expanded(child: Text('place_detail_related_load_failed'.tr())),
+          TextButton(onPressed: onRetry, child: Text('retry'.tr())),
         ],
       ),
     );

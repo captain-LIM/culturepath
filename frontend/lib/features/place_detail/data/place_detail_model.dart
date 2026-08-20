@@ -41,7 +41,7 @@ class PlaceDetailItem {
   final double? latitude;
   final double? longitude;
   final List<PlaceImageItem> images;
-  final bool? hasEnglishInfo;
+  final bool? hasTranslatedInfo;
 
   const PlaceDetailItem({
     required this.contentId,
@@ -60,7 +60,7 @@ class PlaceDetailItem {
     this.thumbnailUrl,
     this.latitude,
     this.longitude,
-    this.hasEnglishInfo,
+    this.hasTranslatedInfo,
   });
 
   factory PlaceDetailItem.fromJson(Map<String, dynamic> json) => PlaceDetailItem(
@@ -79,7 +79,7 @@ class PlaceDetailItem {
         thumbnailUrl: json['thumbnailUrl'] as String?,
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
-        hasEnglishInfo: json['hasEnglishInfo'] as bool?,
+        hasTranslatedInfo: json['hasTranslatedInfo'] as bool?,
         images: ((json['images'] as List<dynamic>?) ?? const [])
             .map((item) => PlaceImageItem.fromJson(
                   item as Map<String, dynamic>,

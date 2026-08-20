@@ -3,17 +3,19 @@
 const pool = require('../config/db');
 const { createPlaceSummary } = require('../models/placeSummary');
 
+// 국문 외 언어별 상세 캐시. 컬럼명은 `detail_json_${lang}` 형태로 통일한다.
+const TRANSLATION_LANGS = Object.freeze(['en', 'ja']);
+
 const PLACE_COLUMNS = `
   content_id,
   summary_json,
   detail_json,
-  detail_json_en,
+  ${TRANSLATION_LANGS.map(lang => `detail_json_${lang}`).join(',\n  ')},
   summary_cached_at,
   summary_expires_at,
   detail_cached_at,
   detail_expires_at,
-  detail_cached_at_en,
-  detail_expires_at_en
+  ${TRANSLATION_LANGS.map(lang => `detail_cached_at_${lang}, detail_expires_at_${lang}`).join(',\n  ')}
 `;
 
 function parseJson(value, fieldName) {
@@ -48,21 +50,30 @@ function mapPlaceRow(row) {
     return null;
   }
 
+  const translations = {};
+  for (const lang of TRANSLATION_LANGS) {
+    const cachedAtRaw = row[`detail_cached_at_${lang}`];
+    translations[lang] = {
+      detail: parseJson(row[`detail_json_${lang}`], `detail_json_${lang}`),
+      cachedAt: cachedAtRaw == null ? null : toTimestamp(cachedAtRaw),
+      expiresAt:
+        row[`detail_expires_at_${lang}`] == null
+          ? null
+          : toTimestamp(row[`detail_expires_at_${lang}`]),
+    };
+  }
+
   return {
     contentId: String(row.content_id),
     summary: parseJson(row.summary_json, 'summary_json'),
     detail: parseJson(row.detail_json, 'detail_json'),
-    detailEn: parseJson(row.detail_json_en, 'detail_json_en'),
     summaryCachedAt: toTimestamp(row.summary_cached_at),
     summaryExpiresAt: toTimestamp(row.summary_expires_at),
     detailCachedAt:
       row.detail_cached_at == null ? null : toTimestamp(row.detail_cached_at),
     detailExpiresAt:
       row.detail_expires_at == null ? null : toTimestamp(row.detail_expires_at),
-    detailCachedAtEn:
-      row.detail_cached_at_en == null ? null : toTimestamp(row.detail_cached_at_en),
-    detailExpiresAtEn:
-      row.detail_expires_at_en == null ? null : toTimestamp(row.detail_expires_at_en),
+    translations,
   };
 }
 
@@ -289,17 +300,21 @@ function createPlaceCacheRepository(options = {}) {
     );
   }
 
-  async function saveDetailEn({
+  async function saveDetailTranslation({
     contentId,
+    lang,
     item,
     cachedAt,
     expiresAt,
   }) {
-    // item이 null이면 "조회해봤지만 영문 번역이 없다"는 확인 결과를 캐시한다.
+    if (!TRANSLATION_LANGS.includes(lang)) {
+      throw new TypeError(`지원하지 않는 번역 언어입니다: ${lang}`);
+    }
+    // item이 null이면 "조회해봤지만 번역이 없다"는 확인 결과를 캐시한다.
     // 이렇게 해야 하루 1000건 트래픽 제한을 매 요청마다 소모하지 않는다.
     await database.query(
       `UPDATE places_cache
-          SET detail_json_en = ?, detail_cached_at_en = ?, detail_expires_at_en = ?
+          SET detail_json_${lang} = ?, detail_cached_at_${lang} = ?, detail_expires_at_${lang} = ?
         WHERE content_id = ?`,
       [item ? JSON.stringify(item) : null, cachedAt, expiresAt, contentId],
     );
@@ -312,7 +327,7 @@ function createPlaceCacheRepository(options = {}) {
     findQuery,
     listPlacesPage,
     saveDetail,
-    saveDetailEn,
+    saveDetailTranslation,
     saveQuery,
   });
 }
@@ -334,6 +349,6 @@ module.exports = {
   findQuery: cacheKey => getDefaultRepository().findQuery(cacheKey),
   listPlacesPage: options => getDefaultRepository().listPlacesPage(options),
   saveDetail: input => getDefaultRepository().saveDetail(input),
-  saveDetailEn: input => getDefaultRepository().saveDetailEn(input),
+  saveDetailTranslation: input => getDefaultRepository().saveDetailTranslation(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),
 };

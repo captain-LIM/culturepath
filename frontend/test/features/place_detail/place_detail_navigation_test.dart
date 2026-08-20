@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:culturepath/features/course_builder/data/place_item.dart';
 import 'package:culturepath/features/culture_detail/data/region_model.dart';
 import 'package:culturepath/features/home/data/culture_model.dart';
@@ -9,23 +11,32 @@ import 'package:culturepath/features/region_detail/presentation/region_detail_sc
 import 'package:culturepath/features/region_detail/presentation/widgets/spot_card.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _EmptyAssetLoader extends AssetLoader {
-  const _EmptyAssetLoader();
+class _UncachedRootBundleAssetLoader extends AssetLoader {
+  const _UncachedRootBundleAssetLoader();
 
   @override
-  Future<Map<String, dynamic>> load(String path, Locale locale) async => {};
+  Future<Map<String, dynamic>> load(String path, Locale locale) async {
+    final localeName = locale.toString().replaceAll('_', '-');
+    final contents = await rootBundle.loadString(
+      '$path/$localeName.json',
+      cache: false,
+    );
+    return (jsonDecode(contents) as Map).cast<String, dynamic>();
+  }
 }
 
 Widget _localizedRouter(GoRouter router, {List<Override> overrides = const []}) {
   return EasyLocalization(
     supportedLocales: const [Locale('ko')],
-    path: 'unused',
-    assetLoader: const _EmptyAssetLoader(),
+    path: 'assets/translations',
+    assetLoader: const _UncachedRootBundleAssetLoader(),
+    fallbackLocale: const Locale('ko'),
     startLocale: const Locale('ko'),
     saveLocale: false,
     child: Builder(
