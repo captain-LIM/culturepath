@@ -91,6 +91,9 @@ class _FakeCourseRepository extends CourseRepository {
 class _FakeGuestCourseRepository extends CourseRepository {
   int saveCalls = 0;
   int replaceCalls = 0;
+  int? replacedIndex;
+  CourseItem? replacedCourse;
+  CourseItem? replacedExpected;
 
   @override
   Future<bool> isLoggedIn() async => false;
@@ -107,9 +110,10 @@ class _FakeGuestCourseRepository extends CourseRepository {
     CourseItem course, {
     CourseItem? expected,
   }) async {
-    expect(index, 0);
-    expect(expected?.title, '원본 제목');
     replaceCalls += 1;
+    replacedIndex = index;
+    replacedCourse = course;
+    replacedExpected = expected;
   }
 }
 
@@ -334,6 +338,8 @@ void main() {
 
   testWidgets('shows semantic changes and an explicit builder action',
       (tester) async {
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
     final original = course([place('1'), place('2')]);
     final proposal = course([place('1')]);
     await _pumpScreen(
@@ -625,6 +631,8 @@ void main() {
 
     expect(repository.saveCalls, 1);
     expect(repository.replaceCalls, 1);
+    expect(repository.replacedIndex, 0);
+    expect(repository.replacedExpected?.title, '원본 제목');
   });
 
   testWidgets('legacy guest course with server id stays local while logged in',
@@ -632,7 +640,7 @@ void main() {
     final repository = _LoggedInGuestCourseRepository();
     final initial = CourseItem(
       id: 21,
-      title: '?먮낯 ?쒕ぉ',
+      title: '원본 제목',
       description: '',
       tracks: [
         CourseTrack(trackNumber: 1, places: [place('1')]),
@@ -671,6 +679,9 @@ void main() {
 
     expect(repository.replaceCalls, 1);
     expect(repository.updateCalls, 0);
+    expect(repository.replacedIndex, 0);
+    expect(repository.replacedExpected?.title, '원본 제목');
+    expect(repository.replacedCourse?.id, 21);
   });
 
   for (final width in [360.0, 390.0, 430.0]) {

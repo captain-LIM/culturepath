@@ -266,30 +266,40 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
         ),
         body: SafeArea(
           bottom: false,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+          child: Stack(
             children: [
-              Semantics(
-                key: const ValueKey('ai-live-status'),
-                container: true,
-                liveRegion: true,
-                label: _statusAnnouncement(),
-                child: const SizedBox.shrink(),
+              ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                children: [
+                  _buildIntro(),
+                  const SizedBox(height: 20),
+                  if (_loading) _buildLoading(),
+                  if (!_loading && _failure != null) _buildFailure(_failure!),
+                  if (!_loading && _result != null && _diff != null)
+                    _buildResult(_result!, _diff!),
+                  if (_applyError != null) ...[
+                    const SizedBox(height: 12),
+                    _StatusCard(
+                      icon: Icons.error_outline,
+                      color: Colors.red.shade700,
+                      title: _applyError!,
+                    ),
+                  ],
+                ],
               ),
-              _buildIntro(),
-              const SizedBox(height: 20),
-              if (_loading) _buildLoading(),
-              if (!_loading && _failure != null) _buildFailure(_failure!),
-              if (!_loading && _result != null && _diff != null)
-                _buildResult(_result!, _diff!),
-              if (_applyError != null) ...[
-                const SizedBox(height: 12),
-                _StatusCard(
-                  icon: Icons.error_outline,
-                  color: Colors.red.shade700,
-                  title: _applyError!,
+              Positioned(
+                left: 0,
+                top: 0,
+                child: IgnorePointer(
+                  child: Semantics(
+                    key: const ValueKey('ai-live-status'),
+                    container: true,
+                    liveRegion: true,
+                    label: _statusAnnouncement(),
+                    child: const SizedBox(width: 1, height: 1),
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
