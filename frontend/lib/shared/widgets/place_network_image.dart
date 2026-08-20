@@ -20,6 +20,7 @@ class PlaceNetworkImage extends StatelessWidget {
   final String placeTitle;
   final BoxFit fit;
   final BorderRadius? borderRadius;
+  final String? semanticLabel;
 
   const PlaceNetworkImage({
     super.key,
@@ -28,6 +29,7 @@ class PlaceNetworkImage extends StatelessWidget {
     this.imageUrl,
     this.fit = BoxFit.cover,
     this.borderRadius,
+    this.semanticLabel,
   });
 
   @override
@@ -35,9 +37,9 @@ class PlaceNetworkImage extends StatelessWidget {
     final selectedUrl = selectSafePlaceImageUrl(thumbnailUrl, imageUrl);
     return Semantics(
       image: true,
-      label: selectedUrl == null
+      label: semanticLabel ?? (selectedUrl == null
           ? '$placeTitle 사진 없음'
-          : '$placeTitle 관광지 사진',
+          : '$placeTitle 관광지 사진'),
       child: ExcludeSemantics(
         child: ClipRRect(
           borderRadius: borderRadius ?? BorderRadius.zero,

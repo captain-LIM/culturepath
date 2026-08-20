@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_builder/data/course_model.dart';
 import '../../../course_builder/data/course_repository.dart';
@@ -6,8 +7,16 @@ import '../../../course_builder/data/course_repository.dart';
 class FeedCourseCard extends StatefulWidget {
   final CourseItem course;
   final VoidCallback onTap;
+  final String? eyebrow;
+  final bool showLike;
 
-  const FeedCourseCard({super.key, required this.course, required this.onTap});
+  const FeedCourseCard({
+    super.key,
+    required this.course,
+    required this.onTap,
+    this.eyebrow,
+    this.showLike = true,
+  });
 
   @override
   State<FeedCourseCard> createState() => _FeedCourseCardState();
@@ -26,27 +35,24 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
   }
 
   Future<void> _toggleLike() async {
-    final loggedIn = await CourseRepository().isLoggedIn();
+    if (widget.course.id == null) return;
+    final repository = CourseRepository();
+    final loggedIn = await repository.isLoggedIn();
     if (!mounted) return;
     if (!loggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('로그인 후 좋아요를 누를 수 있습니다.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('로그인 후 좋아요를 누를 수 있습니다.')),
       );
       return;
     }
 
-    // 낙관적 업데이트
     setState(() {
       _liked = !_liked;
       _likeCount += _liked ? 1 : -1;
       _liking = true;
     });
-
     try {
-      final result = await CourseRepository().toggleLike(widget.course.id!);
+      final result = await repository.toggleLike(widget.course.id!);
       if (mounted) {
         setState(() {
           _liked = result['liked'] as bool;
@@ -54,7 +60,6 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
         });
       }
     } catch (_) {
-      // 실패 시 롤백
       if (mounted) {
         setState(() {
           _liked = !_liked;
@@ -68,124 +73,88 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
 
   @override
   Widget build(BuildContext context) {
-    final nonEmptyTracks = widget.course.tracks.where((t) => t.places.isNotEmpty).length;
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    final course = widget.course;
+    final days = course.tracks.where((track) => track.places.isNotEmpty).length;
+    return Semantics(
+      button: true,
+      label: course.title,
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(AppRadius.surface),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.line),
+            borderRadius: BorderRadius.circular(AppRadius.surface),
+          ),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 작성자 + 날짜
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: Text(
-                      (widget.course.authorId ?? '?')[0].toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+              Container(width: 3, height: 76, color: AppColors.accent),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.eyebrow != null) ...[
+                      Text(
+                        widget.eyebrow!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
+                      const SizedBox(height: AppSpacing.xxs),
+                    ],
+                    Text(
+                      course.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.course.authorId ?? '알 수 없음',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                    if (course.description.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        course.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.xs),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.xxs,
+                      children: [
+                        _Metadata(icon: Icons.calendar_today_outlined, label: 'Day $days'),
+                        _Metadata(icon: Icons.place_outlined, label: '${course.totalPlaces}곳'),
+                        if (course.authorId != null)
+                          _Metadata(icon: Icons.person_outline, label: course.authorId!),
+                      ],
                     ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // 제목
-              Text(
-                widget.course.title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  ],
                 ),
               ),
-              if (widget.course.description.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  widget.course.description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              const SizedBox(height: 12),
-              // 통계 바
-              Row(
-                children: [
-                  _StatChip(Icons.route_outlined, '트랙 $nonEmptyTracks'),
-                  const SizedBox(width: 8),
-                  _StatChip(Icons.place_outlined, '${widget.course.totalPlaces}곳'),
-                  const SizedBox(width: 8),
-                  _StatChip(Icons.call_split, '${widget.course.forkCount}'),
-                  const Spacer(),
-                  // 좋아요 버튼
-                  GestureDetector(
-                    onTap: _liking ? null : _toggleLike,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _liked
-                            ? Colors.red.withValues(alpha: 0.1)
-                            : Colors.grey.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              _liked ? Icons.favorite : Icons.favorite_border,
-                              key: ValueKey(_liked),
-                              size: 16,
-                              color: _liked ? Colors.red : Colors.grey.shade500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$_likeCount',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _liked ? Colors.red : Colors.grey.shade500,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+              if (widget.showLike)
+                Semantics(
+                  button: true,
+                  toggled: _liked,
+                  child: IconButton(
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    onPressed: _liking ? null : _toggleLike,
+                    icon: Icon(
+                      _liked ? Icons.favorite : Icons.favorite_border,
+                      color: _liked ? AppColors.danger : AppColors.muted,
                     ),
+                    tooltip: '$_likeCount',
                   ),
-                ],
-              ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.only(top: AppSpacing.sm),
+                  child: Icon(Icons.arrow_forward, size: 20, color: AppColors.muted),
+                ),
             ],
           ),
         ),
@@ -194,21 +163,19 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
   }
 }
 
-class _StatChip extends StatelessWidget {
+class _Metadata extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _StatChip(this.icon, this.label);
+  const _Metadata({required this.icon, required this.label});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: Colors.grey.shade400),
-        const SizedBox(width: 3),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.muted),
+          const SizedBox(width: AppSpacing.xxs),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      );
 }

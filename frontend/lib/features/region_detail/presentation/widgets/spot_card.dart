@@ -21,20 +21,14 @@ class SpotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isSelected
-            ? Border.all(color: AppColors.primary, width: 2)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.image),
+        border: Border.all(
+          color: isSelected ? AppColors.accent : AppColors.line,
+          width: isSelected ? 2 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +36,7 @@ class SpotCard extends StatelessWidget {
           InkWell(
             key: ValueKey('spot-open-image-${spot.contentId}'),
             onTap: onOpen,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.image)),
             child: SizedBox(
               height: 140,
               child: Stack(
@@ -53,38 +47,7 @@ class SpotCard extends StatelessWidget {
                     thumbnailUrl: spot.thumbnailUrl,
                     imageUrl: spot.imageUrl,
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0x99000000)],
-                        stops: [0.55, 1],
-                      ),
-                    ),
-                  ),
-                  const Positioned(
-                    right: 12,
-                    bottom: 10,
-                    child: Row(
-                      children: [
-                        Icon(Icons.open_in_new, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          '상세 보기',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                      top: Radius.circular(AppRadius.image),
                     ),
                   ),
                 ],
@@ -98,20 +61,12 @@ class SpotCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        spot.category,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    Text(
+                      spot.category,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ],
                 ),
@@ -138,18 +93,14 @@ class SpotCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     key: ValueKey('spot-add-${spot.contentId}'),
                     onPressed: onAdd,
                     icon: Icon(isSelected ? Icons.check : Icons.add, size: 16),
                     label: Text(isSelected ? 'spot_added'.tr() : 'spot_add'.tr()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isSelected ? Colors.grey.shade200 : null,
-                      foregroundColor: isSelected ? Colors.grey.shade700 : null,
-                      minimumSize: const Size.fromHeight(42),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isSelected ? AppColors.success : AppColors.accent,
+                      minimumSize: const Size.fromHeight(48),
                     ),
                   ),
                 ),

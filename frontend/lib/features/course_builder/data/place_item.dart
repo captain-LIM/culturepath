@@ -55,5 +55,7 @@ class PlaceItem {
         if (region != null) 'region': region,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+        if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
       };
 }

@@ -286,6 +286,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               placeTitle: detail.title,
               thumbnailUrl: images[index].thumbnailUrl,
               imageUrl: images[index].imageUrl,
+              semanticLabel: images[index].imageUrl == null &&
+                      images[index].thumbnailUrl == null
+                  ? '${detail.title} 사진 없음'
+                  : '${detail.title} 관광지 사진 ${index + 1}/${images.length}',
             ),
           ),
         ),

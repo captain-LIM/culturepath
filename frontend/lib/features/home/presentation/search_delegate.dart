@@ -6,8 +6,13 @@ import '../../course_builder/data/course_repository.dart';
 import '../../course_view/presentation/course_view_screen.dart';
 import '../../explore/presentation/widgets/feed_course_card.dart';
 
+typedef CourseSearchLoader = Future<List<CourseItem>> Function();
+
 class CourseSearchDelegate extends SearchDelegate<void> {
   List<CourseItem>? _allCourses;
+  final CourseSearchLoader? courseLoader;
+
+  CourseSearchDelegate({this.courseLoader});
 
   @override
   String get searchFieldLabel => tr('search_field_label');
@@ -103,9 +108,9 @@ class CourseSearchDelegate extends SearchDelegate<void> {
           itemBuilder: (_, i) => FeedCourseCard(
             course: results[i],
             onTap: () {
+              final rootNavigator = Navigator.of(context, rootNavigator: true);
               close(context, null);
-              Navigator.push(
-                context,
+              rootNavigator.push(
                 MaterialPageRoute(
                     builder: (_) => CourseViewScreen(course: results[i])),
               );
@@ -117,7 +122,7 @@ class CourseSearchDelegate extends SearchDelegate<void> {
   }
 
   Future<List<CourseItem>> _loadCourses() async {
-    _allCourses ??= await CourseRepository().getPublicCourses();
+    _allCourses ??= await (courseLoader?.call() ?? CourseRepository().getPublicCourses());
     return _allCourses!;
   }
 

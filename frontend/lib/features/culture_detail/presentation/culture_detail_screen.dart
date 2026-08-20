@@ -29,18 +29,21 @@ class CultureDetailScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(context),
+          SliverAppBar(
+            pinned: true,
+            title: Text('culture_${culture.id}_name'.tr()),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+          ),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 'culture_detail_subtitle'.tr(namedArgs: {'name': 'culture_${culture.id}_name'.tr()}),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
           ),
@@ -78,33 +81,4 @@ class CultureDetailScreen extends ConsumerWidget {
     );
   }
 
-  SliverAppBar _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 160,
-      pinned: true,
-      backgroundColor: culture.color,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => context.pop(),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          'culture_${culture.id}_name'.tr(),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [culture.color, culture.color.withValues(alpha: 0.7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Center(
-            child: Text(culture.emoji, style: const TextStyle(fontSize: 64)),
-          ),
-        ),
-      ),
-    );
-  }
 }

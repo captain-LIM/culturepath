@@ -138,4 +138,21 @@ class CourseItem {
       );
 
   int get totalPlaces => tracks.fold(0, (sum, t) => sum + t.places.length);
+
+  CourseItem createLocalFork({
+    required String titleSuffix,
+    required String unknownAuthor,
+  }) =>
+      CourseItem(
+        title: '$title $titleSuffix',
+        description: description,
+        tracks: tracks,
+        isPublic: false,
+        forkedFrom: ForkedFromInfo(
+          courseId: id ?? 0,
+          title: title,
+          authorId: authorId ?? unknownAuthor,
+        ),
+        isOwner: true,
+      );
 }
