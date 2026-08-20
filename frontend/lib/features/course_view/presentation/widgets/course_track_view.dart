@@ -1,7 +1,11 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_builder/data/course_model.dart';
+
+final _numericContentId = RegExp(r'^\d+$');
 
 class CourseTrackView extends StatelessWidget {
   final CourseTrack track;
@@ -59,50 +63,64 @@ class CourseTrackView extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.only(bottom: i < track.places.length - 1 ? 0 : 8),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 16, bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
-                    border: Border(bottom: BorderSide(color: AppColors.line)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        place.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                child: InkWell(
+                  onTap: () {
+                    if (_numericContentId.hasMatch(place.contentId)) {
+                      context.push('/places/${place.contentId}', extra: place);
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('place_detail_unavailable'.tr()),
+                        behavior: SnackBarBehavior.floating,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            localizedCategory(place.category),
-                            style: const TextStyle(fontSize: 11, color: AppColors.accent),
-                          ),
-                          if (place.region != null) ...[
-                            const SizedBox(width: 6),
-                            Text(
-                              place.region!,
-                              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                            ),
-                          ],
-                        ],
-                      ),
-                      if (place.address.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 16, bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(bottom: BorderSide(color: AppColors.line)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          place.address,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          place.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
                         ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              localizedCategory(place.category),
+                              style: const TextStyle(fontSize: 11, color: AppColors.accent),
+                            ),
+                            if (place.region != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                place.region!,
+                                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (place.address.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            place.address,
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),

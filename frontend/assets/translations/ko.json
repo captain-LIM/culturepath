@@ -236,6 +236,7 @@
   "place_detail_copyright_type": "저작권 유형 {type}",
   "place_detail_related_empty": "확인된 연관 방문 장소가 없습니다.",
   "place_detail_related_load_failed": "연관 장소를 불러오지 못했습니다.",
+  "place_detail_unavailable": "이 장소는 상세 정보를 제공하지 않아요.",
   "place_detail_no_translation_notice": "이 장소는 선택한 언어의 정보가 없어 한국어로 표시돼요.",
 
   "score": "점수 {score}",

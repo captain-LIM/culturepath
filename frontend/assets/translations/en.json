@@ -236,6 +236,7 @@
   "place_detail_copyright_type": "Copyright type {type}",
   "place_detail_related_empty": "No related places found.",
   "place_detail_related_load_failed": "Couldn't load related places.",
+  "place_detail_unavailable": "No detailed info is available for this place.",
   "place_detail_no_translation_notice": "No English info is available for this place, so it's shown in Korean.",
 
   "score": "Score {score}",
