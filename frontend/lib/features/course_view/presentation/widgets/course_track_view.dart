@@ -34,8 +34,9 @@ class CourseTrackView extends StatelessWidget {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: i == 0 ? AppColors.primary : AppColors.primary.withValues(alpha: 0.15),
+                      color: i == 0 ? AppColors.accent : AppColors.surface,
                       shape: BoxShape.circle,
+                      border: Border.all(color: i == 0 ? AppColors.accent : AppColors.line),
                     ),
                     child: Center(
                       child: Text(
@@ -43,13 +44,13 @@ class CourseTrackView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: i == 0 ? Colors.white : AppColors.primary,
+                          color: i == 0 ? Colors.white : AppColors.muted,
                         ),
                       ),
                     ),
                   ),
                   if (i < track.places.length - 1)
-                    Container(width: 2, height: 40, color: AppColors.primary.withValues(alpha: 0.15)),
+                    Container(width: 1, height: 56, color: AppColors.line),
                 ],
               ),
             ),
@@ -60,16 +61,9 @@ class CourseTrackView extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.only(right: 16, bottom: 8),
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                  decoration: const BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border(bottom: BorderSide(color: AppColors.line)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,16 +79,9 @@ class CourseTrackView extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              place.category,
-                              style: const TextStyle(fontSize: 10, color: AppColors.accent),
-                            ),
+                          Text(
+                            place.category,
+                            style: const TextStyle(fontSize: 11, color: AppColors.accent),
                           ),
                           if (place.region != null) ...[
                             const SizedBox(width: 6),

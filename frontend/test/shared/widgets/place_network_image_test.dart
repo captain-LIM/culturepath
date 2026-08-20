@@ -45,6 +45,27 @@ void main() {
     expect(find.bySemanticsLabel('경복궁 사진 없음'), findsOneWidget);
   });
 
+  testWidgets('uses the supplied gallery position as its semantic label',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 200,
+            height: 120,
+            child: PlaceNetworkImage(
+              placeTitle: '오죽헌',
+              imageUrl: 'https://example.com/image.jpg',
+              semanticLabel: '오죽헌 관광지 사진 2/3',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('오죽헌 관광지 사진 2/3'), findsOneWidget);
+  });
+
   testWidgets('includes the place title in the network loading placeholder',
       (tester) async {
     await tester.pumpWidget(

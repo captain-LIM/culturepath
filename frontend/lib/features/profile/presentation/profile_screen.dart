@@ -229,8 +229,7 @@ class _LoggedInView extends ConsumerWidget {
             _StatItem(
               'stat_completed'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.completedCount}'}),
               Icons.emoji_events, AppColors.accentGold,
-              onTap: () => Navigator.push(
-                context,
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const CompletionsListScreen()),
               ),
             ),
@@ -238,8 +237,7 @@ class _LoggedInView extends ConsumerWidget {
             _StatItem(
               'stat_created'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.createdCount}'}),
               Icons.edit_note, AppColors.primary,
-              onTap: () => Navigator.push(
-                context,
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const CreatedCoursesListScreen()),
               ),
             ),
@@ -247,8 +245,7 @@ class _LoggedInView extends ConsumerWidget {
             _StatItem(
               'stat_liked'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.likedCount}'}),
               Icons.favorite, Colors.red,
-              onTap: () => Navigator.push(
-                context,
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const LikedCoursesListScreen()),
               ),
             ),

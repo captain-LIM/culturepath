@@ -1,101 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../data/place_item.dart';
+
+enum _PlaceAction { moveUp, moveDown, remove }
 
 class CoursePlaceCard extends StatelessWidget {
   final PlaceItem place;
   final int index;
   final VoidCallback onRemove;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+  final ValueChanged<int> onMoveToDay;
+  final int dayCount;
+  final int activeDay;
 
   const CoursePlaceCard({
     super.key,
     required this.place,
     required this.index,
     required this.onRemove,
+    required this.onMoveToDay,
+    required this.dayCount,
+    required this.activeDay,
+    this.onMoveUp,
+    this.onMoveDown,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '${index + 1}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xxs),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(bottom: BorderSide(color: AppColors.line)),
         ),
-        title: Text(
-          place.title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primary,
-          ),
-        ),
-        subtitle: Row(
+        child: Row(
           children: [
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                place.category,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w500,
+            ExcludeSemantics(
+              child: SizedBox(
+                width: 32,
+                child: Text(
+                  '${index + 1}'.padLeft(2, '0'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.accent),
                 ),
               ),
             ),
-            if (place.region != null) ...[
-              const SizedBox(width: 6),
-              Text(
-                place.region!,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(place.title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    [place.category, if (place.region?.isNotEmpty == true) place.region!].join(' · '),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ),
-            ],
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.drag_handle, color: Colors.grey.shade400, size: 20),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: onRemove,
-              child: Icon(Icons.close, color: Colors.grey.shade400, size: 18),
+            ),
+            PopupMenuButton<Object>(
+              tooltip: '${place.title}, ${'course_place_actions'.tr()}',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onSelected: (value) {
+                if (value == _PlaceAction.moveUp) onMoveUp?.call();
+                if (value == _PlaceAction.moveDown) onMoveDown?.call();
+                if (value == _PlaceAction.remove) onRemove();
+                if (value is int) onMoveToDay(value);
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: _PlaceAction.moveUp,
+                  enabled: onMoveUp != null,
+                  child: Text('course_place_move_up'.tr()),
+                ),
+                PopupMenuItem(
+                  value: _PlaceAction.moveDown,
+                  enabled: onMoveDown != null,
+                  child: Text('course_place_move_down'.tr()),
+                ),
+                for (var day = 0; day < dayCount; day++)
+                  if (day != activeDay)
+                    PopupMenuItem(
+                      value: day,
+                      child: Text(
+                        'course_place_move_day'.tr(
+                          namedArgs: {'day': '${day + 1}'},
+                        ),
+                      ),
+                    ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _PlaceAction.remove,
+                  child: Text('course_place_remove'.tr()),
+                ),
+              ],
+              icon: const Icon(Icons.more_horiz, color: AppColors.muted),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
 }

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
+import '../../course_builder/data/my_courses_provider.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
@@ -15,15 +16,24 @@ import 'course_map_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_view.dart';
 
-final _courseDetailProvider = FutureProvider.autoDispose.family<CourseItem, int>(
+final courseDetailProvider = FutureProvider.autoDispose.family<CourseItem, int>(
   (ref, id) => CourseRepository().getCourse(id),
 );
+
+bool shouldRefreshCourseDetail(CourseItem course, int? guestCourseIndex) =>
+    course.id != null && guestCourseIndex == null;
 
 class CourseViewScreen extends ConsumerStatefulWidget {
   final CourseItem course;
   final bool isOwner;
+  final int? guestCourseIndex;
 
-  const CourseViewScreen({super.key, required this.course, this.isOwner = false});
+  const CourseViewScreen({
+    super.key,
+    required this.course,
+    this.isOwner = false,
+    this.guestCourseIndex,
+  });
 
   @override
   ConsumerState<CourseViewScreen> createState() => _CourseViewScreenState();
@@ -54,13 +64,9 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     final loggedIn = await repo.isLoggedIn();
 
     if (!loggedIn) {
-      final forkedLocally = _course.copyWith(
-        title: '${_course.title} ${'fork_suffix'.tr()}',
-        forkedFrom: ForkedFromInfo(
-          courseId: _course.id ?? 0,
-          title: _course.title,
-          authorId: _course.authorId ?? 'unknown_author'.tr(),
-        ),
+      final forkedLocally = _course.createLocalFork(
+        titleSuffix: 'fork_suffix'.tr(),
+        unknownAuthor: 'unknown_author'.tr(),
       );
       if (!mounted) return;
       _navigateToEdit(forkedLocally);
@@ -91,7 +97,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   void _navigateToEdit(CourseItem forked) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: forked)),
+      builder: (_) => CourseBuilderScreen(initialCourse: forked),
     ));
   }
 
@@ -107,7 +113,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           ..writeln()
           ..writeln(course.description);
       }
-      if (course.id != null) {
+      if (course.id != null && widget.guestCourseIndex == null) {
         buffer
           ..writeln()
           ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
@@ -124,7 +130,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (course.description.isNotEmpty) {
         fallback..writeln()..writeln(course.description);
       }
-      if (course.id != null) {
+      if (course.id != null && widget.guestCourseIndex == null) {
         fallback..writeln()..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
       }
       await Clipboard.setData(ClipboardData(text: fallback.toString().trim()));
@@ -141,13 +147,52 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
 
   Future<void> _handleEdit() async {
     final saved = await Navigator.of(context).push<CourseItem>(MaterialPageRoute(
-      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: _course)),
+      builder: (_) => CourseBuilderScreen(
+        initialCourse: _course,
+        guestCourseIndex: widget.guestCourseIndex,
+      ),
     ));
-    if (saved != null && mounted) Navigator.of(context).pop();
+    if (mounted && saved != null) {
+      ref.invalidate(myCoursesProvider);
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('delete_course'.tr()),
+        content: Text('delete_confirm'.tr(namedArgs: {'title': _course.title})),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('cancel'.tr())),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('delete'.tr())),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final repository = CourseRepository();
+      if (widget.guestCourseIndex != null) {
+        await repository.deleteGuestCourseAt(
+          widget.guestCourseIndex!,
+          expected: _course,
+        );
+      } else if (_course.id != null) {
+        await repository.deleteCourse(_course.id!);
+      }
+      ref.invalidate(myCoursesProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('delete_failed'.tr())));
+      }
+    }
   }
 
   Future<void> _handleAiEdit() async {
-    if (_course.id == null) {
+    if (_course.id == null || widget.guestCourseIndex != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('save_before_ai'.tr())),
       );
@@ -179,7 +224,10 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         );
       },
     );
-    if (saved != null && mounted) Navigator.of(context).pop();
+    if (saved != null && mounted) {
+      ref.invalidate(myCoursesProvider);
+      Navigator.of(context).pop();
+    }
   }
 
   String? _primaryCulture() {
@@ -196,7 +244,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   Future<void> _handleComplete() async {
-    if (_course.id == null) return;
+    if (_course.id == null || widget.guestCourseIndex != null) return;
 
     final loggedIn = await CourseRepository().isLoggedIn();
     if (!mounted) return;
@@ -233,8 +281,8 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   @override
   Widget build(BuildContext context) {
     final courseId = _course.id;
-    if (courseId != null) {
-      ref.listen<AsyncValue<CourseItem>>(_courseDetailProvider(courseId), (previous, next) {
+    if (shouldRefreshCourseDetail(_course, widget.guestCourseIndex)) {
+      ref.listen<AsyncValue<CourseItem>>(courseDetailProvider(courseId!), (previous, next) {
         next.whenData((updated) {
           if (mounted) setState(() => _course = updated);
         });
@@ -245,66 +293,49 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           course.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: Theme.of(context).textTheme.titleMedium,
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.map_outlined, color: Colors.white),
-            tooltip: 'course_map'.tr(),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => CourseMapScreen(course: course)),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.white),
-            tooltip: 'share_course'.tr(),
-            onPressed: () => _shareCourse(),
-          ),
           if (widget.isOwner || course.isOwner)
             IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              icon: const Icon(Icons.edit_outlined),
               tooltip: 'edit_course'.tr(),
               onPressed: _handleEdit,
             ),
-          IconButton(
-            icon: const Text('✨', style: TextStyle(fontSize: 18)),
-            tooltip: 'ai_course_edit'.tr(),
-            onPressed: _handleAiEdit,
-          ),
-          TextButton.icon(
-            onPressed: _completed ? null : _handleComplete,
-            icon: Icon(
-              _completed ? Icons.emoji_events : Icons.emoji_events_outlined,
-              color: _completed ? AppColors.accentGold : Colors.white70,
-              size: 18,
-            ),
-            label: Text(
-              _completed ? 'completed_badge'.tr() : 'complete_course'.tr(),
-              style: TextStyle(
-                color: _completed ? AppColors.accentGold : Colors.white70,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'map') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => CourseMapScreen(course: course)),
+                );
+              }
+              if (value == 'share') _shareCourse();
+              if (value == 'ai') _handleAiEdit();
+              if (value == 'delete') _handleDelete();
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'map', child: Text('course_map'.tr())),
+              PopupMenuItem(value: 'share', child: Text('share_course'.tr())),
+              PopupMenuItem(value: 'ai', child: Text('ai_course_edit'.tr())),
+              if (widget.isOwner || course.isOwner)
+                PopupMenuItem(value: 'delete', child: Text('delete_course'.tr())),
+            ],
           ),
         ],
         bottom: TabBar(
           controller: _tabCtrl,
-          indicatorColor: AppColors.accentGold,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white54,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          indicatorColor: AppColors.accent,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.muted,
           labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           tabs: course.tracks
               .map((t) => Tab(text: 'Day ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})'))
@@ -335,6 +366,23 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               padding: const EdgeInsets.only(top: 8),
               child: ForkBadge(forkedFrom: course.forkedFrom!),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: OutlinedButton.icon(
+              onPressed: _completed ||
+                      course.id == null ||
+                      widget.guestCourseIndex != null
+                  ? null
+                  : _handleComplete,
+              icon: Icon(_completed ? Icons.check_circle : Icons.flag_outlined),
+              label: Text(_completed ? 'completed_badge'.tr() : 'complete_course'.tr()),
+            ),
+          ),
           Expanded(
             child: TabBarView(
               controller: _tabCtrl,
@@ -348,7 +396,9 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: widget.isOwner || course.isOwner
+          ? null
+          : FloatingActionButton.extended(
         onPressed: _forking ? null : _handleFork,
         backgroundColor: AppColors.accent,
         icon: _forking

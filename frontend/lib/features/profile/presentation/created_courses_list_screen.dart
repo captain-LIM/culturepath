@@ -90,8 +90,7 @@ class _CourseTileState extends State<_CourseTile> {
   bool _deleting = false;
 
   Future<void> _edit() async {
-    await Navigator.push(
-      context,
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (_) => CourseBuilderScreen(initialCourse: widget.course),
       ),
@@ -155,8 +154,7 @@ class _CourseTileState extends State<_CourseTile> {
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
               child: InkWell(
                 borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                onTap: () => Navigator.push(
-                  context,
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
                   MaterialPageRoute(builder: (_) => CourseViewScreen(course: c, isOwner: true)),
                 ),
                 child: Padding(

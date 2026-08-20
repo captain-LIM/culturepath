@@ -86,8 +86,7 @@ class _CourseTileState extends State<_CourseTile> {
     if (_opening || _unliking) return;
     setState(() => _opening = true);
     if (mounted) {
-      await Navigator.push(
-        context,
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(builder: (_) => CourseViewScreen(course: widget.course)),
       );
     }

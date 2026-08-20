@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -208,12 +207,10 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
       if (!mounted) return;
       final saved = await Navigator.of(context).push<CourseItem>(
         MaterialPageRoute(
-          builder: (_) => ProviderScope(
-            child: CourseBuilderScreen(
-              initialCourse: editable,
-              aiOriginalCourse: originalForBuilder,
-              courseRepository: _courseRepository,
-            ),
+          builder: (_) => CourseBuilderScreen(
+            initialCourse: editable,
+            aiOriginalCourse: originalForBuilder,
+            courseRepository: _courseRepository,
           ),
         ),
       );
@@ -243,6 +240,18 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
     };
   }
 
+  String _statusAnnouncement() {
+    if (_loading) return 'ai_edit_loading'.tr();
+    if (_failure != null) return _failureMessage(_failure!);
+    if (_applyError != null) return _applyError!;
+    if (_diff != null) {
+      return _diff!.isUnchanged
+          ? 'ai_edit_unchanged_title'.tr()
+          : 'ai_edit_changed_title'.tr();
+    }
+    return 'ai_edit_intro_title'.tr();
+  }
+
   @override
   Widget build(BuildContext context) {
     EasyLocalization.of(context);
@@ -251,32 +260,46 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
           title: Text(
             'ai_course_edit'.tr(),
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
           ),
         ),
         body: SafeArea(
           bottom: false,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+          child: Stack(
             children: [
-              _buildIntro(),
-              const SizedBox(height: 20),
-              if (_loading) _buildLoading(),
-              if (!_loading && _failure != null) _buildFailure(_failure!),
-              if (!_loading && _result != null && _diff != null)
-                _buildResult(_result!, _diff!),
-              if (_applyError != null) ...[
-                const SizedBox(height: 12),
-                _StatusCard(
-                  icon: Icons.error_outline,
-                  color: Colors.red.shade700,
-                  title: _applyError!,
+              ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                children: [
+                  _buildIntro(),
+                  const SizedBox(height: 20),
+                  if (_loading) _buildLoading(),
+                  if (!_loading && _failure != null) _buildFailure(_failure!),
+                  if (!_loading && _result != null && _diff != null)
+                    _buildResult(_result!, _diff!),
+                  if (_applyError != null) ...[
+                    const SizedBox(height: 12),
+                    _StatusCard(
+                      icon: Icons.error_outline,
+                      color: Colors.red.shade700,
+                      title: _applyError!,
+                    ),
+                  ],
+                ],
+              ),
+              Positioned(
+                left: 0,
+                top: 0,
+                child: IgnorePointer(
+                  child: Semantics(
+                    key: const ValueKey('ai-live-status'),
+                    container: true,
+                    liveRegion: true,
+                    label: _statusAnnouncement(),
+                    child: const SizedBox(width: 1, height: 1),
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -312,7 +335,7 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
             children: _quickPromptKeys.map((key) {
               final prompt = key.tr();
               return ActionChip(
-                avatar: const Icon(Icons.auto_awesome, size: 16),
+                avatar: const Icon(Icons.edit_note, size: 16),
                 label: Text(prompt),
                 onPressed: _loading || _retryAfterSeconds > 0
                     ? null
@@ -328,7 +351,7 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
 
   Widget _buildLoading() => _StatusCard(
         key: const ValueKey('ai-loading'),
-        icon: Icons.auto_awesome,
+        icon: Icons.edit_note,
         color: AppColors.accent,
         title: 'ai_edit_loading'.tr(),
         body: 'ai_edit_loading_body'.tr(),
