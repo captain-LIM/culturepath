@@ -2,11 +2,11 @@
 
 > **문서 소유자:** 황찬우
 >
-> **상태:** 검수 기준 v2 — Manus 프로토타입 결과 대기
+> **상태:** 최종 검수 완료 — 조건부 승인, R15 인계
 >
-> **기준일:** 2026-08-19
+> **기준일:** 2026-08-20
 >
-> **연결 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md)
+> **연결 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md) · [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)
 
 ## 1. 판정 방법
 
@@ -16,6 +16,8 @@
 - 검수 결과는 추상적인 인상 대신 Figma frame 이름, 캡처, 실패 조건과 수정 결정을 남긴다.
 
 권장 검수 순서는 구조 → 실제 데이터 → 접근성 → 시각 언어 → Flutter 구현 가능성이다. 같은 화면을 최소 두 번 보고, 두 번째 검수에서는 첫 번째 판단을 전제로 삼지 않고 360dp와 오류 상태부터 다시 확인한다.
+
+아래 `[ ]` 목록은 검수 기준 원문을 보존한 것이다. 실제 `PASS / FAIL / NOT_TESTED` 판정은 8·9절과 [R14 최종 결과](./R14_MANUS_PROTOTYPE_RESULT.md)를 기준으로 한다.
 
 ## 2. 차단 항목
 
@@ -129,28 +131,28 @@
 
 | 화면/흐름 | Manus route·Figma frame 또는 링크 | 1차 판정 | 2차 판정 | 남은 문제·결정 | 담당 |
 | --- | --- | --- | --- | --- | --- |
-| Foundations·Components |  |  |  |  | 황찬우 |
-| 홈 |  |  |  |  | 황찬우 |
-| 탐색·내 코스 |  |  |  |  | 황찬우 |
-| 탐색·커뮤니티·인기 |  |  |  |  | 황찬우 |
-| 문화·지역·장소 목록 |  |  |  |  | 황찬우 |
-| 장소 상세·연관 장소 |  |  |  |  | 황찬우 |
-| 코스 만들기·상세 |  |  |  |  | 황찬우 |
-| AI 코스 다듬기 |  |  |  |  | 황찬우 |
-| 다국어 통합 영향 |  | 대기 | 대기 | 임수민 구현 후 확인 | 임수민→황찬우 |
-| 지도 통합 영향 |  | 대기 | 대기 | 임수민 구현 후 공통 디자인만 확인 | 임수민→황찬우 |
+| Foundations·Components | 최종 패키지 `DESIGN_SYSTEM.md`·`/qa` | PASS | PASS | Noto 실제 적용과 Figma 네이티브 구조는 후속 | 황찬우 |
+| 홈 | `/`·`01_home.png` | PASS | PASS | 실제 TourAPI 사진은 R15 | 황찬우 |
+| 탐색·내 코스 | `/explore`·`02_explore.png` | PASS | PASS | 실제 API 데이터로 회귀 확인 | 황찬우 |
+| 탐색·커뮤니티·인기 | `/explore`·`/qa` | PASS | PASS | 최신·인기 실제 응답 순서 확인 | 황찬우 |
+| 문화·지역·장소 목록 | `/culture`→`/region`→`/places` | PASS | PASS | 실제 사진·빈 결과를 R15에서 재검수 | 황찬우 |
+| 장소 상세·연관 장소 | `/place`·`06_place_detail.png` | PASS | PASS | 실제 asset cache·decode 성능은 R15 | 황찬우 |
+| 코스 만들기·상세 | `/create`·`/course` | PASS | PASS | Android safe area·IME는 R15 실기기 | 황찬우 |
+| AI 코스 다듬기 | `/ai`·`09_ai_refinement.png` | PASS | PASS | OpenRouter live는 R17 | 황찬우 |
+| 다국어 통합 영향 | 해당 없음 | NOT_TESTED | NOT_TESTED | 임수민 구현 후 긴 문구 디자인만 확인 | 임수민→황찬우 |
+| 지도 통합 영향 | 코스 정적 지도 영역만 확인 | NOT_TESTED | NOT_TESTED | 임수민 구현 후 공통 디자인만 확인 | 임수민→황찬우 |
 
 ## 9. 최종 승인 기록
 
-- Manus 프로젝트 링크:
-- Figma 파일/프로젝트 링크:
-- 검수 기준 버전:
-- 1차 검수일·검수자:
-- 2차 검수일·검수자:
-- 차단 항목: `0개 / 미해결 __개`
-- 필수 항목: `통과 __개 / 미해결 __개`
-- R15로 넘길 알려진 제한:
-- 황찬우 최종 결정: `승인 / 조건부 승인 / 반려`
-- 결정일:
+- Manus 프로젝트 링크: `https://3000-izgdit5vs4vbm8ktrq6up-5ce1daa4.sg1.manus.computer/` — 임시 미리보기이며 최종 ZIP을 우선한다.
+- Figma 파일/프로젝트 링크: 없음. 최종 패키지의 `FIGMA_HANDOFF.md`로 대체하고 네이티브 원본은 필요할 때 후속 생성한다.
+- 검수 기준 버전: v2 + 접근성·handoff·route 스크롤 보정
+- 1차 검수일·검수자: 2026-08-19 · Manus 실행 결과 기반 검수
+- 2차 검수일·검수자: 2026-08-19 · 황찬우 승인 범위 반영 및 Codex 최종 패키지 검증
+- 차단 항목: `PASS 4개 / FAIL 0개 / NOT_TESTED 2개`
+- 필수 항목: `PASS 30개 / FAIL 0개 / NOT_TESTED 4개`
+- R15로 넘길 알려진 제한: 실제 TourAPI 사진·성능, Android safe area·IME, Flutter 재현, Noto 실제 적용
+- 황찬우 최종 결정: `조건부 승인 — R15 착수 가능`
+- 결정일: 2026-08-20
 
-R14 완료는 문서 작성이나 Manus의 자체 PASS만으로 판정하지 않는다. Manus 프로토타입과 최종 Figma 원본이 생성되고, 차단 항목이 0개이며, 미해결 필수 항목의 처리 계획이 기록되고, 황찬우가 최종 승인해야 한다.
+R14는 실행 환경에서 확인된 `FAIL` 0개와 위 후속 처리 계획을 근거로 조건부 완료한다. R15는 [최종 결과와 인계 문서](./R14_MANUS_PROTOTYPE_RESULT.md)의 불변 조건을 지키고 `NOT_TESTED` 항목을 실제 Flutter·Android 환경에서 다시 검증한다.

@@ -2,11 +2,11 @@
 
 > **문서 소유자:** 황찬우
 >
-> **상태:** Manus 실행 프롬프트 v1 — 프로토타입 생성 및 검수 대기
+> **상태:** Manus 실행 프롬프트 v1 — 실행 완료, 재현용 보존
 >
-> **기준일:** 2026-08-19
+> **기준일:** 2026-08-20
 >
-> **기준 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md)
+> **기준 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)
 >
 > **후속 작업:** 승인된 Manus 결과만 [Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md)에 반영한다.
 
@@ -89,10 +89,10 @@ Manus가 다음 단계까지 임의로 한꺼번에 진행하려 하면 현재 �
 - ink #2B2D42
 - paper #F7F3E9
 - surface #FFFFFF
-- terracotta #C75B39
+- terracotta #C05534
 - mustard #D9A441
 - charcoal #1E1E1E
-- muted #6F706F
+- muted #6D6E6D
 - line #DDD8CE
 - success #3F6B50
 - danger #A33D32

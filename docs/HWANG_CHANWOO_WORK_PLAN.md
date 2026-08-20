@@ -80,7 +80,7 @@ Manus 프로토타입 ─→ Figma 디자인 시스템·화면·상태 명세 �
 | AI 화면 | 전체 변경안·diff·Fork·적용·취소·원본 복구 구현 | 안전한 코스 변경 UX | R15에서 P0 디자인과 실기기 QA 적용 |
 | DB | 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장 성공 | 배포 DB에서도 재현 가능 | staging/production migration·복구 절차 검증 |
 | 지도 | 코스 Day별 Google Map·좌표 저장·pan 구현 | 지역 지도와 목록 연동·번호 마커·순서선 | **임수민 담당**; 황찬우는 공통 디자인 일관성만 통합 확인 |
-| 디자인 | 기본 UI와 AI 화면, 과거 Figma 초안 존재 | 최신 정보구조와 사람이 검수한 P0 원본 | 홈·탐색 재구성 후 Flutter 디자인 적용·QA |
+| 디자인 | R14 Manus P0 프로토타입·handoff 조건부 승인 | 실제 Flutter 제품 화면 | R15에서 홈·탐색·장소·코스·AI 디자인 적용·QA |
 
 ### 2.3 반드시 바로잡을 명칭
 
@@ -94,7 +94,7 @@ Manus 프로토타입 ─→ Figma 디자인 시스템·화면·상태 명세 �
 
 | 순서 | 단계 | 핵심 결과 |
 | --- | --- | --- |
-| 1 | Manus 프로토타입·Figma P0 | 홈·탐색 정보구조와 비-AI형 시각 언어 확정 |
+| 1 | Manus 프로토타입·Figma handoff P0 | **조건부 완료** — 홈·탐색 정보구조와 비-AI형 시각 언어 확정 |
 | 2 | Flutter 디자인 적용·QA | P0 구현과 Android 실기기·release 검증 |
 | 3 | RAG 평가 계약 | Mock fixture와 실제 TourAPI live 기준 분리 |
 | 4 | OpenRouter live | BGE-M3·Qdrant 검색·AI 변형 품질과 비용 검증 |
@@ -725,7 +725,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 | --- | --- | --- | --- |
 | Primary | 딥 네이비 | `#2B2D42` | 주요 제목, 내비게이션, 핵심 버튼 |
 | Background | 웜 크림 | `#F7F3E9` | 기본 배경 |
-| Accent | 테라코타 | `#C75B39` | 선택, 담기, AI 변화 강조 |
+| Accent | 테라코타 | `#C05534` | 선택, 담기, AI 변화 강조; 흰색 텍스트 AA 대비 |
 | Accent 2 | 머스타드 골드 | `#D9A441` | Fork, 완주, 특별 상태 |
 | Text | 차콜 | `#1E1E1E` | 본문 |
 
@@ -975,14 +975,14 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [x] Android 360·390·430dp 명세
 - [x] Manus 단계별 프로토타입·교정·2회 자체검수 프롬프트
 - [x] Figma 최종 정리 프롬프트·수민님 핸드오프 기준
-- [ ] Manus에서 P0 흐름·상태·반응형 프로토타입 생성
-- [ ] 검수표의 차단 항목 0개 확인
-- [ ] 승인 결과를 Figma 변수·컴포넌트·Variant·Prototype으로 정리
-- [ ] 황찬우 최종 시안 승인
+- [x] Manus에서 P0 흐름·상태·반응형 프로토타입 생성
+- [x] 실행 환경에서 확인된 차단 `FAIL` 0개 확인
+- [x] 승인 결과를 최종 패키지의 디자인 시스템·컴포넌트·상태·Prototype·Figma handoff로 정리
+- [x] 황찬우 조건부 시안 승인과 R15 인계 조건 기록
 
 **제외 범위:** 지역 목록/지도 전환, 마커·카드 연동, 번호 마커, Day 표시, 순서선과 경로 계산은 임수민 담당이다.
 
-**현재 상태:** [P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md), [Manus 프로토타입 실행 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md), [Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md), [디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) 작성 완료. 실제 Manus 생성·검수와 Figma 정리·승인은 대기 중이다.
+**현재 상태:** [P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md), [디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md), [최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)를 기준으로 조건부 승인 완료. 실제 TourAPI 사진·Android 실기기·Flutter 재현·Noto 적용은 R15에서 검증하며 Figma 네이티브 원본은 필요할 때만 후속 생성한다.
 
 **완료 결과:** 홈·탐색 요구와 실제 데이터 길이를 반영한 구현 가능한 P0 디자인이 확정된다.
 
@@ -1104,7 +1104,7 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [x] 1. R11 문화별 관광지 관련도·정렬 품질
 - [x] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
 - [→ 임수민] R13 다국어 관광지 데이터 계약과 연결
-- [ ] 3. R14 Manus 프로토타입·Figma 정보구조·P0 디자인 확정
+- [x] 3. R14 Manus 프로토타입·Figma handoff 정보구조·P0 디자인 조건부 확정
 - [ ] 4. R15 Flutter 디자인 적용과 Android 모바일 QA
 - [ ] 5. R16 Mock/live RAG 평가 계약 분리
 - [ ] 6. R17 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증

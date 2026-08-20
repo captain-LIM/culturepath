@@ -2,11 +2,11 @@
 
 > **문서 소유자:** 황찬우
 >
-> **상태:** 최종 핸드오프 프롬프트 v2 — Manus 승인 결과 대기
+> **상태:** 최종 핸드오프 프롬프트 v2 — Figma 네이티브 원본 필요 시 사용하는 후속 자료
 >
-> **기준일:** 2026-08-19
+> **기준일:** 2026-08-20
 >
-> **기준 문서:** [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md)
+> **기준 문서:** [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)
 
 ## 1. 사용 방법
 
@@ -31,7 +31,7 @@ CulturePath는 사용자가 관심 문화와 지역을 고르고, 실제 관광�
 전체 인상은 '한국의 문화 여행 편집지'다. 종이 위에 실제 여행 사진, 짧은 편집자 주석, 명확한 지명과 일정 순서가 놓인 느낌을 사용한다. 자동 생성 랜딩페이지나 카드 대시보드처럼 보이면 안 된다.
 
 Android 390dp 폭을 기본 프레임으로 하고 360dp와 430dp 변형 규칙도 만든다. status bar, gesture navigation, bottom safe area를 포함한다. 기준 수치는 다음과 같다.
-- 색: ink #2B2D42, paper #F7F3E9, surface #FFFFFF, terracotta #C75B39, mustard #D9A441, charcoal #1E1E1E, muted #6F706F, line #DDD8CE, success #3F6B50, danger #A33D32
+- 색: ink #2B2D42, paper #F7F3E9, surface #FFFFFF, terracotta #C05534, mustard #D9A441, charcoal #1E1E1E, muted #6D6E6D, line #DDD8CE, success #3F6B50, danger #A33D32
 - 제목: Noto Serif KR Bold/SemiBold, 본문·버튼·숫자: Noto Sans KR
 - 크기: display 28/38, screen title 22/30, section title 18/26, card title 15/22, body 14/22, label 12/18, caption 11/16
 - 간격: 4, 8, 12, 16, 20, 24, 32, 40
