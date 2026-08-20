@@ -118,7 +118,7 @@ class _MyCourseContinuation extends StatelessWidget {
           loading: () => const _CourseStatePanel(
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (_, __) => _CourseStatePanel(
+          error: (_, _) => _CourseStatePanel(
             child: Column(
               children: [
                 Text('my_courses_load_error'.tr(), textAlign: TextAlign.center),

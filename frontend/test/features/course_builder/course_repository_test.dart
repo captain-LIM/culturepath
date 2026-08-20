@@ -187,7 +187,7 @@ void main() {
   test('a cache write failure does not discard a successful server response', () async {
     final repository = CourseRepository(
       client: _CourseApiClient(),
-      cacheWriter: (_, __) async => throw StateError('disk unavailable'),
+      cacheWriter: (_, _) async => throw StateError('disk unavailable'),
     );
 
     final snapshot = await repository.getMyCoursesSnapshot();

@@ -112,7 +112,7 @@ class _MyCoursesTab extends ConsumerWidget {
     final state = ref.watch(myCoursesProvider);
     return state.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => _ErrorState(
+      error: (_, _) => _ErrorState(
         message: 'my_courses_load_error'.tr(),
         onRetry: () => ref.invalidate(myCoursesProvider),
       ),
@@ -251,7 +251,7 @@ class _PublicCourseList extends StatelessWidget {
   @override
   Widget build(BuildContext context) => value.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ErrorState(message: 'feed_error'.tr(), onRetry: onRetry),
+        error: (_, _) => _ErrorState(message: 'feed_error'.tr(), onRetry: onRetry),
         data: (snapshot) {
           if (snapshot.courses.isEmpty) {
             return Column(

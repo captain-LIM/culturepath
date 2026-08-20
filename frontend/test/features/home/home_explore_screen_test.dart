@@ -90,6 +90,7 @@ class _SearchShellHost extends StatelessWidget {
           height: 72,
         ),
       );
+}
 
 Future<void> _pump(
   WidgetTester tester,
