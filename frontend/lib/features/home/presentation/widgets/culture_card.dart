@@ -19,41 +19,39 @@ class CultureCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.surface),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border: Border.all(color: AppColors.line),
-            borderRadius: BorderRadius.circular(AppRadius.surface),
-          ),
-          child: Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.surface),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
+              Image.asset(
+                'assets/images/cultures/culture_${culture.id}.png',
+                fit: BoxFit.cover,
+              ),
               ExcludeSemantics(
-                child: Container(
-                  width: 44,
-                  height: 56,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: culture.color.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(AppRadius.surface),
-                  ),
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Container(
-                      width: 24,
-                      height: 3,
-                      margin: const EdgeInsets.all(AppSpacing.xs),
-                      color: culture.color,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.72)],
+                      stops: const [0.4, 1.0],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
+              Positioned(
+                left: AppSpacing.xs,
+                right: AppSpacing.xs,
+                bottom: AppSpacing.xs,
                 child: Text(
                   name,
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ),
             ],

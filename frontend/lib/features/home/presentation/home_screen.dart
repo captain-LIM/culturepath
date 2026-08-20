@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/my_courses_provider.dart';
@@ -23,13 +24,13 @@ class HomeScreen extends ConsumerWidget {
             key: const PageStorageKey('home-scroll'),
             slivers: [
               SliverToBoxAdapter(child: _HomeHeader()),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
               const SliverToBoxAdapter(child: SeasonBanner()),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
               _sectionTitle('home_section'.tr()),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xs)),
               const CultureGrid(),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
               _sectionTitle('home_my_courses'.tr()),
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
               _MyCourseContinuation(ref: ref),
@@ -62,7 +63,23 @@ class _HomeHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('app_name'.tr(), style: Theme.of(context).textTheme.headlineMedium),
+          Row(
+            children: [
+              Image.asset('assets/images/mascot.png', height: 96),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'app_name'.tr(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.blackHanSans(
+                    fontSize: 42,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           Semantics(
             button: true,

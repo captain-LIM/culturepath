@@ -130,7 +130,7 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
 
-  testWidgets('home shows ten cultures in two columns and at most two courses', (tester) async {
+  testWidgets('home shows ten cultures in three columns and at most two courses', (tester) async {
     final entries = ['첫 코스', '둘째 코스', '숨겨질 코스']
         .map(
           (title) => OwnedCourseEntry(
@@ -153,7 +153,7 @@ void main() {
 
     final grid = tester.widget<GridView>(find.byType(GridView));
     final delegate = grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(delegate.crossAxisCount, 2);
+    expect(delegate.crossAxisCount, 3);
     expect(find.byType(CultureCard), findsNWidgets(10));
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -1200));
     await tester.pumpAndSettle();

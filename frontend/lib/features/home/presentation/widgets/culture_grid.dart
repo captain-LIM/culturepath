@@ -36,12 +36,12 @@ class CultureGrid extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: cultures.length > 10 ? 10 : cultures.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+              crossAxisCount: 3,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
               mainAxisExtent: MediaQuery.textScalerOf(context).scale(1) >= 1.8
-                  ? 144
-                  : 108,
+                  ? 150
+                  : 104,
             ),
             itemBuilder: (context, index) => CultureCard(
               culture: cultures[index],

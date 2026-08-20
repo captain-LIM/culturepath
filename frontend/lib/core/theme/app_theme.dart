@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 /// R14에서 접근성 검수까지 마친 CulturePath 디자인 토큰이다.
 class AppColors {
   static const primary = Color(0xFF2B2D42);
-  static const background = Color(0xFFF7F3E9);
+  static const background = Color(0xFFFFFFFF);
   static const surface = Color(0xFFFFFFFF);
   static const accent = Color(0xFFC05534);
   static const accentGold = Color(0xFFD9A441);
@@ -35,7 +35,7 @@ class AppRadius {
 class AppTheme {
   static ThemeData get light {
     final bodyTheme = GoogleFonts.notoSansKrTextTheme();
-    final serif = GoogleFonts.notoSerifKr;
+    final heading = GoogleFonts.notoSansKr;
 
     return ThemeData(
       useMaterial3: true,
@@ -53,22 +53,22 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       dividerColor: AppColors.line,
       textTheme: bodyTheme.copyWith(
-        displayLarge: serif(
+        displayLarge: heading(
           fontSize: 28,
           height: 1.3,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w900,
           color: AppColors.textDark,
         ),
-        headlineMedium: serif(
+        headlineMedium: heading(
           fontSize: 22,
           height: 1.35,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           color: AppColors.textDark,
         ),
-        titleLarge: serif(
+        titleLarge: heading(
           fontSize: 20,
           height: 1.4,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w800,
           color: AppColors.textDark,
         ),
         titleMedium: bodyTheme.titleMedium?.copyWith(
@@ -103,9 +103,9 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: serif(
+        titleTextStyle: heading(
           fontSize: 18,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           color: AppColors.primary,
         ),
       ),

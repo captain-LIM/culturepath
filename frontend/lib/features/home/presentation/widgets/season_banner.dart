@@ -33,7 +33,7 @@ class SeasonBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.surface),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border.all(color: AppColors.line),
@@ -42,7 +42,7 @@ class SeasonBanner extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 4, height: 104, color: AppColors.accentGold),
+                Container(width: 4, height: 76, color: AppColors.accentGold),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
