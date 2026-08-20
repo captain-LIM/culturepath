@@ -49,3 +49,5 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - run: flutter build apk --release --no-pub
+        if: ${{ !cancelled() }}

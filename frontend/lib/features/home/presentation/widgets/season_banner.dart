@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_view/presentation/course_view_screen.dart';
 import '../../data/recommended_course_data.dart';
@@ -7,78 +8,72 @@ import '../../data/recommended_course_data.dart';
 class SeasonBanner extends StatelessWidget {
   const SeasonBanner({super.key});
 
-  String _seasonKey() {
-    final month = DateTime.now().month;
+  String _seasonKey(int month) {
     if (month >= 3 && month <= 5) return 'season_spring';
     if (month >= 6 && month <= 8) return 'season_summer';
     if (month >= 9 && month <= 11) return 'season_autumn';
     return 'season_winter';
   }
 
-  String get _seasonEmoji {
-    final month = DateTime.now().month;
-    if (month >= 3 && month <= 5) return '🌸';
-    if (month >= 6 && month <= 8) return '🌊';
-    if (month >= 9 && month <= 11) return '🍂';
-    return '❄️';
-  }
-
   @override
   Widget build(BuildContext context) {
     EasyLocalization.of(context);
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CourseViewScreen(course: getSeasonalRecommendedCourse()),
-        ),
-      ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF3D4060)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    final season = _seasonKey(DateTime.now().month).tr();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Semantics(
+        button: true,
+        label: '$season ${'banner_recommend'.tr()}',
+        child: InkWell(
+          onTap: () => Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (_) => CourseViewScreen(course: getSeasonalRecommendedCourse()),
+            ),
           ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentGold.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$_seasonEmoji ${_seasonKey().tr()} ${'banner_recommend'.tr()}',
-                      style: const TextStyle(color: AppColors.accentGold, fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'banner_desc'.tr(),
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, height: 1.4),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+          borderRadius: BorderRadius.circular(AppRadius.surface),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.line),
+              borderRadius: BorderRadius.circular(AppRadius.surface),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 4, height: 104, color: AppColors.accentGold),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('banner_cta'.tr(), style: const TextStyle(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_ios, color: AppColors.accentGold, size: 12),
+                      Text(
+                        '$season · ${'banner_recommend'.tr()}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('banner_desc'.tr(), style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Text(
+                            'banner_cta'.tr(),
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.accent),
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          const Icon(Icons.arrow_forward, size: 18, color: AppColors.accent),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Text('📖', style: TextStyle(fontSize: 56)),
-          ],
+          ),
         ),
       ),
     );

@@ -26,7 +26,7 @@ class TrackTimeline extends StatelessWidget {
             children: List.generate(tracks.length, (i) => _buildTrackTab(i)),
           ),
           const SizedBox(height: 12),
-          _buildActiveTrackPreview(),
+          _buildActiveTrackPreview(context),
           const SizedBox(height: 4),
         ],
       ),
@@ -70,7 +70,7 @@ class TrackTimeline extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveTrackPreview() {
+  Widget _buildActiveTrackPreview(BuildContext context) {
     final track = tracks[activeTrack];
 
     if (track.places.isEmpty) {
@@ -90,7 +90,7 @@ class TrackTimeline extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 32,
+      height: MediaQuery.textScalerOf(context).scale(32).clamp(32, 56).toDouble(),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: track.places.length,

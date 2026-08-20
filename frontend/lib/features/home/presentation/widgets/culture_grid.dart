@@ -20,7 +20,7 @@ class CultureGrid extends ConsumerWidget {
 
     return culturesAsync.when(
       loading: () => const SliverToBoxAdapter(
-        child: SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
+        child: SizedBox(height: 240, child: Center(child: CircularProgressIndicator())),
       ),
       error: (e, _) => SliverToBoxAdapter(
         child: SizedBox(
@@ -30,16 +30,18 @@ class CultureGrid extends ConsumerWidget {
       ),
       data: (cultures) => SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: cultures.length > 10 ? 10 : cultures.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.72,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              mainAxisExtent: MediaQuery.textScalerOf(context).scale(1) >= 1.8
+                  ? 144
+                  : 108,
             ),
             itemBuilder: (context, index) => CultureCard(
               culture: cultures[index],

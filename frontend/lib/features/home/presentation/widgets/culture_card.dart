@@ -1,5 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+
+import '../../../../core/theme/app_theme.dart';
 import '../../data/culture_model.dart';
 
 class CultureCard extends StatelessWidget {
@@ -10,39 +12,52 @@ class CultureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: culture.color,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: culture.color.withValues(alpha: 0.3),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(culture.emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(
-              'culture_${culture.id}_name'.tr(),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                height: 1.3,
+    final name = 'culture_${culture.id}_name'.tr();
+    return Semantics(
+      button: true,
+      label: name,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.surface),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.line),
+            borderRadius: BorderRadius.circular(AppRadius.surface),
+          ),
+          child: Row(
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  width: 44,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: culture.color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(AppRadius.surface),
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Container(
+                      width: 24,
+                      height: 3,
+                      margin: const EdgeInsets.all(AppSpacing.xs),
+                      color: culture.color,
+                    ),
+                  ),
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

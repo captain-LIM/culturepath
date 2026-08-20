@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/course_model.dart';
 import '../data/course_repository.dart';
+import '../data/my_courses_provider.dart';
 import '../data/place_item.dart';
 import 'widgets/course_place_card.dart';
 import 'widgets/track_timeline.dart';
@@ -41,6 +42,17 @@ class _CourseBuilderNotifier extends StateNotifier<CourseItem> {
     tracks[trackIdx] = tracks[trackIdx].copyWith(places: places);
     state = state.copyWith(tracks: tracks);
   }
+
+  void movePlace(int fromTrack, int placeIndex, int toTrack) {
+    if (fromTrack == toTrack) return;
+    final tracks = List<CourseTrack>.from(state.tracks);
+    final source = List<PlaceItem>.from(tracks[fromTrack].places);
+    final target = List<PlaceItem>.from(tracks[toTrack].places);
+    target.add(source.removeAt(placeIndex));
+    tracks[fromTrack] = tracks[fromTrack].copyWith(places: source);
+    tracks[toTrack] = tracks[toTrack].copyWith(places: target);
+    state = state.copyWith(tracks: tracks);
+  }
 }
 
 // family key로 CourseItem?을 사용: null=새 코스, 값=포크/편집
@@ -53,12 +65,14 @@ class CourseBuilderScreen extends ConsumerStatefulWidget {
   final CourseItem? initialCourse;
   final CourseItem? aiOriginalCourse;
   final CourseRepository? courseRepository;
+  final int? guestCourseIndex;
 
   const CourseBuilderScreen({
     super.key,
     this.initialCourse,
     this.aiOriginalCourse,
     this.courseRepository,
+    this.guestCourseIndex,
   });
 
   @override
@@ -69,17 +83,24 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
   int _activeTrack = 0;
   bool _saving = false;
   String? _lastGuestSave;
+  int? _savedGuestIndex;
+  CourseItem? _savedGuestSnapshot;
   late final TextEditingController _titleCtrl;
+  late final TextEditingController _descriptionCtrl;
 
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.initialCourse?.title ?? '');
+    _descriptionCtrl = TextEditingController(text: widget.initialCourse?.description ?? '');
+    _savedGuestIndex = widget.guestCourseIndex;
+    _savedGuestSnapshot = widget.guestCourseIndex == null ? null : widget.initialCourse;
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _descriptionCtrl.dispose();
     super.dispose();
   }
 
@@ -131,8 +152,9 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     final notifier = ref.read(courseBuilderProvider(_providerKey).notifier);
     try {
       final loggedIn = await repo.isLoggedIn();
+      final saveLocally = widget.guestCourseIndex != null || !loggedIn;
       late final CourseItem savedCourse;
-      if (loggedIn) {
+      if (!saveLocally) {
         if (course.id != null) {
           savedCourse = await repo.updateCourse(course);
         } else {
@@ -142,28 +164,50 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       } else {
         final fingerprint = jsonEncode(course.toJson());
         if (_lastGuestSave == fingerprint) return;
-        await repo.saveGuestCourse(course);
+        if (_savedGuestIndex != null) {
+          await repo.replaceGuestCourseAt(
+            _savedGuestIndex!,
+            course,
+            expected: _savedGuestSnapshot,
+          );
+        } else {
+          _savedGuestIndex = await repo.saveGuestCourse(course);
+        }
+        _savedGuestSnapshot = course;
         _lastGuestSave = fingerprint;
       }
+      ref.invalidate(myCoursesProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loggedIn ? 'course_saved'.tr() : 'course_saved_guest'.tr()),
+            content: Text(saveLocally ? 'course_saved_guest'.tr() : 'course_saved'.tr()),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        if (loggedIn && Navigator.of(context).canPop()) {
+        if (!saveLocally && Navigator.of(context).canPop()) {
           Navigator.of(context).pop(savedCourse);
+        } else if (widget.guestCourseIndex != null && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(course);
         }
       }
     } catch (error) {
       if (_canSaveOffline(error)) {
         final fingerprint = jsonEncode(course.toJson());
         if (_lastGuestSave != fingerprint) {
-          await repo.saveGuestCourse(course);
+          if (_savedGuestIndex != null) {
+            await repo.replaceGuestCourseAt(
+              _savedGuestIndex!,
+              course,
+              expected: _savedGuestSnapshot,
+            );
+          } else {
+            _savedGuestIndex = await repo.saveGuestCourse(course);
+          }
+          _savedGuestSnapshot = course;
           _lastGuestSave = fingerprint;
+          ref.invalidate(myCoursesProvider);
         }
       }
       if (mounted) {
@@ -188,6 +232,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     if (original == null) return;
     ref.read(courseBuilderProvider(_providerKey).notifier).replace(original);
     _titleCtrl.text = original.title;
+    _descriptionCtrl.text = original.description;
     setState(() => _activeTrack = 0);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('ai_edit_original_restored'.tr())),
@@ -204,47 +249,13 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: widget.initialCourse != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: AppColors.primary),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
-        title: TextField(
-          controller: _titleCtrl,
-          onChanged: notifier.updateTitle,
-          decoration: InputDecoration(
-            hintText: isFork ? 'course_title_hint_fork'.tr() : 'course_title_hint'.tr(),
-            hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
-            border: InputBorder.none,
-          ),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        actions: [
-          _saving
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : TextButton(
-                  key: const ValueKey('course-save-button'),
-                  onPressed: _saveCourse,
-                  child: Text(
-                    'save'.tr(),
-                    style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-        ],
+        title: Text(widget.initialCourse == null ? 'nav_create'.tr() : 'edit_course'.tr()),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +268,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
               color: AppColors.accent.withValues(alpha: 0.08),
               child: ListTile(
                 dense: true,
-                leading: const Icon(Icons.auto_awesome, color: AppColors.accent),
+                leading: const Icon(Icons.edit_note, color: AppColors.accent),
                 title: Text(
                   'ai_edit_draft_notice'.tr(),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -269,6 +280,34 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 ),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _titleCtrl,
+                  onChanged: notifier.updateTitle,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: isFork ? 'course_title_hint_fork'.tr() : 'course_title_hint'.tr(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                TextField(
+                  controller: _descriptionCtrl,
+                  onChanged: notifier.updateDescription,
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: InputDecoration(labelText: 'course_description_hint'.tr()),
+                ),
+              ],
+            ),
+          ),
           TrackTimeline(
             tracks: course.tracks,
             activeTrack: _activeTrack,
@@ -311,6 +350,18 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                         place: place,
                         index: i,
                         onRemove: () => notifier.removePlace(_activeTrack, i),
+                        onMoveUp: i == 0
+                            ? null
+                            : () => notifier.reorder(_activeTrack, i, i - 1),
+                        onMoveDown: i == course.tracks[_activeTrack].places.length - 1
+                            ? null
+                            : () => notifier.reorder(_activeTrack, i, i + 1),
+                        onMoveToDay: (day) {
+                          notifier.movePlace(_activeTrack, i, day);
+                          setState(() => _activeTrack = day);
+                        },
+                        dayCount: course.tracks.length,
+                        activeDay: _activeTrack,
                       );
                     },
                   ),
@@ -322,6 +373,32 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text('add_place'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xs,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            border: Border(top: BorderSide(color: AppColors.line)),
+          ),
+          child: ElevatedButton(
+            key: const ValueKey('course-save-button'),
+            onPressed: _saving ? null : _saveCourse,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Text('save'.tr()),
+          ),
+        ),
       ),
     );
   }

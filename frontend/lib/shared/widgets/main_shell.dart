@@ -12,13 +12,21 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.1),
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.line)),
+        ),
+        child: NavigationBar(
+          height: 72,
+          elevation: 0,
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: AppColors.accent.withValues(alpha: 0.10),
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: navigationShell.goBranch,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home, color: AppColors.primary),
@@ -39,7 +47,8 @@ class MainShell extends StatelessWidget {
             selectedIcon: const Icon(Icons.person, color: AppColors.primary),
             label: 'nav_profile'.tr(),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

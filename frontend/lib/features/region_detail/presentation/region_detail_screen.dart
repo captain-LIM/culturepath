@@ -195,24 +195,12 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
 
   SliverAppBar _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 120,
       pinned: true,
-      backgroundColor: widget.culture.color,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          widget.region.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        background: Container(color: widget.culture.color),
-      ),
+      title: Text(widget.region.name),
     );
   }
 }
@@ -226,12 +214,12 @@ class _BasketBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(16),
-      color: AppColors.primary,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(AppRadius.control),
+      color: AppColors.accent,
       child: InkWell(
         onTap: onBuild,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Row(

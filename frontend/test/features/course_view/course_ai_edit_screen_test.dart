@@ -88,6 +88,48 @@ class _FakeCourseRepository extends CourseRepository {
   }
 }
 
+class _FakeGuestCourseRepository extends CourseRepository {
+  int saveCalls = 0;
+  int replaceCalls = 0;
+  int? replacedIndex;
+  CourseItem? replacedCourse;
+  CourseItem? replacedExpected;
+
+  @override
+  Future<bool> isLoggedIn() async => false;
+
+  @override
+  Future<int> saveGuestCourse(CourseItem course) async {
+    saveCalls += 1;
+    return 0;
+  }
+
+  @override
+  Future<void> replaceGuestCourseAt(
+    int index,
+    CourseItem course, {
+    CourseItem? expected,
+  }) async {
+    replaceCalls += 1;
+    replacedIndex = index;
+    replacedCourse = course;
+    replacedExpected = expected;
+  }
+}
+
+class _LoggedInGuestCourseRepository extends _FakeGuestCourseRepository {
+  int updateCalls = 0;
+
+  @override
+  Future<bool> isLoggedIn() async => true;
+
+  @override
+  Future<CourseItem> updateCourse(CourseItem course) async {
+    updateCalls += 1;
+    return course;
+  }
+}
+
 class _BuilderHost extends StatefulWidget {
   final CourseItem initialCourse;
   final CourseItem originalCourse;
@@ -296,25 +338,34 @@ void main() {
 
   testWidgets('shows semantic changes and an explicit builder action',
       (tester) async {
-    final original = course([place('1'), place('2')]);
-    final proposal = course([place('1')]);
-    await _pumpScreen(
-      tester,
-      original: original,
-      aiRepository: _FakeAiRepository([result(proposal)]),
-    );
+    final semantics = tester.ensureSemantics();
+    try {
+      final original = course([place('1'), place('2')]);
+      final proposal = course([place('1')]);
+      await _pumpScreen(
+        tester,
+        original: original,
+        aiRepository: _FakeAiRepository([result(proposal)]),
+      );
+      final liveStatus = tester.widget<Semantics>(
+        find.byKey(const ValueKey('ai-live-status')),
+      );
+      expect(liveStatus.properties.liveRegion, isTrue);
 
-    await tester.enterText(
-      find.byKey(const ValueKey('ai-request-field')),
-      '마지막 장소 빼줘',
-    );
-    await tester.tap(find.byKey(const ValueKey('ai-send-button')));
-    await tester.pump();
-    await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai-request-field')),
+        '마지막 장소 빼줘',
+      );
+      await tester.tap(find.byKey(const ValueKey('ai-send-button')));
+      await tester.pump();
+      await tester.pump();
 
-    expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
-    expect(find.text('변경안 편집하기'), findsOneWidget);
-    expect(find.textContaining('Day 1에서 삭제'), findsOneWidget);
+      expect(find.byKey(const ValueKey('ai-changed')), findsOneWidget);
+      expect(find.text('변경안 편집하기'), findsOneWidget);
+      expect(find.textContaining('Day 1에서 삭제'), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('keeps warnings visible and hides apply for an unchanged result',
@@ -536,6 +587,104 @@ void main() {
 
     expect(repository.updateCalls, 1);
     expect(find.text('saved-21'), findsOneWidget);
+  });
+
+  testWidgets('new guest course replaces its first save after further edits',
+      (tester) async {
+    final repository = _FakeGuestCourseRepository();
+    final initial = CourseItem(
+      title: '원본 제목',
+      description: '',
+      tracks: [
+        CourseTrack(trackNumber: 1, places: [place('1')]),
+        const CourseTrack(trackNumber: 2, places: []),
+        const CourseTrack(trackNumber: 3, places: []),
+      ],
+    );
+    await tester.pumpWidget(
+      EasyLocalization(
+        supportedLocales: const [Locale('ko')],
+        path: 'assets/translations',
+        assetLoader: const _UncachedRootBundleAssetLoader(),
+        fallbackLocale: const Locale('ko'),
+        startLocale: const Locale('ko'),
+        saveLocale: false,
+        child: Builder(
+          builder: (context) => ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: context.localizationDelegates,
+              supportedLocales: context.supportedLocales,
+              locale: context.locale,
+              home: CourseBuilderScreen(
+                initialCourse: initial,
+                courseRepository: repository,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await waitForWidget(tester, find.byKey(const ValueKey('course-save-button')));
+
+    await tester.tap(find.byKey(const ValueKey('course-save-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '수정 제목');
+    await tester.tap(find.byKey(const ValueKey('course-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.saveCalls, 1);
+    expect(repository.replaceCalls, 1);
+    expect(repository.replacedIndex, 0);
+    expect(repository.replacedExpected?.title, '원본 제목');
+  });
+
+  testWidgets('legacy guest course with server id stays local while logged in',
+      (tester) async {
+    final repository = _LoggedInGuestCourseRepository();
+    final initial = CourseItem(
+      id: 21,
+      title: '원본 제목',
+      description: '',
+      tracks: [
+        CourseTrack(trackNumber: 1, places: [place('1')]),
+        const CourseTrack(trackNumber: 2, places: []),
+        const CourseTrack(trackNumber: 3, places: []),
+      ],
+    );
+    await tester.pumpWidget(
+      EasyLocalization(
+        supportedLocales: const [Locale('ko')],
+        path: 'assets/translations',
+        assetLoader: const _UncachedRootBundleAssetLoader(),
+        fallbackLocale: const Locale('ko'),
+        startLocale: const Locale('ko'),
+        saveLocale: false,
+        child: Builder(
+          builder: (context) => ProviderScope(
+            child: MaterialApp(
+              localizationsDelegates: context.localizationDelegates,
+              supportedLocales: context.supportedLocales,
+              locale: context.locale,
+              home: CourseBuilderScreen(
+                initialCourse: initial,
+                guestCourseIndex: 0,
+                courseRepository: repository,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await waitForWidget(tester, find.byKey(const ValueKey('course-save-button')));
+
+    await tester.tap(find.byKey(const ValueKey('course-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.replaceCalls, 1);
+    expect(repository.updateCalls, 0);
+    expect(repository.replacedIndex, 0);
+    expect(repository.replacedExpected?.title, '원본 제목');
+    expect(repository.replacedCourse?.id, 21);
   });
 
   for (final width in [360.0, 390.0, 430.0]) {

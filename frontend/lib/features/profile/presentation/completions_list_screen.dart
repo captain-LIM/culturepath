@@ -101,7 +101,7 @@ class _CompletionTileState extends State<_CompletionTile> {
     try {
       final course = await CourseRepository().getCourse(widget.record.courseId);
       if (mounted) {
-        Navigator.of(context).push(MaterialPageRoute(
+        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
           builder: (_) => CourseViewScreen(course: course),
         ));
       }
