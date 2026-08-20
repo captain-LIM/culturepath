@@ -7,10 +7,13 @@ const PLACE_COLUMNS = `
   content_id,
   summary_json,
   detail_json,
+  detail_json_en,
   summary_cached_at,
   summary_expires_at,
   detail_cached_at,
-  detail_expires_at
+  detail_expires_at,
+  detail_cached_at_en,
+  detail_expires_at_en
 `;
 
 function parseJson(value, fieldName) {
@@ -49,12 +52,17 @@ function mapPlaceRow(row) {
     contentId: String(row.content_id),
     summary: parseJson(row.summary_json, 'summary_json'),
     detail: parseJson(row.detail_json, 'detail_json'),
+    detailEn: parseJson(row.detail_json_en, 'detail_json_en'),
     summaryCachedAt: toTimestamp(row.summary_cached_at),
     summaryExpiresAt: toTimestamp(row.summary_expires_at),
     detailCachedAt:
-      row.detail_cached_at === null ? null : toTimestamp(row.detail_cached_at),
+      row.detail_cached_at == null ? null : toTimestamp(row.detail_cached_at),
     detailExpiresAt:
-      row.detail_expires_at === null ? null : toTimestamp(row.detail_expires_at),
+      row.detail_expires_at == null ? null : toTimestamp(row.detail_expires_at),
+    detailCachedAtEn:
+      row.detail_cached_at_en == null ? null : toTimestamp(row.detail_cached_at_en),
+    detailExpiresAtEn:
+      row.detail_expires_at_en == null ? null : toTimestamp(row.detail_expires_at_en),
   };
 }
 
@@ -281,6 +289,22 @@ function createPlaceCacheRepository(options = {}) {
     );
   }
 
+  async function saveDetailEn({
+    contentId,
+    item,
+    cachedAt,
+    expiresAt,
+  }) {
+    // item이 null이면 "조회해봤지만 영문 번역이 없다"는 확인 결과를 캐시한다.
+    // 이렇게 해야 하루 1000건 트래픽 제한을 매 요청마다 소모하지 않는다.
+    await database.query(
+      `UPDATE places_cache
+          SET detail_json_en = ?, detail_cached_at_en = ?, detail_expires_at_en = ?
+        WHERE content_id = ?`,
+      [item ? JSON.stringify(item) : null, cachedAt, expiresAt, contentId],
+    );
+  }
+
   return Object.freeze({
     findPlace,
     findExistingPlaces,
@@ -288,6 +312,7 @@ function createPlaceCacheRepository(options = {}) {
     findQuery,
     listPlacesPage,
     saveDetail,
+    saveDetailEn,
     saveQuery,
   });
 }
@@ -309,5 +334,6 @@ module.exports = {
   findQuery: cacheKey => getDefaultRepository().findQuery(cacheKey),
   listPlacesPage: options => getDefaultRepository().listPlacesPage(options),
   saveDetail: input => getDefaultRepository().saveDetail(input),
+  saveDetailEn: input => getDefaultRepository().saveDetailEn(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),
 };

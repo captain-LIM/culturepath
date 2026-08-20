@@ -10,6 +10,7 @@ const {
   selectPlacesForCulture,
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
+const { resolveLang } = require('../utils/resolveLang');
 
 const CULTURE_ID_TO_NAME = Object.freeze({
   1: '독립서점·책방',
@@ -133,7 +134,10 @@ function createRegionsController(options = {}) {
     }
 
     try {
-      const result = await service.getRegionsByCulture(Number(rawCultureId));
+      const result = await service.getRegionsByCulture(
+        Number(rawCultureId),
+        resolveLang(req),
+      );
       if (!result) {
         return res.status(404).json({
           message: '해당 문화 카테고리를 찾을 수 없습니다.',
@@ -156,6 +160,7 @@ function createRegionsController(options = {}) {
     const { code } = req.params;
     const cultureFilter = String(req.query?.culture || '').trim();
     const tourCodes = REGION_TOUR_CODES[code];
+    const lang = resolveLang(req);
 
     if (!tourCodes) {
       return res.status(404).json({ message: '해당 지역 정보를 찾을 수 없습니다.' });
@@ -207,7 +212,10 @@ function createRegionsController(options = {}) {
         res.set({ 'X-Cache-Status': cacheStatus });
       }
 
-      return res.json(items.map(toPublicSpot));
+      const publicItems = lang === 'en'
+        ? await placesService.attachEnglishOverlay(items)
+        : items;
+      return res.json(publicItems.map(toPublicSpot));
     } catch (error) {
       if (cultureFilter) {
         const response = publicPlaceError(error);
@@ -220,7 +228,11 @@ function createRegionsController(options = {}) {
       }
 
       // 문화 필터가 없는 이전 흐름은 가용성을 위해 기존 seed fallback을 유지한다.
-      return res.json((SPOT_MAP[code] || []).map(toPublicSpot));
+      const fallbackItems = SPOT_MAP[code] || [];
+      const publicFallback = lang === 'en'
+        ? await placesService.attachEnglishOverlay(fallbackItems)
+        : fallbackItems;
+      return res.json(publicFallback.map(toPublicSpot));
     }
   }
 

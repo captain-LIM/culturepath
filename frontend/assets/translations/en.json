@@ -56,6 +56,7 @@
   "stat_completed": "Completed",
   "stat_created": "Created",
   "stat_liked": "Liked",
+  "stat_count": "{n}",
   "logout": "Log Out",
   "share_course": "Share Course",
   "course_map": "View on Map",
@@ -219,6 +220,8 @@
 
   "score": "Score {score}",
   "by_author": "by {author}",
+  "region_spot_count": "{n} places",
+  "region_culture_fit": "Culture fit {score}",
 
   "language_ko": "한국어",
   "language_en": "English",

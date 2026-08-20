@@ -227,7 +227,7 @@ class _LoggedInView extends ConsumerWidget {
         child: Row(
           children: [
             _StatItem(
-              'stat_completed'.tr(), '${stats.completedCount}개',
+              'stat_completed'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.completedCount}'}),
               Icons.emoji_events, AppColors.accentGold,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const CompletionsListScreen()),
@@ -235,7 +235,7 @@ class _LoggedInView extends ConsumerWidget {
             ),
             _Divider(),
             _StatItem(
-              'stat_created'.tr(), '${stats.createdCount}개',
+              'stat_created'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.createdCount}'}),
               Icons.edit_note, AppColors.primary,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const CreatedCoursesListScreen()),
@@ -243,7 +243,7 @@ class _LoggedInView extends ConsumerWidget {
             ),
             _Divider(),
             _StatItem(
-              'stat_liked'.tr(), '${stats.likedCount}개',
+              'stat_liked'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.likedCount}'}),
               Icons.favorite, Colors.red,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const LikedCoursesListScreen()),
@@ -266,9 +266,9 @@ class _LoggedInView extends ConsumerWidget {
   }
 
   static const _allBadges = [
-    ('독립서점·책방', '📚'), ('문학', '✍️'), ('음악', '🎵'), ('전통주·양조장', '🍶'),
-    ('로컬 미식', '🍽️'), ('공예·공방', '🎨'), ('근대 문화유산', '🏛️'),
-    ('미술·갤러리', '🖼️'), ('영화·애니메이션', '🎬'), ('커피·카페', '☕'),
+    (1, '독립서점·책방', '📚'), (2, '문학', '✍️'), (3, '음악', '🎵'), (4, '전통주·양조장', '🍶'),
+    (5, '로컬 미식', '🍽️'), (6, '공예·공방', '🎨'), (7, '근대 문화유산', '🏛️'),
+    (8, '미술·갤러리', '🖼️'), (9, '영화·애니메이션', '🎬'), (10, '커피·카페', '☕'),
   ];
 
   SliverToBoxAdapter _buildBadgeGrid(Map<String, int> badges) {
@@ -279,8 +279,8 @@ class _LoggedInView extends ConsumerWidget {
           spacing: 8,
           runSpacing: 8,
           children: _allBadges.map((b) {
-            final count = badges[b.$1] ?? 0;
-            return _BadgeChip(name: b.$1, emoji: b.$2, count: count);
+            final count = badges[b.$2] ?? 0;
+            return _BadgeChip(name: 'culture_${b.$1}_name'.tr(), emoji: b.$3, count: count);
           }).toList(),
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -17,8 +18,8 @@ class RegionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-      button: true,
-      label: region.name,
+        button: true,
+        label: region.name,
         child: InkWell(
           onTap: onTap,
           child: Container(
@@ -34,21 +35,32 @@ class RegionCard extends StatelessWidget {
                   width: 40,
                   child: Text(
                     '$rank'.padLeft(2, '0'),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.accent),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: AppColors.accent),
                   ),
                 ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(region.name, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        region.name,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       if (region.description.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xxs),
-                        Text(region.description, style: Theme.of(context).textTheme.bodyMedium),
+                        Text(
+                          region.description,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ],
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        '장소 ${region.spotCount}개',
+                        'region_spot_count'.tr(
+                          namedArgs: {'n': '${region.spotCount}'},
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -56,7 +68,11 @@ class RegionCard extends StatelessWidget {
                 ),
                 const Padding(
                   padding: EdgeInsets.only(top: AppSpacing.xs),
-                  child: Icon(Icons.arrow_forward, size: 20, color: AppColors.muted),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    size: 20,
+                    color: AppColors.muted,
+                  ),
                 ),
               ],
             ),

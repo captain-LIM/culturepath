@@ -259,7 +259,8 @@ function normalizeKeywordPlaceOptions({
 
 function createTourApiService(options = {}) {
   const client =
-    options.client || createConfiguredPublicDataClient('tour', options);
+    options.client ||
+    createConfiguredPublicDataClient(options.serviceName || 'tour', options);
   const normalizePlace = options.normalizePlace || normalizeTourPlace;
   const normalizePlaceDetail =
     options.normalizePlaceDetail || normalizeTourPlaceDetail;
@@ -536,6 +537,23 @@ function getDefaultService() {
   return defaultService;
 }
 
+let defaultEngService;
+
+function getDefaultEngService() {
+  if (!defaultEngService) {
+    defaultEngService = createTourApiService({ serviceName: 'tourEng' });
+  }
+  return defaultEngService;
+}
+
+function getPlaceDetailEng(options) {
+  return getDefaultEngService().getPlaceDetail(options);
+}
+
+function searchPlacesByKeywordEng(options) {
+  return getDefaultEngService().searchPlacesByKeyword(options);
+}
+
 function getAreaCodes(options) {
   return getDefaultService().getAreaCodes(options);
 }
@@ -584,10 +602,12 @@ module.exports = {
   getIntroDetail,
   getLegalDistrictCodes,
   getPlaceDetail,
+  getPlaceDetailEng,
   getAreaBasedPlaces,
   getAreaCodes,
   getClassificationCodes,
   normalizeAreaBasedPlaceOptions,
   normalizeKeywordPlaceOptions,
   searchPlacesByKeyword,
+  searchPlacesByKeywordEng,
 };
