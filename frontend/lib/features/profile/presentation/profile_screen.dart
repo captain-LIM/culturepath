@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,18 +94,52 @@ class _LoggedInView extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off, size: 40, color: Colors.grey.shade400),
-              const SizedBox(height: 12),
-              Text('profile_error'.tr(), style: TextStyle(color: Colors.grey.shade500)),
-              const SizedBox(height: 12),
-              TextButton(onPressed: () => ref.invalidate(_profileProvider), child: Text('retry'.tr())),
-            ],
-          ),
-        ),
+        error: (e, _) {
+          final unauthorized = e is DioException && e.response?.statusCode == 401;
+          if (unauthorized) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_clock_outlined, size: 40, color: Colors.grey.shade400),
+                    const SizedBox(height: 12),
+                    Text(
+                      'session_expired'.tr(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await AuthRepository().clearExpiredSession();
+                          ref.invalidate(authStateProvider);
+                          if (context.mounted) context.go('/login');
+                        },
+                        child: Text('login_button'.tr()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off, size: 40, color: Colors.grey.shade400),
+                const SizedBox(height: 12),
+                Text('profile_error'.tr(), style: TextStyle(color: Colors.grey.shade500)),
+                const SizedBox(height: 12),
+                TextButton(onPressed: () => ref.invalidate(_profileProvider), child: Text('retry'.tr())),
+              ],
+            ),
+          );
+        },
         data: (profile) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(_profileProvider);
