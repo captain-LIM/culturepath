@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/home/data/culture_model.dart';
 import '../../../features/region_detail/presentation/region_detail_screen.dart';
@@ -10,9 +11,9 @@ import '../data/regions_repository.dart';
 import 'widgets/region_card.dart';
 
 final regionsProvider =
-    FutureProvider.family<List<RegionItem>, int>((ref, cultureId) {
+    FutureProvider.family<List<RegionItem>, (int, String)>((ref, args) {
   ref.keepAlive();
-  return RegionsRepository().getRegionsByCulture(cultureId);
+  return RegionsRepository().getRegionsByCulture(args.$1);
 });
 
 class CultureDetailScreen extends ConsumerWidget {
@@ -23,7 +24,7 @@ class CultureDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     EasyLocalization.of(context);
-    final regionsAsync = ref.watch(regionsProvider(culture.id));
+    final regionsAsync = ref.watch(regionsProvider((culture.id, appLocaleCode)));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -55,7 +56,11 @@ class CultureDetailScreen extends ConsumerWidget {
             data: (regions) {
               // 지역 목록이 뜨는 즉시 각 지역의 장소 데이터를 백그라운드에서 미리 로드
               for (final region in regions) {
-                ref.read(spotsProvider((areaCode: region.areaCode, culture: culture.name)));
+                ref.read(spotsProvider((
+                  areaCode: region.areaCode,
+                  culture: culture.name,
+                  lang: appLocaleCode,
+                )));
               }
               return SliverList(
                 delegate: SliverChildBuilderDelegate(

@@ -46,6 +46,7 @@
   "stat_completed": "完成",
   "stat_created": "创建",
   "stat_liked": "点赞",
+  "stat_count": "{n}个",
   "logout": "退出登录",
   "share_course": "分享路线",
   "course_map": "在地图上查看",
@@ -203,6 +204,8 @@
 
   "score": "分数 {score}",
   "by_author": "by {author}",
+  "region_spot_count": "{n}个地点",
+  "region_culture_fit": "文化契合度 {score}分",
 
   "language_ko": "한국어",
   "language_en": "English",

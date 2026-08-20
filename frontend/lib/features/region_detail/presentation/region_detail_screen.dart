@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/course_builder/data/course_model.dart';
 import '../../../features/course_builder/data/place_item.dart';
@@ -12,7 +13,7 @@ import '../data/spot_model.dart';
 import '../data/spots_repository.dart';
 import 'widgets/spot_card.dart';
 
-final spotsProvider = FutureProvider.family<List<SpotItem>, ({String areaCode, String? culture})>(
+final spotsProvider = FutureProvider.family<List<SpotItem>, ({String areaCode, String? culture, String lang})>(
   (ref, args) {
     ref.keepAlive();
     return SpotsRepository().getSpotsByRegion(args.areaCode, culture: args.culture);
@@ -95,7 +96,11 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final spotsAsync = ref.watch(
-      spotsProvider((areaCode: widget.region.areaCode, culture: widget.culture.name)),
+      spotsProvider((
+        areaCode: widget.region.areaCode,
+        culture: widget.culture.name,
+        lang: appLocaleCode,
+      )),
     );
     final hasBasket = _basket.isNotEmpty;
 
@@ -114,7 +119,7 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${widget.region.name} × ${widget.culture.name}',
+                        '${widget.region.name} × ${'culture_${widget.culture.id}_name'.tr()}',
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,

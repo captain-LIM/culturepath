@@ -94,7 +94,15 @@ function combineCacheStatuses(statuses) {
   )[0] || 'BYPASS';
 }
 
-function curatedResult(entries) {
+function localizedName(entry, lang) {
+  return lang === 'en' && entry.nameEn ? entry.nameEn : entry.name;
+}
+
+function localizedDescription(entry, lang) {
+  return lang === 'en' && entry.descriptionEn ? entry.descriptionEn : entry.description;
+}
+
+function curatedResult(entries, lang) {
   return [...entries]
     .sort((left, right) =>
       right.curationScore - left.curationScore ||
@@ -102,8 +110,8 @@ function curatedResult(entries) {
     )
     .map(entry => ({
       areaCode: entry.areaCode,
-      name: entry.name,
-      description: entry.description,
+      name: localizedName(entry, lang),
+      description: localizedDescription(entry, lang),
       spotCount: entry.spotCount,
       score: entry.curationScore,
     }));
@@ -130,7 +138,7 @@ function createRegionScoreService(options = {}) {
     ]);
   }
 
-  async function getRegionsByCulture(cultureId) {
+  async function getRegionsByCulture(cultureId, lang = 'ko') {
     const entries = getRegionsForCulture(cultureId);
     if (!entries) {
       return null;
@@ -177,7 +185,7 @@ function createRegionScoreService(options = {}) {
         );
         if (visitorTrendScore === null) {
           return {
-            items: curatedResult(entries),
+            items: curatedResult(entries, lang),
             dataStatus: 'CURATED',
           };
         }
@@ -189,8 +197,8 @@ function createRegionScoreService(options = {}) {
         );
         scored.push({
           areaCode: entry.areaCode,
-          name: entry.name,
-          description: entry.description,
+          name: localizedName(entry, lang),
+          description: localizedDescription(entry, lang),
           spotCount: entry.spotCount,
           score: clamp(score, 0, 100),
         });
@@ -209,7 +217,7 @@ function createRegionScoreService(options = {}) {
         errorName: error?.name || 'Error',
       });
       return {
-        items: curatedResult(entries),
+        items: curatedResult(entries, lang),
         dataStatus: 'CURATED',
       };
     }
@@ -232,8 +240,8 @@ module.exports = {
   calculateTrendScore,
   combineCacheStatuses,
   createRegionScoreService,
-  getRegionsByCulture: cultureId =>
-    getDefaultService().getRegionsByCulture(cultureId),
+  getRegionsByCulture: (cultureId, lang) =>
+    getDefaultService().getRegionsByCulture(cultureId, lang),
   normalizeDensity,
   sumNonResidentVisitors,
 };

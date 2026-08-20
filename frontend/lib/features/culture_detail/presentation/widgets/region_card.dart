@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/region_model.dart';
@@ -74,9 +75,15 @@ class RegionCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _Chip('장소 ${region.spotCount}개', Icons.place_outlined),
+                      _Chip(
+                        'region_spot_count'.tr(namedArgs: {'n': '${region.spotCount}'}),
+                        Icons.place_outlined,
+                      ),
                       const SizedBox(width: 8),
-                      _Chip('문화 적합도 ${region.score}점', Icons.star_outline),
+                      _Chip(
+                        'region_culture_fit'.tr(namedArgs: {'score': '${region.score}'}),
+                        Icons.star_outline,
+                      ),
                     ],
                   ),
                 ],

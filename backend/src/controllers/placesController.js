@@ -12,6 +12,7 @@ const {
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
+const { resolveLang } = require('../utils/resolveLang');
 
 function toPublicPlace(place) {
   const result = {
@@ -161,7 +162,10 @@ function createPlacesController(options = {}) {
 
   async function getPlaceDetail(req, res) {
     try {
-      const result = await service.getPlaceDetail({ contentId: req.params?.id });
+      const result = await service.getPlaceDetail({
+        contentId: req.params?.id,
+        lang: resolveLang(req),
+      });
       const wrapped =
         result &&
         Object.prototype.hasOwnProperty.call(result, 'item') &&

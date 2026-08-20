@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// 현재 앱 언어 코드. main.dart에서 locale이 바뀔 때마다 갱신되며,
+/// ApiClient가 BuildContext 없이도 요청에 Accept-Language를 실어 보낼 수 있게 한다.
+String appLocaleCode = 'ko';
+
 class ApiClient {
   static const defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -35,6 +39,7 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        options.headers['Accept-Language'] = appLocaleCode;
         handler.next(options);
       },
       onError: (error, handler) {

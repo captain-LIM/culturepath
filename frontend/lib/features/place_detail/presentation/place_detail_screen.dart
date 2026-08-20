@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/place_network_image.dart';
 import '../../course_builder/data/course_model.dart';
@@ -176,6 +177,21 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (appLocaleCode == 'en' && detail.hasEnglishInfo == false)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "No English info is available for this place, so it's shown in Korean.",
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ),
               if (detail.address.isNotEmpty)
                 _DetailRow(Icons.place_outlined, '주소', detail.address),
               if (detail.openTime.isNotEmpty)

@@ -231,7 +231,7 @@ function createConfiguredPublicDataClient(serviceKey, options = {}) {
   return createPublicDataClient({
     serviceName: service.name,
     baseUrl: service.baseUrl,
-    apiKey: config.apiKey,
+    apiKey: service.apiKey || config.apiKey,
     mobileOs: config.mobileOs,
     mobileApp: config.mobileApp,
     timeoutMs: config.timeoutMs,

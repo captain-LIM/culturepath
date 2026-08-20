@@ -46,6 +46,7 @@
   "stat_completed": "完走",
   "stat_created": "作成",
   "stat_liked": "いいね",
+  "stat_count": "{n}件",
   "logout": "ログアウト",
   "share_course": "コースをシェア",
   "course_map": "地図で見る",
@@ -203,6 +204,8 @@
 
   "score": "スコア {score}",
   "by_author": "by {author}",
+  "region_spot_count": "スポット {n}件",
+  "region_culture_fit": "文化適合度 {score}点",
 
   "language_ko": "한국어",
   "language_en": "English",
