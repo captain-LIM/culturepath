@@ -48,6 +48,7 @@ dependencies:
 
   # HTTP 클라이언트
   dio: ^5.8.0+1
+  cached_network_image: ^3.4.1
 
   # 구글 폰트
   google_fonts: ^6.2.1

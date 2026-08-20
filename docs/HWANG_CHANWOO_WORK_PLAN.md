@@ -8,7 +8,7 @@
 >
 > **기준일:** 2026-07-20
 >
-> **최종 갱신:** 2026-08-12
+> **최종 갱신:** 2026-08-18
 >
 > **관련 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](./TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
 
@@ -17,7 +17,8 @@
 ## 0. 이 문서의 사용법
 
 - 이 문서는 아이디어 목록이 아니라 **실제 작업 순서와 완료 조건을 관리하는 체크리스트**다.
-- 완료된 기반 설명은 참고하고, 잔여 작업은 **이미지 → Figma P0 → Flutter 적용 → RAG 평가 계약 → OpenRouter → 배포** 순서로 진행한다.
+- 완료된 기반 설명은 참고하고, 황찬우 잔여 작업은 **Figma P0 → Flutter 디자인 적용 → RAG 평가 계약 → OpenRouter → 배포** 순서로 진행한다.
+- 다국어 관광 데이터와 지도 고도화는 임수민 담당이다. 이 문서에서는 팀원 변경이 디자인·RAG·배포 계약에 미치는 통합 영향만 추적한다.
 - 체크박스는 코드 작성만으로 완료 처리하지 않는다. 각 항목의 **완료 기준(Definition of Done)**을 만족해야 체크한다.
 - 외부 API 키, Qdrant API 키, OpenRouter API 키 등 비밀값은 이 문서와 Git에 절대 기록하지 않는다.
 - 수민님과 합의가 필요한 항목은 혼자 확정하지 않고 `협업 필요` 표시를 기준으로 먼저 인터페이스를 맞춘다.
@@ -25,7 +26,9 @@
 
 ## 1. 내 역할 한 문장 정의
 
-**한국관광공사 API의 실제 데이터를 안정적으로 수집·가공하고, 그 데이터를 Qdrant 기반 RAG와 OpenRouter LLM에 연결하며, 사용자가 이 기능을 편하게 경험하도록 Figma Make 기반 UI/UX를 설계한다.**
+**한국관광공사 API의 실제 데이터를 안정적으로 수집·가공하고, 그 데이터를 Qdrant 기반 RAG와 OpenRouter LLM에 연결하며, 사용자가 이 기능을 편하게 경험하도록 Manus 프로토타입과 Figma 원본 기반 UI/UX를 설계한다.**
+
+다만 2026-08-18 역할 재확인에 따라 **다국어 관광 데이터 구현과 지도 고도화는 임수민 담당**이며 황찬우의 구현 범위에서 제외한다.
 
 내 역할은 세 영역으로 나뉘지만 서로 독립적이지 않다.
 
@@ -42,7 +45,7 @@ Qdrant 의미 검색                      │
         ↓                              │
 OpenRouter 코스 변형 ──────────────→ AI 변형 UX
 
-Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Flutter 구현
+Manus 프로토타입 ─→ Figma 디자인 시스템·화면·상태 명세 ─→ 수민님 Flutter 구현
 ```
 
 ## 2. 두 차례 검토 결과
@@ -56,25 +59,28 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 - `places_cache` 적재·갱신과 외부 API 장애 대응
 - Qdrant 검색, OpenRouter LLM, 프롬프트 및 코스 변형 로직
 - `POST /ai/transform` 요청·응답 설계와 구현
-- Figma Make를 활용한 디자인 시스템 및 핵심 화면 설계
+- Manus를 활용한 반복 프로토타입과 Figma 기반 디자인 시스템·핵심 화면 설계
 - AI 변형 결과의 변경 전·후 비교, 적용, 취소 UX 설계
 - 수민님에게 API 명세와 디자인 명세를 전달하고 통합 결과 검수
 
 ### 2.2 2차 검토 — 현재 코드 기준
 
-현재 저장소는 TourAPI·MySQL 캐시·Qdrant/RAG 코드·AI 변경안 UX까지 구현돼 있다. 남은 핵심은 이미지 수직 연결, 디자인 마감, 실제 데이터 평가 계약과 OpenRouter live 검증이다.
+현재 저장소는 TourAPI·MySQL 캐시·Qdrant/RAG 코드·AI 변경안 UX, 코스 지도, 문화 탐색 품질과 이미지·상세 UI까지 구현돼 있다. 황찬우에게 남은 핵심은 정보구조·시각 디자인, Flutter 디자인 적용, 실제 데이터 평가 계약과 OpenRouter live 검증이다.
 
 | 구분 | 현재 상태 | 목표 상태 | 내가 해야 할 일 |
 | --- | --- | --- | --- |
 | 관광지 데이터 | 목록·상세·연관 장소와 MySQL 캐시 구현·실환경 저장 확인 | TourAPI + MySQL 캐시 | 현재 계약 유지와 이미지/상세 UI 연결 |
+| 문화 관련도 | R11 후보 재분류·오탐 제거·근거 강도 정렬 구현 | 근거 기반 필터·안정 정렬 | 실제 데이터 커버리지 감사 전까지 결정론적 fixture 회귀 유지 |
 | 지역·문화 데이터 | DataLab 점수와 TourAPI 장소 목록 연결 | 실데이터 + 안전한 큐레이션 fallback | 배포 전 표본·장애 시나리오 재검증 |
-| 장소 이미지 | Backend 상세에는 이미지가 있으나 Flutter 목록은 `이미지 준비 중` | 목록 썸네일 + 상세 갤러리 | nullable 필드·fallback·캐시·상세 이동 구현 |
+| 장소 이미지 | 목록 썸네일·상세 갤러리·연관 장소 UI 구현 및 PR #16 머지 | 안전한 이미지 탐색 | 완료 계약 유지와 회귀 확인 |
+| 다국어 관광 데이터 | Flutter 고정 문구만 `ko/en/ja/zh` 번역, TourAPI 데이터는 한국어 | locale별 공식 데이터 + 안전한 한국어 fallback | **임수민 담당**; 황찬우는 긴 문구 디자인과 RAG ID 호환성만 통합 확인 |
 | 벡터 검색 | Qdrant 코드와 환경·연결 검증 완료, OpenRouter 실임베딩 미실행 | 실제 장소 의미 검색 | live 평가 계약 확정 후 최소 호출로 인덱싱·평가 |
 | LLM | OpenRouter 어댑터·Mock 구현, live 연결 연기 | OpenRouter | 이미지·디자인·평가 계약 뒤 모델·비용·제한 검증 |
 | AI API | 구조화 `POST /ai/transform`과 후보 검증 구현 | 실제 코스 변형 | Qdrant 후보와 OpenRouter 실모델 품질 검증 |
-| AI 화면 | 전체 변경안·diff·Fork·적용·취소·원본 복구 구현 | 안전한 코스 변경 UX | R13에서 P0 디자인과 실기기 QA 적용 |
+| AI 화면 | 전체 변경안·diff·Fork·적용·취소·원본 복구 구현 | 안전한 코스 변경 UX | R15에서 P0 디자인과 실기기 QA 적용 |
 | DB | 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장 성공 | 배포 DB에서도 재현 가능 | staging/production migration·복구 절차 검증 |
-| 디자인 | 기본 UI와 AI 화면, 과거 Figma 초안 존재 | 최신 Flutter 기반 P0 원본·상태 명세 | 이미지 연결 후 Figma 확정, Flutter 적용·QA |
+| 지도 | 코스 Day별 Google Map·좌표 저장·pan 구현 | 지역 지도와 목록 연동·번호 마커·순서선 | **임수민 담당**; 황찬우는 공통 디자인 일관성만 통합 확인 |
+| 디자인 | R14 Manus P0 프로토타입·handoff 조건부 승인 | 실제 Flutter 제품 화면 | R15에서 홈·탐색·장소·코스·AI 디자인 적용·QA |
 
 ### 2.3 반드시 바로잡을 명칭
 
@@ -84,16 +90,15 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 
 ## 3. 전체 우선순위
 
-초기 기반 1~8은 구현됐다. 2026-08-12부터의 실제 잔여 순서는 다음과 같다.
+초기 기반과 R11·R12는 구현됐다. 2026-08-18부터의 황찬우 실제 잔여 순서는 다음과 같다.
 
 | 순서 | 단계 | 핵심 결과 |
 | --- | --- | --- |
-| 1 | 관광지 이미지·상세 연결 | 실제 썸네일·갤러리·연관 장소를 Flutter까지 전달 |
-| 2 | Figma Make P0 확정 | 실제 데이터 상태를 반영한 모바일 디자인·상태·토큰 확정 |
-| 3 | Flutter 디자인 적용·QA | P0 구현과 Android 실기기·release 검증 |
-| 4 | RAG 평가 계약 재정의 | Mock fixture와 실제 TourAPI live 기준 분리 |
-| 5 | OpenRouter live 통합 | BGE-M3·Qdrant 검색·AI 변형 품질과 비용 검증 |
-| 6 | 배포·제출 마감 | staging/production, 보안, Google Play, 공모전 데모 완성 |
+| 1 | Manus 프로토타입·Figma handoff P0 | **조건부 완료** — 홈·탐색 정보구조와 비-AI형 시각 언어 확정 |
+| 2 | Flutter 디자인 적용·QA | P0 구현과 Android 실기기·release 검증 |
+| 3 | RAG 평가 계약 | Mock fixture와 실제 TourAPI live 기준 분리 |
+| 4 | OpenRouter live | BGE-M3·Qdrant 검색·AI 변형 품질과 비용 검증 |
+| 5 | 배포·제출 | staging/production, 보안, Google Play, 공모전 데모 완성 |
 
 ### 3.1 PR 실행 단위
 
@@ -111,19 +116,20 @@ Figma Make ─→ 디자인 시스템·화면·상태 명세 ─→ 수민님 Fl
 - [x] 한국관광공사_관광지별 연관 관광지 정보
 - [x] 한국관광공사_빅데이터_지역별 방문자수_GW
 
-현재 P0/P1에 필요하지 않은 무장애·반려동물·다국어·혼잡도 API는 핵심 흐름 완성 전까지 보류한다.
+현재 P0/P1에 필요하지 않은 무장애·반려동물·혼잡도 API는 핵심 흐름 완성 전까지 보류한다. 다국어 관광 데이터 R13은 임수민 담당이다. 2026-08-13 공식 포털에서 `EngService2`, `JpnService2`, `ChsService2`, `ChtService2`의 현재 제공과 Base URL은 확인했지만, 이후 활용 신청·승인·실호출과 구현은 임수민 작업으로 인계한다.
 
 ## A-2. API 키와 환경변수
 
 ### 할 일
 
-- [ ] 공공데이터포털 마이페이지에서 세 API의 승인 상태와 서비스키 확인
-- [ ] Swagger 또는 Postman으로 각 API를 최소 한 번 직접 호출
-- [ ] 인코딩 키와 디코딩 키 사용 방식 확인
-- [ ] 백엔드 `.env`에 실제 키 저장
-- [ ] `.env.example`에는 변수명과 예시값만 기록
-- [ ] Git 추적 대상에 `.env`가 포함되지 않는지 확인
-- [ ] API 키가 로그·에러 응답·Flutter 코드에 노출되지 않는지 확인
+- [x] 공공데이터포털 마이페이지에서 기존 세 API의 승인 상태와 서비스키 확인
+- [x] Swagger와 Backend smoke로 기존 세 API를 최소 한 번 직접 호출
+- [x] 인코딩 키와 디코딩 키 사용 방식 확인
+- [x] 백엔드 `.env`에 실제 키 저장
+- [x] `.env.example`에는 변수명과 예시값만 기록
+- [x] Git 추적 대상에 `.env`가 포함되지 않는지 확인
+- [x] 현재 Git diff와 추적 파일에 API 키 원문이 없는지 재검증
+- [→ 임수민] 다국어 네 서비스의 활용 신청·승인과 실호출 검증
 
 ### 권장 환경변수
 
@@ -136,11 +142,13 @@ EXTERNAL_API_TIMEOUT_MS=8000
 TOUR_CACHE_TTL_HOURS=24
 ```
 
-### 완료 기준
+### 기존 세 API 완료 기준
 
 - 실제 키가 코드와 문서에 노출되지 않는다.
 - 세 API에서 성공 응답을 받는다.
 - 실패 응답의 HTTP 상태, 공공데이터 응답 코드, 메시지를 확인할 수 있다.
+
+다국어 관광정보의 성공 기준과 미완료 항목은 [외부 관광 API 검증 체크리스트](./API_VALIDATION_CHECKLIST.md)의 다국어 관광정보 절에서 임수민 담당 항목으로 관리한다.
 
 ## A-3. 외부 API 공통 클라이언트
 
@@ -350,7 +358,7 @@ place_query_cache
 - [x] 로컬 MySQL 8.4.11에서 schema·migration·최소 권한 연결과 실제 캐시 저장을 검증한다.
 - [ ] 캐시를 삭제해도 TourAPI에서 다시 만들 수 있는지 통합 환경에서 확인한다.
 
-구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 자동 테스트는 외부 서비스 없이 실행하고, 별도의 수동 실환경 검증에서 로컬 MySQL 연결과 TourAPI 기반 캐시 저장을 확인했다. 배포 DB의 migration·삭제 후 재구축 검증은 R16에 남긴다.
+구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 자동 테스트는 외부 서비스 없이 실행하고, 별도의 수동 실환경 검증에서 로컬 MySQL 연결과 TourAPI 기반 캐시 저장을 확인했다. 배포 DB의 migration·삭제 후 재구축 검증은 R18에 남긴다.
 
 ## A-9. 내부 API 교체 순서
 
@@ -401,7 +409,7 @@ Flutter diff 미리보기 → 적용/취소
 - MySQL에 상세 원본을 저장하고 Qdrant에는 벡터와 검색에 필요한 최소 payload만 저장한다.
 - 개발 중에는 Mock 모드를 유지하되, 실제 검색 검증 단계에서는 Mock 문서를 사용하지 않는다.
 - Qdrant Cloud 무료 클러스터로 시작한다.
-- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하되, R14에서 Mock/live 평가 계약을 분리한 뒤 실제 품질을 검증한다.
+- OpenRouter의 저비용 다국어 `baai/bge-m3`를 1024차원으로 사용하되, R16에서 Mock/live 평가 계약을 분리한 뒤 실제 품질을 검증한다.
 - 무료 단일 공급자 모델의 가용성보다 변경분만 재임베딩하는 재현 가능한 저비용 계약을 우선한다.
 - LLM 호출은 모든 화면 조회가 아니라 사용자가 `AI 변형`을 요청했을 때만 수행한다.
 - 동일 입력·동일 코스에 대한 단기 결과 캐시 가능성을 검토한다.
@@ -633,7 +641,7 @@ User Request: 사용자의 원문
 
 황찬우 소유의 35개 고정 질문 `culturepath-rag-eval-v1`을 저장소에 두고 코드 변경 전·후
 Mock 결과를 비교한다. 실제 TourAPI title·culture와 정답 계약이 다르므로 이 fixture를 그대로
-live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 live fixture를 별도로 확정한 뒤
+live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 live fixture를 별도로 확정한 뒤
 승인된 `--live` 평가를 실행한다.
 
 ### 평가 범주
@@ -661,8 +669,8 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 | 비용 | 불필요하게 긴 문맥과 출력을 사용하지 않는가 |
 
 기존 Mock 회귀의 초기 검색 기준은 Hit@8 0.80 이상, MRR@8 0.50 이상, routing·hard filter
-1.00이다. live MySQL 원본 비율은 1.00을 요구하되 Hit/MRR 정답과 title·alias 판정은 R14에서
-확정한다. 지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 R15 전에는 hard gate로 사용하지 않는다.
+1.00이다. live MySQL 원본 비율은 1.00을 요구하되 Hit/MRR 정답과 title·alias 판정은 R16에서
+확정한다. 지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 R17 전에는 hard gate로 사용하지 않는다.
 
 ## B-11. RAG 완료 기준
 
@@ -717,7 +725,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 | --- | --- | --- | --- |
 | Primary | 딥 네이비 | `#2B2D42` | 주요 제목, 내비게이션, 핵심 버튼 |
 | Background | 웜 크림 | `#F7F3E9` | 기본 배경 |
-| Accent | 테라코타 | `#C75B39` | 선택, 담기, AI 변화 강조 |
+| Accent | 테라코타 | `#C05534` | 선택, 담기, AI 변화 강조; 흰색 텍스트 AA 대비 |
 | Accent 2 | 머스타드 골드 | `#D9A441` | Fork, 완주, 특별 상태 |
 | Text | 차콜 | `#1E1E1E` | 본문 |
 
@@ -739,19 +747,19 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 - [ ] Mobile/Web breakpoint
 - [ ] Motion duration과 easing 기본값
 
-## C-4. Figma Make 활용 순서
+## C-4. Manus·Figma 활용 순서
 
-1. 현재 Flutter 화면 캡처와 서비스 계획서를 참고자료로 준비한다.
-2. 한 번에 앱 전체가 아니라 한 사용자 흐름씩 프롬프트를 작성한다.
-3. Figma Make가 생성한 시안을 디자인 시스템에 맞춰 수동 정리한다.
-4. 실제 Flutter로 구현하기 어려운 효과와 과도한 애니메이션을 제거한다.
-5. 컴포넌트와 Variant로 반복 UI를 통합한다.
-6. 기본·로딩·빈 상태·오류·선택·비활성 상태를 추가한다.
-7. Prototype으로 핵심 전환을 연결한다.
-8. 수민님에게 시안을 전달하고 구현 난이도 피드백을 받는다.
+1. 현재 Flutter 화면 감사 결과, P0 디자인 명세와 검수표를 Manus 참고자료로 준비한다.
+2. Manus에서 외부 API·저장소와 격리된 Android 모바일 프로토타입을 한 사용자 흐름씩 만든다.
+3. 360·390·430px, 긴 글자와 loading·empty·error·stale·image-missing 상태를 실제로 눌러본다.
+4. Manus 자체 검수를 두 번 실행한 뒤 황찬우가 같은 검수표로 다시 판정한다.
+5. 승인된 화면·토큰·상태·핸드오프만 Figma로 옮긴다.
+6. Figma 무료 AI 크레딧은 변수·컴포넌트·Variant·Auto Layout·Prototype 정리에 우선 사용한다.
+7. 실제 Flutter로 구현하기 어려운 효과와 과도한 애니메이션을 제거한다.
+8. 수민님에게 최종 Figma 원본을 전달하고 구현 난이도 피드백을 받는다.
 9. 구현본을 캡처해 Figma와 비교하고 차이를 기록한다.
 
-### Figma Make 프롬프트에 항상 포함할 내용
+### Manus·Figma 프롬프트에 항상 포함할 내용
 
 - 서비스 목적과 대상 사용자
 - 현재 화면의 목적 하나
@@ -782,7 +790,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 - [ ] 유명 지역 순위
 - [ ] `왜 유명한지` 한 줄 설명
 - [ ] 장소 수와 문화 적합도 점수
-- [ ] 리스트·지도 토글 상태
+- [→ 임수민] 리스트·지도 토글 상태와 지도 고도화
 - [ ] 데이터 부족 지역 표시
 
 ### P0-3 지역 상세
@@ -884,7 +892,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 - [ ] 페이지네이션 방식
 - [ ] 캐시 데이터의 최신성 표시 여부
 - [x] `/ai/transform` JSON Schema와 기존 Flutter 호환 공개 응답
-- [ ] Figma 화면·컴포넌트·상태 명세
+- [x] Figma 화면·컴포넌트·상태 명세
 
 ## D-2. 수민님에게 받아야 할 것
 
@@ -907,7 +915,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 
 # Part E. 단계별 실행 일정
 
-과거 Phase 번호는 구현 이력을 설명하기 위해 보존한다. 현재 실제 PR 순서와 범위는 로드맵 `R11`~`R16`이 우선한다.
+과거 Phase 번호는 구현 이력을 설명하기 위해 보존한다. 현재 실제 PR 순서와 범위는 로드맵 `R11`~`R18`이 우선한다.
 
 ## Phase 0~2 — 완료된 데이터 기반
 
@@ -923,42 +931,75 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 - [x] 지역 문화점수 초기 버전
 - [x] TourAPI stale fallback과 MySQL fail-open
 - [x] 로컬 MySQL 8.4.11 schema·migration·최소 권한 연결·캐시 저장
+- [x] 코스 좌표 migration·응답과 Day별 Google Map 기반
 
-**남은 계약:** 내부 장소 JSON의 새 nullable 이미지 필드는 R11에서 Backend·Swagger·Flutter를 함께 맞춘다.
+**현재 계약:** 문화 관련도 R11과 이미지·상세 R12는 완료됐다. locale별 관광 데이터 R13은 임수민이 Backend·Swagger·Flutter를 함께 맞춘다.
 
-## Phase 3A / R11 — 이미지·상세·연관 장소
+## Phase 3A / R11 — 문화 관련도·정렬 품질
 
-- [ ] 지역 장소 목록에 `thumbnailUrl`·`imageUrl` 전달
-- [ ] Flutter 카드 네트워크 이미지와 placeholder
-- [ ] 장소 상세·이미지 갤러리
-- [ ] 연관 장소 UI와 상세 이동
-- [ ] 빈 URL·실패·긴 제목·느린 네트워크 상태
-- [ ] Backend·Swagger·Flutter 모델·테스트 동시 갱신
+- [x] culture 키워드 결과의 공식 분류·제목 규칙 재검증
+- [x] 선택 culture를 무조건 category로 덮어쓰는 동작 제거
+- [x] 지역 목록·키워드 후보 병합과 `contentId` 중복 제거
+- [x] 근거 강도 기반 안정 정렬과 오탐 제거
+- [x] 10개 문화별 정상·오탐·빈 결과 fixture
+- [x] `/regions/:code/spots`·`/places/search` 판정 일관성
+
+**완료 결과:** 사용자가 문화를 누르면 관련 없는 장소가 제거되고 근거가 강한 실제 관광지가 먼저 나온다.
+
+## Phase 3B / R12 — 이미지·상세·연관 장소
+
+- [x] 지역 장소 목록에 `thumbnailUrl`·`imageUrl` 전달
+- [x] Flutter 카드 네트워크 이미지와 placeholder
+- [x] 장소 상세·최대 10장 이미지 갤러리
+- [x] 연관 장소 UI와 상세 이동
+- [x] 빈 URL·HTTP·실패·느린 네트워크 fallback
+- [x] Backend·Swagger·Flutter 모델·테스트 동시 갱신
 
 **완료 결과:** 실제 TourAPI 이미지와 상세정보를 휴대폰에서 안정적으로 탐색한다.
 
-## Phase 3B / R12 — Figma Make 디자인 P0
+## 협업 의존성 / R13 — 다국어 관광 데이터(임수민 담당)
 
-- [ ] 최신 Flutter와 서비스 계획서 감사
-- [ ] 색·타입·간격·radius·elevation 토큰
-- [ ] 홈·문화·지역·장소·코스·AI P0 화면
-- [ ] loading·empty·error·offline/stale·이미지 없음 상태
-- [ ] Android 360·390·430dp 명세
-- [ ] Figma Make 프롬프트·검수표·수민님 핸드오프
+- API 활용 신청·locale 계약·Backend·Swagger·캐시·Flutter 구현은 임수민이 담당한다.
+- 황찬우는 팀원 변경이 머지된 후 긴 다국어 문구의 디자인 대응과 canonical `contentId`·RAG 평가 호환성만 확인한다.
+- R13을 황찬우 잔여 PR 수나 완료율에 포함하지 않는다.
 
-**완료 결과:** 실제 데이터 길이와 이미지 비율을 반영한 구현 가능한 P0 디자인이 확정된다.
+## Phase 3D / R14 — Manus 프로토타입·Figma 정보구조·디자인 P0
 
-## Phase 3C / R13 — Flutter 디자인 적용과 모바일 QA
+- [x] 최신 Flutter와 서비스 계획서 감사
+- [x] 탐색의 `내 코스 / 커뮤니티 / 인기` 정보구조
+- [x] 홈 빈 공간을 실제 데이터 기반 `내 코스 이어보기`로 보완
+- [x] 색·타입·간격·radius·elevation 토큰 명세
+- [x] 홈·문화·지역·장소·코스·AI P0 화면 명세
+- [x] loading·empty·error·offline/stale·이미지 없음 상태 명세
+- [x] 반복 카드·pill·gradient·과한 그림자를 줄이는 휴먼 디자인 기준
+- [x] Android 360·390·430dp 명세
+- [x] Manus 단계별 프로토타입·교정·2회 자체검수 프롬프트
+- [x] Figma 최종 정리 프롬프트·수민님 핸드오프 기준
+- [x] Manus에서 P0 흐름·상태·반응형 프로토타입 생성
+- [x] 실행 환경에서 확인된 차단 `FAIL` 0개 확인
+- [x] 승인 결과를 최종 패키지의 디자인 시스템·컴포넌트·상태·Prototype·Figma handoff로 정리
+- [x] 황찬우 조건부 시안 승인과 R15 인계 조건 기록
+
+**제외 범위:** 지역 목록/지도 전환, 마커·카드 연동, 번호 마커, Day 표시, 순서선과 경로 계산은 임수민 담당이다.
+
+**현재 상태:** [P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md), [디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md), [최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)를 기준으로 조건부 승인 완료. 실제 TourAPI 사진·Android 실기기·Flutter 재현·Noto 적용은 R15에서 검증하며 Figma 네이티브 원본은 필요할 때만 후속 생성한다.
+
+**완료 결과:** 홈·탐색 요구와 실제 데이터 길이를 반영한 구현 가능한 P0 디자인이 확정된다.
+
+## Phase 3E / R15 — Flutter 디자인 적용과 모바일 QA
 
 - [ ] 공통 Theme·컴포넌트와 P0 화면 적용
-- [ ] 접근성·긴 한국어·text scale·safe area 대응
+- [ ] 탐색 내 코스·홈 추가 섹션 구현
+- [ ] 접근성·긴 다국어·text scale·safe area 대응
 - [ ] 360·390·430dp와 Android 실제 기기 QA
 - [ ] `flutter analyze`, `flutter test`, release 빌드
 - [ ] Figma 명세와 구현 캡처 비교
 
+**제외 범위:** 다국어 관광 데이터와 지도 고도화 기능 구현. 팀원 변경이 합쳐진 뒤 공통 디자인이 깨지지 않는지만 통합 QA한다.
+
 **완료 결과:** Google Play 대상 휴대폰 화면에서 핵심 흐름과 디자인이 안정적으로 동작한다.
 
-## Phase 4A / R14 — RAG 평가 계약 확정
+## Phase 4A / R16 — RAG 평가 계약 확정
 
 - [x] 35개 Mock 회귀 fixture와 실행기
 - [ ] Mock fixture와 live fixture 분리
@@ -969,7 +1010,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 
 **완료 결과:** 실제 데이터 차이를 모델 실패로 오판하지 않는 평가 기준이 생긴다.
 
-## Phase 4B / R15 — OpenRouter live RAG·AI
+## Phase 4B / R17 — OpenRouter live RAG·AI
 
 - [x] Qdrant 환경·연결 검증
 - [x] 컬렉션·payload index·증분 인덱싱 코드
@@ -978,16 +1019,17 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 - [ ] OpenRouter 모델 이용 가능 여부·가격·예산 확인
 - [ ] 장소 1건 실임베딩과 1024차원 확인
 - [ ] 제한된 증분 인덱싱과 document hash skip 확인
-- [ ] R14 live fixture 전체 검색 평가
+- [ ] R16 live fixture 전체 검색 평가
 - [ ] 실제 `/ai/transform` 최소 smoke와 비용·latency 기록
 
 **완료 결과:** 실제 장소만 사용한 의미 검색과 구조화 코스 변형이 승인된 품질·비용 범위에서 동작한다.
 
-## Phase 5 / R16 — 배포·제출 품질
+## Phase 5 / R18 — 배포·제출 품질
 
 - [ ] staging/production MySQL과 migration·복구 runbook
 - [ ] HTTPS Backend·CORS·환경변수·비밀값 관리
 - [ ] Qdrant 재구축과 OpenRouter 예산·rate limit·장애 정책
+- [협업] 임수민 담당 다국어·Google Maps와 황찬우 담당 이미지의 키 제한·공급자 이용조건 최종 확인
 - [ ] Android application ID·서명·권한·release 빌드
 - [ ] 대표 지역 실데이터 표본
 - [ ] API·RAG 장애 시나리오 검증
@@ -1042,7 +1084,10 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 | TourAPI 키·파라미터 오류 | 실데이터 연동 지연 | 앱 연결 전 Swagger Smoke Test |
 | API 호출 제한 | 화면 실패·개발 중단 | MySQL 캐시, 배치, 호출 로그 |
 | 필드 결측 | 카드 깨짐 | nullable 모델과 fallback 디자인 |
-| 문화 코드 매핑 부정확 | 추천 품질 저하 | 시드 매핑 + 평가 + 점진 보완 |
+| 문화 코드 매핑·키워드 오탐 | 관련 없는 관광지 노출 | 공식 분류·제목 근거 재검증 + culture fixture |
+| locale 캐시 충돌(임수민 기능) | 언어가 섞이거나 원문 손실 | 임수민 구현 후 황찬우가 canonical ID·RAG 호환성 확인 |
+| 지도 공급자 키·좌표 결측(임수민 기능) | 빈 지도·빌드 환경 차이 | 임수민이 키 제한·빈 상태·nullable 좌표 처리, 황찬우는 디자인 통합 QA |
+| 유료 경로 API 과사용(임수민 기능) | 지도 비용 증가 | Routes 사용 여부와 비용은 임수민이 별도 승인 후 결정 |
 | Qdrant 무료 클러스터 비활성 삭제 | 검색 인덱스 손실 | MySQL 원본 + 재인덱싱 명령 |
 | 한국어 임베딩 품질 부족 | 엉뚱한 장소 검색 | 고정 평가 세트로 모델 비교 |
 | LLM 환각 | 존재하지 않는 코스 | 검색 후보 `contentId` 검증 |
@@ -1056,20 +1101,24 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 
 다음 항목을 위에서 아래로 진행한다. 상세 PR 범위는 잔여 PR 로드맵을 따른다.
 
-- [ ] 1. R11 관광지 이미지·상세·연관 장소 수직 연결
-- [ ] 2. R12 최신 Flutter 감사와 Figma Make P0 확정
-- [ ] 3. R13 Flutter 디자인 적용과 Android 모바일 QA
-- [ ] 4. R14 Mock/live RAG 평가 계약 분리
-- [ ] 5. R15 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증
-- [ ] 6. R16 배포 환경·보안·Google Play·공모전 데모 마감
+- [x] 1. R11 문화별 관광지 관련도·정렬 품질
+- [x] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
+- [→ 임수민] R13 다국어 관광지 데이터 계약과 연결
+- [x] 3. R14 Manus 프로토타입·Figma handoff 정보구조·P0 디자인 조건부 확정
+- [ ] 4. R15 Flutter 디자인 적용과 Android 모바일 QA
+- [ ] 5. R16 Mock/live RAG 평가 계약 분리
+- [ ] 6. R17 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증
+- [ ] 7. R18 배포 환경·보안·Google Play·공모전 데모 마감
 
 ## 다음 사용자 가시 완료 목표
 
 ```text
 문화 → 지역 → 실제 TourAPI 장소 목록
+→ 관련 문화 근거로 오탐 제거·정렬
 → 썸네일 카드
 → 장소 상세와 이미지 갤러리
 → 연관 장소 이동
+→ 선택 언어의 관광지 정보
 → 코스 담기
 ```
 
@@ -1084,7 +1133,7 @@ live 합격 기준으로 사용하지 않는다. R14에서 `contentId` 중심 li
 → 사용자가 적용 또는 취소
 ```
 
-OpenRouter가 준비되기 전까지 이 흐름은 Mock 회귀로만 확인한다. 실제 의미 검색과 실제 AI 생성 완료 표시는 R14 계약 확정과 R15 live 검증 뒤에만 한다.
+OpenRouter가 준비되기 전까지 이 흐름은 Mock 회귀로만 확인한다. 실제 의미 검색과 실제 AI 생성 완료 표시는 R16 계약 확정과 R17 live 검증 뒤에만 한다.
 
 ---
 

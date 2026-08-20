@@ -1,6 +1,6 @@
 # 안정화 변경 배포 메모
 
-> 최종 상태 갱신: 2026-08-12
+> 최종 상태 갱신: 2026-08-13
 
 ## MySQL 마이그레이션
 
@@ -9,9 +9,12 @@
 재실행·동시 실행 정책은 `backend/migrations/README.md`를 따른다.
 
 자동 테스트는 노트북 자원을 아끼기 위해 Docker나 실DB에 의존하지 않는다. 별도 수동
-검증에서는 로컬 MySQL 8.4.11에 `schema.sql`을 적용하고 migration 2개를 실행했으며,
-두 번째 migration 재실행도 성공했다. 최소 권한 `culturepath_app` 계정의 Backend 연결과
-실제 TourAPI 응답의 `places_cache`·`place_query_cache` 저장도 확인했다.
+검증에서는 로컬 MySQL 8.4.11에 `schema.sql`과 기존 migration 2개를 적용했고 두 번째
+migration 재실행도 성공했다. 이후 `20260812_add_course_track_coordinates.sql`을 추가 적용해
+`place_latitude`·`place_longitude`가 `DECIMAL(10,7) NULL`인지 확인하고 동일 migration 재실행도
+성공했다. 최소 권한 `culturepath_app` 계정의 Backend 연결과 실제 TourAPI 응답의
+`places_cache`·`place_query_cache` 저장도 확인했다. 당시 `course_tracks`가 0건이라 좌표
+백필 대상은 없었다.
 
 이 결과는 로컬 환경 검증이며 배포 DB 검증을 대신하지 않는다. 운영 반영 전 staging 또는
 production과 동일한 MySQL 8 환경에서 백업, 기존 DB migration, 재실행과 복구 절차를 다시

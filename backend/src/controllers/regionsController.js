@@ -1,5 +1,15 @@
 const regionScoreService = require('../services/regionScoreService');
 const cachedPlacesService = require('../services/cachedPlacesService');
+const {
+  CULTURE_SEARCH_KEYWORDS,
+  MAX_CULTURE_RESULTS,
+} = require('../config/cultureCategoryMap');
+const {
+  combineCultureCacheStatus,
+  isSupportedCulture,
+  selectPlacesForCulture,
+} = require('../services/culturePlaceSelection');
+const { publicPlaceError } = require('../utils/publicPlaceError');
 
 const CULTURE_ID_TO_NAME = Object.freeze({
   1: '독립서점·책방',
@@ -69,20 +79,6 @@ const SPOT_MAP = {
   ],
 };
 
-// 문화별 TourAPI 키워드 검색어
-const CULTURE_SEARCH_KEYWORDS = Object.freeze({
-  '독립서점·책방': '서점',
-  '문학': '문학',
-  '음악': '음악',
-  '전통주·양조장': '전통주',
-  '로컬 미식': '시장',
-  '공예·공방': '공예',
-  '근대 문화유산': '근대',
-  '미술·갤러리': '갤러리',
-  '영화·애니메이션': '영화',
-  '커피·카페': '카페',
-});
-
 // 지역별 TourAPI 법정동 코드 (lDongRegnCd: 2자리 시도, lDongSignguCd: 3자리 시군구)
 const REGION_TOUR_CODES = Object.freeze({
   seoul:     { lDongRegnCd: '11' },
@@ -108,8 +104,24 @@ function setRegionDataStatusHeader(res, status) {
   res.setHeader?.('X-Region-Data-Status', status);
 }
 
+function toPublicSpot(place) {
+  return {
+    contentId: place.contentId,
+    title: place.title,
+    address: place.address || '',
+    tel: place.tel || '',
+    openTime: place.openTime || '',
+    category: place.category || '기타',
+    latitude: place.latitude ?? null,
+    longitude: place.longitude ?? null,
+    imageUrl: place.imageUrl ?? null,
+    thumbnailUrl: place.thumbnailUrl ?? null,
+  };
+}
+
 function createRegionsController(options = {}) {
   const service = options.regionScoreService || regionScoreService;
+  const placesService = options.placesService || cachedPlacesService;
   const logger = options.logger || console;
 
   async function getRegionsByCulture(req, res) {
@@ -139,73 +151,83 @@ function createRegionsController(options = {}) {
     }
   }
 
-  return Object.freeze({ getRegionsByCulture });
-}
+  // GET /regions/:code/spots?culture=
+  async function getSpotsByRegion(req, res) {
+    const { code } = req.params;
+    const cultureFilter = String(req.query?.culture || '').trim();
+    const tourCodes = REGION_TOUR_CODES[code];
 
-// GET /regions/:code/spots?culture=
-async function getSpotsByRegion(req, res) {
-  const { code } = req.params;
-  const cultureFilter = String(req.query?.culture || '').trim();
-  const tourCodes = REGION_TOUR_CODES[code];
+    if (!tourCodes) {
+      return res.status(404).json({ message: '해당 지역 정보를 찾을 수 없습니다.' });
+    }
+    if (cultureFilter && !isSupportedCulture(cultureFilter)) {
+      return res.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: '지원하지 않는 문화 카테고리입니다.',
+        retryable: false,
+      });
+    }
 
-  if (!tourCodes) {
-    return res.status(404).json({ message: '해당 지역 정보를 찾을 수 없습니다.' });
-  }
+    try {
+      let items;
+      let cacheStatus;
 
-  try {
-    let items;
-    let cacheStatus;
-
-    if (cultureFilter) {
-      const keyword = CULTURE_SEARCH_KEYWORDS[cultureFilter];
-      if (keyword) {
-        // 키워드 검색: TourAPI가 이미 관련 장소를 필터링하므로 추가 분류 불필요
-        const result = await cachedPlacesService.searchPlacesByKeyword({ ...tourCodes, keyword, numOfRows: 20 });
+      if (cultureFilter) {
+        const keyword = CULTURE_SEARCH_KEYWORDS[cultureFilter];
+        const [areaResult, keywordResult] = await Promise.all([
+          placesService.getAreaBasedPlaces({
+            ...tourCodes,
+            numOfRows: MAX_CULTURE_RESULTS,
+          }),
+          placesService.searchPlacesByKeyword({
+            ...tourCodes,
+            keyword,
+            numOfRows: MAX_CULTURE_RESULTS,
+          }),
+        ]);
+        items = selectPlacesForCulture(
+          [areaResult.items, keywordResult.items],
+          cultureFilter,
+          { limit: MAX_CULTURE_RESULTS },
+        );
+        cacheStatus = combineCultureCacheStatus(
+          areaResult.cacheStatus,
+          keywordResult.cacheStatus,
+        );
+      } else {
+        const result = await placesService.getAreaBasedPlaces({
+          ...tourCodes,
+          numOfRows: MAX_CULTURE_RESULTS,
+        });
         items = result.items;
         cacheStatus = result.cacheStatus;
-      } else {
-        const result = await cachedPlacesService.getAreaBasedPlaces({ ...tourCodes, numOfRows: 20 });
-        items = result.items.filter(p => Array.isArray(p.cultures) && p.cultures.includes(cultureFilter));
-        cacheStatus = result.cacheStatus;
       }
-    } else {
-      const result = await cachedPlacesService.getAreaBasedPlaces({ ...tourCodes, numOfRows: 20 });
-      items = result.items;
-      cacheStatus = result.cacheStatus;
-    }
 
-    if (typeof res.set === 'function') {
-      res.set({ 'X-Cache-Status': cacheStatus });
-    }
+      if (typeof res.set === 'function' && cacheStatus) {
+        res.set({ 'X-Cache-Status': cacheStatus });
+      }
 
-    // TourAPI 결과가 없으면 SPOT_MAP으로 보완
-    if (cultureFilter && items.length === 0) {
-      const fallback = (SPOT_MAP[code] || []).filter(s => s.category === cultureFilter);
-      if (fallback.length > 0) return res.json(fallback);
-    }
+      return res.json(items.map(toPublicSpot));
+    } catch (error) {
+      if (cultureFilter) {
+        const response = publicPlaceError(error);
+        if (response.status === 500) {
+          logger?.error?.('문화별 지역 장소 처리에 실패했습니다.', {
+            errorName: error?.name || 'Error',
+          });
+        }
+        return res.status(response.status).json(response.body);
+      }
 
-    return res.json(items.map(p => ({
-      contentId: p.contentId,
-      title: p.title,
-      address: p.address || '',
-      tel: p.tel || '',
-      openTime: p.openTime || '',
-      category: cultureFilter || p.category || '기타',
-      latitude: p.latitude ?? null,
-      longitude: p.longitude ?? null,
-    })));
-  } catch (_error) {
-    // TourAPI 실패 시 SPOT_MAP 폴백
-    const spots = SPOT_MAP[code];
-    if (!spots) return res.status(404).json({ message: '해당 지역 정보를 찾을 수 없습니다.' });
-    const filtered = cultureFilter
-      ? spots.filter(s => s.category === cultureFilter)
-      : spots;
-    return res.json(filtered.length > 0 ? filtered : spots);
+      // 문화 필터가 없는 이전 흐름은 가용성을 위해 기존 seed fallback을 유지한다.
+      return res.json((SPOT_MAP[code] || []).map(toPublicSpot));
+    }
   }
+
+  return Object.freeze({ getRegionsByCulture, getSpotsByRegion });
 }
 
-const { getRegionsByCulture } = createRegionsController();
+const { getRegionsByCulture, getSpotsByRegion } = createRegionsController();
 
 module.exports = {
   createRegionsController,

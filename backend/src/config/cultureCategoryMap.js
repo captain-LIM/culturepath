@@ -13,6 +13,15 @@ const CULTURE_CATEGORIES = Object.freeze([
   '커피·카페',
 ]);
 
+const MAX_CULTURE_RESULTS = 20;
+
+const CULTURE_MATCH_STRENGTH = Object.freeze({
+  NONE: 0,
+  TITLE_KEYWORD: 1,
+  OFFICIAL_CLASSIFICATION: 2,
+  CONTENT_ID_OVERRIDE: 3,
+});
+
 // TourAPI 분류만으로 구분하기 어려운 장소를 contentId 기준으로 보정한다.
 // 검증되지 않은 ID는 추측해서 추가하지 않는다.
 const CONTENT_ID_OVERRIDES = Object.freeze({});
@@ -76,58 +85,86 @@ function normalizeCategories(categories) {
 }
 
 function getTopLevelCode(item) {
-  const code = String(
-    item?.lclsSystm1 ?? item?.lclsSystmCode1 ?? item?.lcls_systm1 ?? '',
-  )
-    .trim()
-    .toUpperCase();
+  const code = getClassificationCodes(item).find(value => value.length === 2) || '';
   return code.slice(0, 2);
 }
 
-function getClassificationCode(item, camelKey, snakeKey) {
-  return String(item?.[camelKey] ?? item?.[snakeKey] ?? '')
-    .trim()
-    .toUpperCase();
+function getClassificationCodes(item) {
+  const values = [
+    item?.lclsSystm1,
+    item?.lclsSystm2,
+    item?.lclsSystm3,
+    item?.lclsSystmCode1,
+    item?.lcls_systm1,
+    item?.lcls_systm2,
+    item?.lcls_systm3,
+    ...(Array.isArray(item?.lclsSystmCodes) ? item.lclsSystmCodes : []),
+  ];
+
+  return values
+    .map(value => String(value ?? '').trim().toUpperCase())
+    .filter((value, index, all) => value && all.indexOf(value) === index);
 }
 
-function classifyTourPlace(item, options = {}) {
+function getCultureMatchStrengths(item, options = {}) {
   const contentId = String(item?.contentid ?? item?.contentId ?? '').trim();
   const overrides = options.contentIdOverrides || CONTENT_ID_OVERRIDES;
 
   if (Object.prototype.hasOwnProperty.call(overrides, contentId)) {
-    return normalizeCategories(overrides[contentId]);
+    return new Map(
+      normalizeCategories(overrides[contentId]).map(category => [
+        category,
+        CULTURE_MATCH_STRENGTH.CONTENT_ID_OVERRIDE,
+      ]),
+    );
   }
 
   const title = String(item?.title || '').trim();
   const topLevelCode = getTopLevelCode(item);
   const hasClassificationCode = topLevelCode.length > 0;
   const allowedCategories = TOP_LEVEL_CANDIDATES[topLevelCode];
-  const matches = [];
+  const matches = new Map();
 
   for (const [category, pattern] of KEYWORD_RULES) {
     const categoryAllowed = hasClassificationCode
       ? allowedCategories?.has(category) === true
       : true;
     if (categoryAllowed && pattern.test(title)) {
-      matches.push(category);
+      matches.set(category, CULTURE_MATCH_STRENGTH.TITLE_KEYWORD);
     }
   }
 
-  const midCode = getClassificationCode(item, 'lclsSystm2', 'lcls_systm2');
-  const subCode = getClassificationCode(item, 'lclsSystm3', 'lcls_systm3');
-  if (MID_CLASSIFICATION_CODE_RULES[midCode]) {
-    matches.push(MID_CLASSIFICATION_CODE_RULES[midCode]);
-  }
-  if (SUB_CLASSIFICATION_CODE_RULES[subCode]) {
-    matches.push(SUB_CLASSIFICATION_CODE_RULES[subCode]);
+  for (const code of getClassificationCodes(item)) {
+    const category =
+      MID_CLASSIFICATION_CODE_RULES[code] ||
+      SUB_CLASSIFICATION_CODE_RULES[code];
+    if (category) {
+      matches.set(category, CULTURE_MATCH_STRENGTH.OFFICIAL_CLASSIFICATION);
+    }
   }
 
-  return normalizeCategories(matches);
+  return matches;
+}
+
+function classifyTourPlace(item, options = {}) {
+  const matches = getCultureMatchStrengths(item, options);
+  return CULTURE_CATEGORIES.filter(category => matches.has(category));
+}
+
+function getCultureMatchStrength(item, culture, options = {}) {
+  if (!CULTURE_CATEGORIES.includes(culture)) {
+    return CULTURE_MATCH_STRENGTH.NONE;
+  }
+  return getCultureMatchStrengths(item, options).get(culture) ||
+    CULTURE_MATCH_STRENGTH.NONE;
 }
 
 module.exports = {
   CONTENT_ID_OVERRIDES,
   CULTURE_CATEGORIES,
+  CULTURE_MATCH_STRENGTH,
   CULTURE_SEARCH_KEYWORDS,
+  MAX_CULTURE_RESULTS,
   classifyTourPlace,
+  getCultureMatchStrength,
 };

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/course_builder/data/course_model.dart';
 import '../../../features/course_builder/data/place_item.dart';
@@ -29,17 +30,17 @@ class RegionDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
-  final List<SpotItem> _basket = [];
+  final List<PlaceItem> _basket = [];
   final Set<String> _basketIds = {};
 
   void _toggle(SpotItem spot) {
     setState(() {
       if (_basketIds.contains(spot.contentId)) {
         _basketIds.remove(spot.contentId);
-        _basket.removeWhere((s) => s.contentId == spot.contentId);
+        _basket.removeWhere((place) => place.contentId == spot.contentId);
       } else {
         _basketIds.add(spot.contentId);
-        _basket.add(spot);
+        _basket.add(_toPlaceItem(spot));
       }
     });
   }
@@ -55,10 +56,25 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
         region: widget.region.name,
         latitude: spot.latitude,
         longitude: spot.longitude,
+        imageUrl: spot.imageUrl,
+        thumbnailUrl: spot.thumbnailUrl,
       );
 
+  Future<void> _openPlaceDetail(SpotItem spot) async {
+    final selected = await context.push<PlaceItem>(
+      '/places/${spot.contentId}',
+      extra: _toPlaceItem(spot),
+    );
+    if (selected != null && mounted && !_basketIds.contains(selected.contentId)) {
+      setState(() {
+        _basketIds.add(selected.contentId);
+        _basket.add(selected);
+      });
+    }
+  }
+
   void _openCourseBuilder() {
-    final places = _basket.map(_toPlaceItem).toList();
+    final places = List<PlaceItem>.of(_basket);
     final initialCourse = CourseItem(
       title: '',
       description: '',
@@ -145,6 +161,7 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
                             spot: spots[index],
                             isSelected: _basketIds.contains(spots[index].contentId),
                             onAdd: () => _toggle(spots[index]),
+                            onOpen: () => _openPlaceDetail(spots[index]),
                           ),
                           childCount: spots.length,
                         ),

@@ -206,6 +206,22 @@ test('assembles common, intro, and images without calling detailInfo by default'
   assert.deepEqual(normalized.payload.infoItems, []);
 });
 
+test('clamps an explicit detail image request to the public maximum', async () => {
+  const fake = createRecordingClient({
+    detailCommon2: resultWith([
+      { contentid: '2390314', contenttypeid: '12', title: '경복궁' },
+    ]),
+    detailIntro2: resultWith([]),
+    detailImage2: resultWith([]),
+  });
+  const service = createTourApiService({ client: fake.client });
+
+  await service.getPlaceDetail({ contentId: '2390314', imageRows: 50 });
+
+  const imageCall = fake.calls.find(call => call.operation === 'detailImage2');
+  assert.equal(imageCall.options.numOfRows, 10);
+});
+
 test('supports optional detailInfo and stops when the common detail is empty', async () => {
   const withInfo = createRecordingClient({
     detailCommon2: resultWith([

@@ -11,6 +11,9 @@ test('documents the implemented public place routes and compatibility contract',
   assert.ok(openApiDocument.paths['/places/{id}/related']);
 
   const search = openApiDocument.paths['/places/search'].get;
+  const searchCulture = search.parameters.find(
+    parameter => parameter.name === 'culture',
+  );
   assert.equal(
     search.responses[200].content['application/json'].schema.type,
     'array',
@@ -20,6 +23,12 @@ test('documents the implemented public place routes and compatibility contract',
   assert.ok(search.responses[400]);
   assert.ok(search.responses[500]);
   assert.ok(search.responses[504]);
+  assert.equal(searchCulture.schema.enum.length, 10);
+  assert.equal(
+    search.responses[200].content['application/json']
+      .schema['x-culture-filter-max-items'],
+    20,
+  );
   assert.ok(
     openApiDocument.paths['/places/{id}']
       .get.responses[200].headers['X-Cache-Status'],
@@ -63,6 +72,35 @@ test('documents the backward-compatible DataLab region score contract', () => {
   );
   assert.ok(regions.responses[404]);
   assert.ok(regions.responses[500]);
+});
+
+test('documents strict culture filtering for region spots', () => {
+  const spots = openApiDocument.paths['/regions/{code}/spots'].get;
+  const culture = spots.parameters.find(parameter => parameter.name === 'culture');
+  const success = spots.responses[200];
+
+  assert.equal(culture.schema.enum.length, 10);
+  assert.equal(
+    success.content['application/json'].schema.items.$ref,
+    '#/components/schemas/RegionSpot',
+  );
+  assert.equal(success.content['application/json'].schema.maxItems, 20);
+  assert.ok(success.headers['X-Cache-Status']);
+  assert.ok(spots.responses[400]);
+  assert.ok(spots.responses[404]);
+  assert.ok(spots.responses[502]);
+  assert.ok(spots.responses[503]);
+  assert.ok(spots.responses[504]);
+  const regionSpot = openApiDocument.components.schemas.RegionSpot;
+  assert.ok(regionSpot.required.includes('imageUrl'));
+  assert.ok(regionSpot.required.includes('thumbnailUrl'));
+  assert.equal(regionSpot.properties.imageUrl.nullable, true);
+  assert.equal(regionSpot.properties.thumbnailUrl.nullable, true);
+  assert.equal(
+    openApiDocument.components.schemas.PlaceDetail.allOf[1]
+      .properties.images.maxItems,
+    10,
+  );
 });
 
 test('documents the authenticated structured AI transform contract', () => {
