@@ -99,6 +99,7 @@
   "culture_8_name": "미술·갤러리",
   "culture_9_name": "영화·애니메이션",
   "culture_10_name": "커피·카페",
+  "category_other": "기타",
   "culture_detail_subtitle": "{name} 여행으로 유명한 지역",
   "culture_detail_error": "지역 정보를 불러올 수 없습니다.",
 

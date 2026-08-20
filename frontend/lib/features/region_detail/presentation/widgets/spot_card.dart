@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/place_network_image.dart';
 import '../../data/spot_model.dart';
@@ -62,7 +63,7 @@ class SpotCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      spot.category,
+                      localizedCategory(spot.category),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.accent,
                             fontWeight: FontWeight.w700,

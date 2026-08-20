@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_builder/data/course_model.dart';
 
@@ -80,7 +81,7 @@ class CourseTrackView extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            place.category,
+                            localizedCategory(place.category),
                             style: const TextStyle(fontSize: 11, color: AppColors.accent),
                           ),
                           if (place.region != null) ...[

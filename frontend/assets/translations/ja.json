@@ -99,6 +99,7 @@
   "culture_8_name": "アート・ギャラリー",
   "culture_9_name": "映画・アニメ",
   "culture_10_name": "コーヒー・カフェ",
+  "category_other": "その他",
   "culture_detail_subtitle": "{name}旅行で有名な地域",
   "culture_detail_error": "地域情報を読み込めません。",
 

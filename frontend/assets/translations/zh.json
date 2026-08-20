@@ -99,6 +99,7 @@
   "culture_8_name": "艺术·画廊",
   "culture_9_name": "电影·动漫",
   "culture_10_name": "咖啡·咖啡厅",
+  "category_other": "其他",
   "culture_detail_subtitle": "{name}旅游胜地",
   "culture_detail_error": "无法加载地区信息。",
 

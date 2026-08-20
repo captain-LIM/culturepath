@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/place_item.dart';
 
@@ -54,7 +55,7 @@ class CoursePlaceCard extends StatelessWidget {
                   Text(place.title, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    [place.category, if (place.region?.isNotEmpty == true) place.region!].join(' · '),
+                    [localizedCategory(place.category), if (place.region?.isNotEmpty == true) place.region!].join(' · '),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

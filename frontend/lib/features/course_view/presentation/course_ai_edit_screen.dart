@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/category_localization.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ai_assistant/data/ai_repository.dart';
 import '../../ai_assistant/data/course_diff.dart';
@@ -622,7 +623,7 @@ class _CourseAiEditScreenState extends State<CourseAiEditScreen> {
               Chip(
                 visualDensity: VisualDensity.compact,
                 label: Text(
-                  change.place.category,
+                  localizedCategory(change.place.category),
                   style: const TextStyle(fontSize: 11),
                 ),
               ),

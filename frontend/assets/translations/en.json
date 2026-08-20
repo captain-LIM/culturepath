@@ -99,6 +99,7 @@
   "culture_8_name": "Art & Galleries",
   "culture_9_name": "Film & Animation",
   "culture_10_name": "Coffee & Cafés",
+  "category_other": "Other",
   "culture_detail_subtitle": "Regions famous for {name}",
   "culture_detail_error": "Failed to load region info.",
 

@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/place_item.dart';
 import '../../data/course_repository.dart';
@@ -168,7 +169,7 @@ class _PlaceResultTile extends StatelessWidget {
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
       ),
       subtitle: Text(
-        '${place.region != null ? "[${place.region}] " : ""}${place.category} · ${place.address}',
+        '${place.region != null ? "[${place.region}] " : ""}${localizedCategory(place.category)} · ${place.address}',
         style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/category_localization.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/place_network_image.dart';
 import '../../course_builder/data/course_model.dart';
@@ -159,7 +160,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
           sliver: SliverList.list(
             children: [
               Text(
-                detail.category,
+                localizedCategory(detail.category),
                 style: const TextStyle(
                   color: AppColors.accent,
                   fontSize: 12,
