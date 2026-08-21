@@ -7,7 +7,22 @@ const path = require('node:path');
 const { createRagSearchService } = require('../src/services/ragSearchService');
 const { runRagEvaluation } = require('../src/services/ragEvaluationService');
 
-const DATASET_PATH = path.join(__dirname, '..', 'test', 'fixtures', 'rag-evaluation-v1.json');
+const MOCK_DATASET_PATH = path.join(
+  __dirname,
+  '..',
+  'test',
+  'fixtures',
+  'rag-evaluation-v1.json',
+);
+const LIVE_DATASET_PATH = path.join(
+  __dirname,
+  '..',
+  'test',
+  'fixtures',
+  'rag-evaluation-live-v1.json',
+);
+// 기존 import 호환성은 유지하되 기본 경로는 명시적으로 Mock이다.
+const DATASET_PATH = MOCK_DATASET_PATH;
 
 function parsePositive(value, name, maximum) {
   const parsed = Number(value);
@@ -61,8 +76,9 @@ function safeFailure(error) {
   return 'RAG 검색 평가 중 오류가 발생했습니다.';
 }
 
-function loadDataset() {
-  return JSON.parse(fs.readFileSync(DATASET_PATH, 'utf8'));
+function loadDataset(mode = 'mock') {
+  const datasetPath = mode === 'live' ? LIVE_DATASET_PATH : MOCK_DATASET_PATH;
+  return JSON.parse(fs.readFileSync(datasetPath, 'utf8'));
 }
 
 function evaluationExitCode(result) {
@@ -81,10 +97,11 @@ async function main(argv = process.argv.slice(2), dependencies = {}) {
   validateLiveConfiguration(sourceEnv, args.live);
   const env = { ...sourceEnv, USE_MOCK_RAG: args.live ? 'false' : 'true' };
   const service = dependencies.searchService || createRagSearchService();
+  const mode = args.live ? 'live' : 'mock';
   const result = await runRagEvaluation({
-    dataset: dependencies.dataset || loadDataset(),
+    dataset: dependencies.dataset || loadDataset(mode),
     limit: args.limit,
-    mode: args.live ? 'live' : 'mock',
+    mode,
     search: (query, input) => service.search(query, input, { env }),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -102,6 +119,8 @@ if (require.main === module) {
 
 module.exports = {
   DATASET_PATH,
+  LIVE_DATASET_PATH,
+  MOCK_DATASET_PATH,
   evaluationExitCode,
   loadDataset,
   main,

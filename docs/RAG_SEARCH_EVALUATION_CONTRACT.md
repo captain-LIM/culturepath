@@ -2,11 +2,11 @@
 
 > 기준일: 2026-08-04
 >
-> 최종 상태 갱신: 2026-08-12
+> 최종 상태 갱신: 2026-08-21
 >
 > 소유자: 황찬우
 >
-> 범위: R8 — R7에서 만든 `culturepath_places_v1`을 재현 가능하게 검색하고 품질을 같은 기준으로 비교하는 기반
+> 범위: R8 검색 기반 + R16 Mock/live 평가 계약 분리
 
 ## 1. 경계
 
@@ -135,18 +135,57 @@ Qdrant payload 값으로 덮어쓰지 않는다.
 live 모드에서 컬렉션이 없거나 point 수가 0이면 `QDRANT_INDEX_EMPTY`로 실패한다. hard
 filter에 맞는 장소가 없는 것은 정상적인 빈 결과이며 필터를 자동으로 해제하지 않는다.
 
-## 6. 고정 평가 세트
+## 6. Mock/live 평가 세트
 
-평가 세트는 `backend/test/fixtures/rag-evaluation-v1.json`에 저장한다.
+R16부터 실행 모드에 따라 서로 다른 fixture와 정답 판정 규칙을 사용한다. `--live`가
+Mock fixture를 읽거나, live fixture가 Mock 문서 제목으로 합격하는 동작은 허용하지 않는다.
 
-- 소유자: 황찬우
-- 버전: `culturepath-rag-eval-v1`
-- case 수: 35개
-- Top-K: 8
-- 범주: 지역+문화, 지역만, 문화만, alias, 명시적 콘텐츠 유형, 우천·동행 soft 조건, 후보 없음
-- 기대값: 12개 Mock 문서의 canonical title 또는 명시적인 빈 결과
+| 구분 | Mock 회귀 | Live baseline |
+| --- | --- | --- |
+| 파일 | `rag-evaluation-v1.json` | `rag-evaluation-live-v1.json` |
+| case 수 | 35개 | 15개 |
+| 최소 case 수 | 30개 | 15개 |
+| 정답 식별자 | 정규화한 canonical title | 숫자형 TourAPI `contentId` exact match |
+| title 용도 | 정답 판정 | 사람이 읽는 진단·locale별 관측값 |
+| 외부 의존성 | 없음 | 승인된 실행에서 OpenRouter·Qdrant·MySQL |
+| 현재 gate | 승인된 Mock 회귀 기준 | R17 실측 전 baseline |
 
-아래 값은 기존 Mock 회귀의 초기 기준이다. live 평가에는 R16에서 별도 fixture와 판정 단위를 확정한 뒤 적용한다.
+기존 `rag-evaluation-v1.json`과 `vectorStore.js`의 12개 Mock 문서는 변경하지 않는다.
+Mock의 title 정규화는 별칭 통합이 아니라 Unicode·대소문자·공백·문장부호 차이만 줄인다.
+
+Live case의 `expected.outcome`은 다음 세 값 중 하나다.
+
+| outcome | 의미 | Hit@K·MRR 포함 여부 |
+| --- | --- | --- |
+| `relevant` | 기대 `contentIds` 중 하나가 검색돼야 함 | 포함 |
+| `empty` | 원천을 감사해 적합 장소가 없다고 확정 | 빈 결과 정확도에 포함 |
+| `coverage_gap` | 알려진 장소가 있지만 분류·번역·원천 공백으로 현재 검색 품질을 채점할 수 없음 | 제외, 별도 지표로 노출 |
+
+`coverage_gap`은 `UNCLASSIFIED_CULTURE`, `MISSING_TRANSLATION`,
+`SOURCE_DATA_INCOMPLETE` 중 근거를 반드시 기록한다. 예를 들어 `contentId=129784`는
+지역 기반 검색에서는 오죽헌으로 사용할 수 있지만 현재 `cultures=[]`이므로
+`강릉 × 문학` case에서는 `UNCLASSIFIED_CULTURE`로 기록한다. 평가 통과를 위해 문화
+규칙이나 `CONTENT_ID_OVERRIDES`를 자동으로 보정하지 않는다.
+
+Live의 `titlesByLocale`은 같은 장소의 관측 표시명이다. `오죽헌`,
+`강릉 오죽헌·시립박물관`, 번역 title이 서로 달라도 `contentId`가 같으면 같은 장소다.
+반대로 title이 같아도 `contentId`가 다르면 정답으로 인정하지 않는다.
+한 case에 기대 `contentIds`가 여러 개면 `titlesByContentId`로 각 ID의 locale title을
+따로 연결해야 하며, 감사 결과도 ID별 snapshot 일치 여부를 분리해 표시한다.
+
+Live fixture의 각 case는 `evidence.source`, `evidence.verification`,
+`evidence.observedAt`을 가진다. 현재 seed는 저장소에 반영된 실제 TourAPI 숫자 ID를
+사용하지만 로컬 MySQL 서비스를 이번 세션에서 열 수 없어
+`repository_snapshot_pending_mysql_audit` 상태다. 이를 `mysql_verified`로 바꾸기 전에는
+`qualityGate.evidenceVerified=false`, `qualityGate.contractReady=false`,
+`qualityGate.ready=false`이며 production 품질 합격으로 표현하지 않는다.
+`qualityGate.status=approved`로 바꾸려면 0~1 사이의 Hit@K와 MRR 기준도 함께 확정해야 한다.
+`contractReady`는 계약·근거 준비 상태이고, 실행 결과까지 포함한 `ready`는 전체 case가
+오류 없이 현재 threshold를 통과해야만 `true`가 된다.
+
+### 6.1 지표와 합격 의미
+
+아래 값은 기존 Mock 회귀의 기준이다.
 
 | 지표 | 기준 |
 | --- | --- |
@@ -155,11 +194,26 @@ filter에 맞는 장소가 없는 것은 정상적인 빈 결과이며 필터를
 | routing 정확도 | `1.00` |
 | hard filter 준수율 | `1.00` |
 | 기대 빈 결과 정확도 | `1.00` |
-| MySQL 신뢰 원본 비율 | R16 live 계약 확정 뒤 `1.00` |
+| MySQL 신뢰 원본 비율 | Mock에서는 미적용 |
 
 제한 실행은 smoke 용도이므로 `complete=false`, `passed=false`로 기록한다. 전체 35건을
 실행해야 **Mock 회귀** 합격으로 판정한다. 이 결과를 live 품질 합격으로 표현하지 않는다.
-live에서는 지연시간 p50·p95와 임베딩 입력 토큰을 기록하되 R16/R17에서 hard gate 여부를 결정한다.
+Live baseline은 routing 정확도, hard filter 준수율, MySQL 신뢰 원본 비율만 `1.00`으로
+필수로 강제한다. 세 필드는 삭제하거나 `1.00`보다 낮출 수 없다. Hit@8과 MRR@8은 R17
+첫 실측에서 보고하되 아직 hard gate로 사용하지 않는다.
+따라서 live 결과의 `passed=true`는 현재 baseline 구조 검증을 통과했다는 의미이며,
+`qualityGate.ready=false`인 동안 production 검색 품질 승인을 뜻하지 않는다.
+
+Live에는 다음 진단을 추가한다.
+
+- `coverageGapCount`, `coverageGapRate`, `coverageGapReasons`
+- culture 기대 case 중 `UNCLASSIFIED_CULTURE`를 제외한 `classificationCoverageRate`
+- 실제 Hit@K·MRR 채점이 가능한 `scorableCaseRate`
+- locale title과 무관한 `matchedBy=contentId`
+- MySQL의 `summary.title`과 `translations.{locale}.detail.title`을 대조한 locale별 누락·관측 진단
+- Qdrant 결과가 MySQL 원본으로 재검증됐는지 보는 `trustedSourceRate`
+
+지연시간 p50·p95와 임베딩 입력 토큰은 기록하되 R17에서 hard gate 여부를 결정한다.
 
 제한 smoke는 품질 합격 판정과 별개로 처리한다. 실행 case 중 운영 오류가 하나라도 있으면
 프로세스는 실패 코드로 종료하고, 오류 없이 제한된 case를 마친 경우에만 성공 종료한다.
@@ -174,6 +228,9 @@ Backend 디렉터리에서 실행한다.
 ```powershell
 # 외부 호출 없이 Mock 문서로 평가기와 고정 세트를 회귀 검증
 npm run rag:evaluate
+
+# 외부 API 없이 live fixture의 contentId·문화·locale title 근거를 로컬 MySQL과 대조
+npm run rag:audit-live-fixture
 
 # 실제 설정 후 처음 3건만 연결 smoke test
 npm run rag:evaluate -- --live --limit=3
@@ -204,6 +261,12 @@ QDRANT_COLLECTION=culturepath_places_v1
 - 중복·잘못된 ID·MySQL 누락·원본 필터 불일치를 제거하는 경로를 자동 테스트한다.
 - 로컬 MySQL과 Qdrant 환경·연결 검증은 완료됐다. OpenRouter는 아직 연결하지 않았다.
 - OpenRouter BGE-M3 실임베딩, 실제 장소 전체 인덱싱과 live 의미 검색 평가는 실행하지 않았다.
-- 기존 fixture를 그대로 live에 사용하면 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 발생할 수 있다. R16 전에는 이를 공식 live 합격/실패로 해석하지 않는다.
+- 기존 fixture를 그대로 사용했던 과거 live 결과는 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 섞일 수 있으므로 공식 live 합격/실패로 해석하지 않는다.
+- R16은 Mock과 live fixture 로딩·검증·판정을 분리했고 live title은 정답 판정에 사용하지 않는다.
+- Live baseline은 15개 case와 13개 고유 TourAPI `contentId`를 갖는다. 10개는 relevance, 5개는 명시적인 `UNCLASSIFIED_CULTURE` 공백이다.
+- 이번 구현 세션에서는 Windows `MySQL84` 서비스가 중지 상태였고 현재 권한으로 시작할 수 없었다. 따라서 live fixture 근거는 `repository_snapshot_pending_mysql_audit`이며 `npm run rag:audit-live-fixture` 재검증이 남아 있다.
+- 감사 명령은 누락 ID, relevance case의 문화 누락, 기존 coverage gap 해소를 서로 다른 진단으로 표시한다. 누락을 Mock이나 가상 장소로 채우지 않는다.
+- 감사 CLI는 자신이 만든 MySQL pool을 성공·오류 경로 모두에서 닫아 JSON 출력 후 프로세스가 종료되도록 한다.
+- R16 변경을 포함한 Backend 하네스 242/242와 별도 `gpt-5.6-sol high` 리뷰를 통과했다.
 - Qdrant 결과를 정답으로 다시 등록하거나 fixture를 현재 검색 결과에 맞춰 바꿔 평가를 통과시키지 않는다.
 - `QDRANT_SCORE_THRESHOLD` 최종값과 live 지연시간 기준은 전체 live 평가 후 확정한다.
