@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "rag:audit-live-fixture": "node scripts/auditRagLiveFixture.js",
     "rag:evaluate": "node scripts/evaluateRag.js",
     "rag:index": "node scripts/indexPlaces.js",
     "test": "node --import ./test-support/setup.js --test",

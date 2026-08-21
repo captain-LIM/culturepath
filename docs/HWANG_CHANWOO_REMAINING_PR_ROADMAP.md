@@ -2,7 +2,7 @@
 
 > **문서 소유자:** 황찬우
 >
-> **최종 갱신:** 2026-08-18
+> **최종 갱신:** 2026-08-21
 >
 > **담당 범위:** 외부 API 연동 · 관광 데이터 품질 · RAG/AI Backend · Frontend UI/UX Design 및 API 연결
 >
@@ -39,6 +39,7 @@
 | 안정화 | PR #10 | migration, 코스 생성·Fork 멱등성, RAG/AI 어댑터 기반 |
 | R7~R9 | PR #11~#13 | Qdrant 인덱싱 코드, RAG 검색·평가 기반, 구조화 AI 변형 Backend |
 | R10 | PR #14 | Flutter AI 변경안, semantic diff, 적용·취소·원본 복구 UX |
+| R14·R15 | PR #17·#18 | Manus/Figma P0 계약과 Flutter 디자인 적용·모바일 QA |
 | 팀원 지도 기능 | `67a1943`, `8195d41`, `64fcfc2` | 코스 Day별 Google Map, 좌표 저장·응답, 최신 코스 재조회, 지도 pan 수정 |
 
 2026-08-13 재검증 기준:
@@ -65,9 +66,10 @@
 ### 2.3 RAG fixture와 live 데이터 계약 충돌
 
 - `rag-evaluation-v1.json`은 35개 case와 Mock 문서 기반 고유 기대 title 12개를 가진다.
-- 현재 live 비교는 title 정규화 문자열을 사용하며 장소 별칭 canonicalization은 없다.
-- 실제 TourAPI title과 Mock title이 다르거나 `cultures=[]`이면 같은 장소도 기존 fixture에서 실패할 수 있다.
-- 기존 fixture는 Mock 회귀로 보존한다. R16 전에는 fixture, Mock title, culture rule, `CONTENT_ID_OVERRIDES`, Qdrant schema를 평가 통과 목적으로 임의 변경하지 않는다.
+- R16에서 Mock은 기존 title 비교를 유지하고 live는 별도 fixture의 숫자형 TourAPI `contentId` exact match로 분리했다.
+- 실제 TourAPI title과 번역 title은 진단 정보일 뿐 live 정답 판정에 사용하지 않는다.
+- `cultures=[]`처럼 알려진 분류 공백은 `coverage_gap`으로 기록해 Hit@K·MRR과 분리한다.
+- 기존 fixture, Mock title, culture rule, `CONTENT_ID_OVERRIDES`, Qdrant schema는 변경하지 않았다.
 
 ## 3. 앞으로 실행할 PR 순서
 
@@ -77,8 +79,8 @@
 | 2 | R12 | **머지 완료(PR #16)** | 관광지 이미지·상세·연관 장소 수직 연결 | R11 공개 목록 계약 |
 | 협업 | R13 | **황찬우 범위 제외·임수민 담당** | 다국어 관광지 데이터 계약과 연결 | 황찬우는 머지 후 통합 영향만 확인 |
 | 3 | R14 | **머지 완료(PR #17)** | Manus 프로토타입·Figma handoff P0 디자인 확정 | R11·R12의 실제 데이터 상태 |
-| 4 | R15 | **구현 중** | Flutter 디자인 적용·모바일 디자인 QA | R14 조건부 승인과 인계 계약 |
-| 5 | R16 | 대기 | 실제 TourAPI 기준 RAG 평가 계약 재정의 | R11 분류 정책·실제 MySQL 표본 |
+| 4 | R15 | **머지 완료(PR #18)** | Flutter 디자인 적용·모바일 디자인 QA | R14 조건부 승인과 인계 계약 |
+| 5 | R16 | **구현·자동검증·독립리뷰 완료 / MySQL 감사 대기** | 실제 TourAPI 기준 RAG 평가 계약 재정의 | R11 분류 정책·실제 MySQL 표본 |
 | 6 | R17 | OpenRouter 준비까지 대기 | OpenRouter live RAG·AI 품질/비용 검증 | R16 live fixture·예산 승인 |
 | 7 | R18 | 대기 | 배포·비용·보안·Google Play·공모전 마감 | R11~R17 완료 |
 
@@ -289,6 +291,26 @@ R11·R12의 실제 데이터 상태를 기준으로 화면 구조와 시각 언�
 - title alias, canonicalization, `cultures=[]`, 번역 title의 판정 우선순위 정의
 - Qdrant schema 변경은 검토하되 승인 없이 변경하지 않음
 
+### 확정 구현 계약
+
+- `rag-evaluation-v1.json` 35개 case는 Mock 전용으로 보존한다.
+- `rag-evaluation-live-v1.json`은 최소 15개 case를 요구하며 현재 10개 relevance와 5개 `coverage_gap`으로 시작한다.
+- Live relevance는 title fallback 없이 `contentId`로만 맞춘다. `titlesByLocale`은 표시·감사용이다.
+- 여러 기대 ID를 가진 case는 `titlesByContentId`로 ID별 locale title을 구분한다.
+- `empty`는 실제로 적합 장소가 없다고 감사한 경우에만 사용한다.
+- `cultures=[]`은 `UNCLASSIFIED_CULTURE`로 기록하고 검색 오답이나 자동 override로 바꾸지 않는다.
+- Live Hit@8·MRR@8은 R17 첫 실측 전까지 보고 전용이다. routing·hard filter·MySQL trusted source만 baseline gate로 둔다.
+- 세 baseline threshold는 모두 필수 `1.00`이며 삭제하거나 완화한 fixture는 거부한다.
+- `npm run rag:audit-live-fixture`로 fixture ID와 `places_cache`의 culture·locale별 title을 외부 API 없이 대조하고 MySQL pool을 종료한다.
+- Qdrant schema, `CONTENT_ID_OVERRIDES`, OpenRouter 모델과 Flutter 계약은 변경하지 않는다.
+
+### 현재 제한
+
+- 현재 Windows `MySQL84` 서비스가 중지돼 있고 이 세션 권한으로 시작할 수 없었다.
+- Live seed의 13개 고유 숫자 ID는 저장소에 반영된 TourAPI 기반 제품 표본이지만, 증거 상태는 `repository_snapshot_pending_mysql_audit`이다.
+- MySQL을 켠 뒤 감사 명령을 통과하고 case 증거를 `mysql_verified`로 갱신하기 전까지 `qualityGate.contractReady=false`, `qualityGate.ready=false`다.
+- `ready=true`는 승인된 Hit@K·MRR을 포함한 유효한 0~1 threshold, 전체 실행 완료와 실제 평가 통과까지 모두 필요하다.
+
 ### 완료 조건
 
 - Mock 회귀와 live 품질 지표가 오염되지 않는다.
@@ -360,12 +382,14 @@ R14~R16은 OpenRouter 없이 진행할 수 있다. R17 전에는 실제 의미 �
 ## 14. 현재 세션 인수인계
 
 - R11 문화별 관광지 관련도와 R12 이미지·상세·연관 장소 수직 연결은 머지 완료됐다.
-- R14의 P0 명세, Manus·Figma 프롬프트, 검수표와 [최종 결과·R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)는 `agent/r14-manus-figma-p0-design` 브랜치에 작성됐다.
-- Manus 프로토타입은 핵심 9개 화면, QA 상태, 360·390·430px, text zoom과 접근성 보정을 완료했고 조건부 승인됐다.
-- 다음 행동은 R14 PR을 머지하고 최신 `main`에서 R15 Flutter 디자인 적용 브랜치를 만드는 것이다.
+- R14와 R15는 각각 PR #17·#18로 머지됐고, 후속 팀원 디자인·다국어·지도 변경도 현재 `main`에 반영됐다.
+- 현재 작업 브랜치는 `agent/r16-live-rag-evaluation-contract`이며 Mock/live 평가 계약 분리 구현과 독립 리뷰가 완료됐다.
+- 기존 Mock 35개 fixture는 그대로이며 live baseline 15개 case는 `contentId` 정답과 명시적 coverage gap을 사용한다.
+- 로컬 MySQL 서비스 시작 권한이 없어 실제 `places_cache` 재감사는 남아 있다. 다음 세션은 MySQL 실행 후 `npm run rag:audit-live-fixture`부터 수행한다.
+- 현재 Backend 하네스는 242/242를 통과했고 `gpt-5.6-sol high` 최종 리뷰는 추가 발견 없이 `APPROVE`다.
 - R11은 일반 탐색 품질이며 Qdrant/OpenRouter RAG와 구분한다. 관련도 강도는 공개하지 않는다.
 - 다국어 관광 데이터 R13과 지역 지도·지도 UX 고도화는 **임수민 담당**이며 황찬우 잔여 PR에서 제외한다.
 - 황찬우는 팀원 변경이 머지된 후 디자인 일관성, 긴 다국어 문구, canonical `contentId`·RAG 평가 호환성만 통합 검증한다.
 - OpenRouter는 R17로 연기하며 그전까지 `USE_MOCK_RAG=true`를 기본으로 유지한다.
-- R12는 PR #16으로 `main`에 머지됐다. Flutter 로컬 도구가 없어 이후 Flutter 변경도 GitHub CI의 analyze/test 확인이 필수다.
+- R12는 PR #16으로, R14·R15는 PR #17·#18로 `main`에 머지됐다. Flutter 변경은 계속 GitHub CI의 analyze/test와 release build를 확인한다.
 - 사용자가 별도로 요청하기 전에는 커밋·푸시·PR을 생성하지 않는다.

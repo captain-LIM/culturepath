@@ -1,0 +1,256 @@
+{
+  "version": "culturepath-rag-live-eval-v1",
+  "owner": "황찬우",
+  "mode": "live",
+  "topK": 8,
+  "qualityGate": {
+    "status": "baseline",
+    "note": "R17 첫 OpenRouter·Qdrant 실측 전까지 Hit@K와 MRR은 보고만 하고 합격 기준으로 사용하지 않는다."
+  },
+  "thresholds": {
+    "routingAccuracy": 1,
+    "strictFilterRate": 1,
+    "trustedSourceRate": 1
+  },
+  "cases": [
+    {
+      "id": "live-gangneung-ojukheon-region",
+      "query": "강릉 오죽헌을 포함한 문화 여행",
+      "expectedFilters": { "region": "강릉" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["129784"],
+        "titlesByLocale": { "ko": ["오죽헌", "강릉 오죽헌·시립박물관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-tongyeong-literature-exact",
+      "query": "통영 박경리기념관 문학 여행",
+      "expectedFilters": { "region": "통영", "category": "문학" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["2369504"],
+        "titlesByLocale": { "ko": ["박경리기념관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-tongyeong-literature-alias",
+      "query": "통영에서 박경리 작가의 문학 흔적을 찾는 여행",
+      "expectedFilters": { "region": "통영", "category": "문학" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["2369504"],
+        "titlesByLocale": { "ko": ["박경리기념관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-jeonju-craft",
+      "query": "전주 공예 전시관 여행",
+      "expectedFilters": { "region": "전주", "category": "공예·공방" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["130357"],
+        "titlesByLocale": { "ko": ["전주공예품전시관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-seoul-art-museums",
+      "query": "서울 미술관 여행",
+      "expectedFilters": { "region": "서울", "category": "미술·갤러리" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["1934593", "130227"],
+        "titlesByLocale": { "ko": ["국립현대미술관 서울관", "일민미술관"] },
+        "titlesByContentId": {
+          "1934593": { "ko": ["국립현대미술관 서울관"] },
+          "130227": { "ko": ["일민미술관"] }
+        }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-chuncheon-literature",
+      "query": "춘천 김유정 문학 여행",
+      "expectedFilters": { "region": "춘천", "category": "문학" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["127933"],
+        "titlesByLocale": { "ko": ["김유정문학촌"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gunsan-heritage",
+      "query": "군산 근대역사박물관 여행",
+      "expectedFilters": { "region": "군산", "category": "근대 문화유산" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["1684836"],
+        "titlesByLocale": { "ko": ["군산근대역사박물관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-mokpo-heritage",
+      "query": "목포 근대역사관 여행",
+      "expectedFilters": { "region": "목포", "category": "근대 문화유산" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["2607311"],
+        "titlesByLocale": { "ko": ["목포 근대역사관 1관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-mokpo-literature",
+      "query": "목포 문학관 여행",
+      "expectedFilters": { "region": "목포", "category": "문학" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["130176"],
+        "titlesByLocale": { "ko": ["목포 문학관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-literature-category",
+      "query": "문학관과 작가의 흔적을 찾는 여행",
+      "expectedFilters": { "category": "문학" },
+      "expected": {
+        "outcome": "relevant",
+        "contentIds": ["2369504", "127933", "130176"],
+        "titlesByLocale": { "ko": ["박경리기념관", "김유정문학촌", "목포 문학관"] },
+        "titlesByContentId": {
+          "2369504": { "ko": ["박경리기념관"] },
+          "127933": { "ko": ["김유정문학촌"] },
+          "130176": { "ko": ["목포 문학관"] }
+        }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gap-ojukheon-literature",
+      "query": "강릉 오죽헌 문학 여행",
+      "expectedFilters": { "region": "강릉", "category": "문학" },
+      "expected": {
+        "outcome": "coverage_gap",
+        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "contentIds": ["129784"],
+        "titlesByLocale": { "ko": ["오죽헌", "강릉 오죽헌·시립박물관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gap-terarosa-coffee",
+      "query": "강릉 테라로사 커피 여행",
+      "expectedFilters": { "region": "강릉", "category": "커피·카페" },
+      "expected": {
+        "outcome": "coverage_gap",
+        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "contentIds": ["1950195"],
+        "titlesByLocale": { "ko": ["테라로사 본점"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gap-yourmind-bookshop",
+      "query": "서울 유어마인드 독립서점 여행",
+      "expectedFilters": { "region": "서울", "category": "독립서점·책방" },
+      "expected": {
+        "outcome": "coverage_gap",
+        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "contentIds": ["2044896"],
+        "titlesByLocale": { "ko": ["유어마인드"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gap-jeonju-traditional-liquor",
+      "query": "전주 전통술박물관 전통주 여행",
+      "expectedFilters": { "region": "전주", "category": "전통주·양조장" },
+      "expected": {
+        "outcome": "coverage_gap",
+        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "contentIds": ["130444"],
+        "titlesByLocale": { "ko": ["전주 전통술박물관"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    },
+    {
+      "id": "live-gap-gunsan-hirosu-heritage",
+      "query": "군산 히로쓰가옥 근대 문화유산 여행",
+      "expectedFilters": { "region": "군산", "category": "근대 문화유산" },
+      "expected": {
+        "outcome": "coverage_gap",
+        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "contentIds": ["913869"],
+        "titlesByLocale": { "ko": ["군산 히로쓰가옥"] }
+      },
+      "evidence": {
+        "source": "tourapi-seeded-product-data",
+        "verification": "repository_snapshot_pending_mysql_audit",
+        "observedAt": "2026-08-21"
+      }
+    }
+  ]
+}
