@@ -47,6 +47,7 @@
   "sort_popular": "人気",
   "refresh": "更新",
   "no_courses": "公開コースがありません。",
+  "explore_list_end": "他に表示できるコースはありません",
   "ranking_title": "TOPコースランキング",
   "ranking_subtitle": "いいね・フォーク数順",
   "feed_error": "フィードを読み込めません。\nバックエンドサーバーが起動しているか確認してください。",

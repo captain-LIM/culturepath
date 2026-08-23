@@ -47,6 +47,7 @@
   "sort_popular": "인기",
   "refresh": "새로고침",
   "no_courses": "공개된 코스가 없습니다.",
+  "explore_list_end": "더 둘러볼 코스가 없어요",
   "ranking_title": "TOP 코스 랭킹",
   "ranking_subtitle": "좋아요·포크 기반 점수순",
   "feed_error": "피드를 불러올 수 없습니다.\n백엔드 서버가 실행 중인지 확인하세요.",

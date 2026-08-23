@@ -160,6 +160,7 @@ class _MyCoursesTab extends ConsumerWidget {
                     ),
                   ),
                 ),
+              const _ListEndNotice(),
             ],
           ),
         );
@@ -278,10 +279,13 @@ class _PublicCourseList extends StatelessWidget {
                 AppSpacing.lg,
                 AppSpacing.xxl,
               ),
-              itemCount: snapshot.courses.length + (snapshot.isStale ? 1 : 0),
+              itemCount: snapshot.courses.length + (snapshot.isStale ? 1 : 0) + 1,
               itemBuilder: (context, index) {
                 if (snapshot.isStale && index == 0) return const _StaleNotice();
                 final courseIndex = index - (snapshot.isStale ? 1 : 0);
+                if (courseIndex == snapshot.courses.length) {
+                  return const _ListEndNotice();
+                }
                 final course = snapshot.courses[courseIndex];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -295,6 +299,21 @@ class _PublicCourseList extends StatelessWidget {
             ),
           );
         },
+      );
+}
+
+class _ListEndNotice extends StatelessWidget {
+  const _ListEndNotice();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+        child: Center(
+          child: Text(
+            'explore_list_end'.tr(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+        ),
       );
 }
 

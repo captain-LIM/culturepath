@@ -47,6 +47,7 @@
   "sort_popular": "热门",
   "refresh": "刷新",
   "no_courses": "暂无公开路线。",
+  "explore_list_end": "暂时没有更多路线了",
   "ranking_title": "TOP路线排行榜",
   "ranking_subtitle": "按点赞·分叉数排名",
   "feed_error": "无法加载动态。\n请检查后端服务器是否正在运行。",

@@ -47,6 +47,7 @@
   "sort_popular": "Popular",
   "refresh": "Refresh",
   "no_courses": "No public courses yet.",
+  "explore_list_end": "That's all the courses for now",
   "ranking_title": "TOP Course Rankings",
   "ranking_subtitle": "Ranked by likes & forks",
   "feed_error": "Unable to load feed.\nPlease check if the backend server is running.",
