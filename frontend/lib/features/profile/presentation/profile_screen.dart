@@ -152,7 +152,7 @@ class _LoggedInView extends ConsumerWidget {
               _buildLanguageSelectorSliver(context),
               _buildStats(profile.stats, context),
               _sectionTitle('my_badges'.tr()),
-              _buildBadgeGrid(profile.badges),
+              _buildBadgeGrid(profile.badges, context),
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
@@ -271,17 +271,24 @@ class _LoggedInView extends ConsumerWidget {
     (8, '미술·갤러리', '🖼️'), (9, '영화·애니메이션', '🎬'), (10, '커피·카페', '☕'),
   ];
 
-  SliverToBoxAdapter _buildBadgeGrid(Map<String, int> badges) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _allBadges.map((b) {
+  SliverPadding _buildBadgeGrid(Map<String, int> badges, BuildContext context) {
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.8;
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          mainAxisExtent: largeText ? 80 : 56,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final b = _allBadges[index];
             final count = badges[b.$2] ?? 0;
             return _BadgeChip(name: 'culture_${b.$1}_name'.tr(), emoji: b.$3, count: count);
-          }).toList(),
+          },
+          childCount: _allBadges.length,
         ),
       ),
     );
@@ -393,49 +400,57 @@ class _BadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final earned = count > 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: earned ? AppColors.accentGold.withValues(alpha: 0.12) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: earned ? AppColors.accentGold.withValues(alpha: 0.5) : Colors.grey.shade300,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            emoji,
-            style: TextStyle(fontSize: 14, color: earned ? null : const Color(0x00000000)),
-          ),
-          if (!earned)
-            const Text('❓', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: earned ? FontWeight.bold : FontWeight.normal,
-              color: earned ? AppColors.accentGold : Colors.grey.shade400,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: earned ? AppColors.accentGold.withValues(alpha: 0.12) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(AppRadius.surface),
+            border: Border.all(
+              color: earned ? AppColors.accentGold.withValues(alpha: 0.5) : Colors.grey.shade300,
             ),
           ),
-          if (earned && count > 1) ...[
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          child: Row(
+            children: [
+              Text(earned ? emoji : '❓', style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: earned ? FontWeight.bold : FontWeight.normal,
+                    color: earned ? AppColors.accentGold : Colors.grey.shade400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (earned && count > 1)
+          Positioned(
+            top: -8,
+            right: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.accentGold,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 1.5),
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
