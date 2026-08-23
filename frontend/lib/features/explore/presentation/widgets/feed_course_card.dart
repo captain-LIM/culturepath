@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -41,7 +42,7 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
     if (!mounted) return;
     if (!loggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그인 후 좋아요를 누를 수 있습니다.')),
+        SnackBar(content: Text('login_required_like'.tr())),
       );
       return;
     }

@@ -18,7 +18,7 @@ class CourseTrackView extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
-          '이 트랙에는 장소가 없습니다.',
+          'track_no_places'.tr(),
           style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
         ),
       );
