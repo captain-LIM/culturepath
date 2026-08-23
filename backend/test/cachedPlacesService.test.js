@@ -445,3 +445,92 @@ test('reports BYPASS when a cache write fails without losing upstream data', asy
   assert.equal(response.items[0].contentId, '5');
   assert.equal(logger.warnings.length, 1);
 });
+
+test('translation overlay matches the nearby candidate whose title overlaps, not just the nearest neighbor', async () => {
+  const korItem = {
+    contentId: '129784',
+    title: '강릉 오죽헌·시립박물관',
+    latitude: 37.7791389,
+    longitude: 128.8796621,
+  };
+  let searchArgs;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async (lang, options) => {
+        searchArgs = { lang, options };
+        return {
+          items: [
+            {
+              contentId: 'near-but-unrelated',
+              title: 'Museum of Oriental Embroidery (동양자수박물관)',
+              latitude: 37.7779681,
+              longitude: 128.8803035,
+            },
+            {
+              contentId: 'same-place',
+              title: 'Ojukheon House (강릉 오죽헌)',
+              latitude: 37.7791,
+              longitude: 128.8797,
+            },
+          ],
+        };
+      },
+      getPlaceDetailTranslated: async (lang, { contentId }) => ({
+        contentId,
+        title: 'Ojukheon House',
+        address: 'Gangneung',
+      }),
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(searchArgs.lang, 'en');
+  assert.equal(searchArgs.options.latitude, korItem.latitude);
+  assert.equal(searchArgs.options.longitude, korItem.longitude);
+  assert.equal(overlaid.hasTranslatedInfo, true);
+  assert.equal(overlaid.title, 'Ojukheon House');
+});
+
+test('translation overlay keeps the Korean item when no nearby candidate title matches', async () => {
+  const korItem = {
+    contentId: '2764935',
+    title: '김동명문학관',
+    latitude: 37.820456,
+    longitude: 128.837729,
+  };
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [
+          {
+            contentId: 'unrelated-cafe',
+            title: 'Some Unrelated Cafe (어떤 카페)',
+            latitude: 37.8205,
+            longitude: 128.8377,
+          },
+        ],
+      }),
+      getPlaceDetailTranslated: async () => {
+        throw new Error('should not fetch a detail without a title match');
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.hasTranslatedInfo, false);
+  assert.equal(overlaid.title, '김동명문학관');
+});

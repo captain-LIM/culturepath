@@ -83,10 +83,43 @@ function canUseStale(error) {
 
 // EngService2/JpnService2는 KorService2와 별개의 contentId 공간을 쓰기 때문에
 // (같은 장소도 서로 다른 ID), 국문 contentId로 번역 서비스 상세를 직접 조회할
-// 수 없다. 대신 국문 제목으로 번역 서비스를 키워드 검색한 뒤, 좌표가 가장
-// 가까운 결과를 같은 장소로 판단한다.
+// 수 없다. 번역 서비스의 keyword 검색은 번역된 제목만 대상으로 하기 때문에
+// 국문 제목으로는 거의 매칭되지 않는다(실측: EngService2에 국문 키워드로
+// 검색하면 0건). 대신 국문 좌표 주변을 locationBasedList2로 조회한 뒤, 후보
+// 제목에 국문 제목이 포함되는지로 동일 장소 여부를 확인하고 그중 가장 가까운
+// 결과를 채택한다.
 const SUPPORTED_TRANSLATION_LANGS = Object.freeze(new Set(['en', 'ja']));
-const MAX_TRANSLATION_MATCH_DISTANCE_METERS = 150;
+const TRANSLATION_MATCH_RADIUS_METERS = 500;
+const MAX_TRANSLATION_MATCH_DISTANCE_METERS = 500;
+
+function normalizeForTitleMatch(value) {
+  return String(value || '').replace(/[\s()·\-,./]/g, '');
+}
+
+// 번역 서비스 제목은 보통 "English Name (국문 이름)" 형태로 끝에 국문 이름을
+// 괄호로 덧붙인다. 국문 정식 명칭에 부속시설명이 붙는 경우(예: "오죽헌·시립박물관")
+// 완전 일치는 아니므로, 양쪽이 서로를 포함하는지(부분집합 관계)로 판단한다.
+function extractTrailingParenthetical(title) {
+  const match = /\(([^()]+)\)\s*$/.exec(String(title || '').trim());
+  return match ? match[1] : null;
+}
+
+function titleLooksLikeSamePlace(korTitle, candidateTitle) {
+  const normalizedKorTitle = normalizeForTitleMatch(korTitle);
+  if (!normalizedKorTitle) {
+    return false;
+  }
+  if (normalizeForTitleMatch(candidateTitle).includes(normalizedKorTitle)) {
+    return true;
+  }
+  const parenthetical = extractTrailingParenthetical(candidateTitle);
+  const normalizedParenthetical = normalizeForTitleMatch(parenthetical);
+  return (
+    normalizedParenthetical.length > 0 &&
+    (normalizedKorTitle.includes(normalizedParenthetical) ||
+      normalizedParenthetical.includes(normalizedKorTitle))
+  );
+}
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371000;
@@ -335,15 +368,20 @@ function createCachedPlacesService(options = {}) {
       return null;
     }
 
-    const searchResult = await upstream.searchPlacesByKeywordTranslated(lang, {
-      keyword: korItem.title,
-      numOfRows: 10,
+    const searchResult = await upstream.searchPlacesByLocationTranslated(lang, {
+      latitude: korItem.latitude,
+      longitude: korItem.longitude,
+      radius: TRANSLATION_MATCH_RADIUS_METERS,
+      numOfRows: 20,
     });
 
     let bestContentId = null;
     let bestDistance = Infinity;
     for (const candidate of searchResult.items) {
       if (candidate.latitude == null || candidate.longitude == null) {
+        continue;
+      }
+      if (!titleLooksLikeSamePlace(korItem.title, candidate.title)) {
         continue;
       }
       const distance = haversineMeters(

@@ -27,6 +27,7 @@ const CLASSIFICATION_PATTERNS = Object.freeze({
   lclsSystm3: /^[A-Z]{2}\d{6}$/,
 });
 const SORT_OPTIONS = Object.freeze(['A', 'C', 'D']);
+const LOCATION_SORT_OPTIONS = Object.freeze(['A', 'C', 'D', 'E']);
 
 function operationContext(operation) {
   return { ...TOUR_CONTEXT, operation };
@@ -34,6 +35,24 @@ function operationContext(operation) {
 
 function normalizeOptionalCode(value, name, context, pattern = CODE_PATTERN) {
   return requirePattern(value, name, pattern, context, { optional: true });
+}
+
+function requireNumberInRange(value, name, context, min, max) {
+  const numeric = Number(value);
+  if (
+    value === undefined ||
+    value === null ||
+    String(value).trim() === '' ||
+    !Number.isFinite(numeric) ||
+    numeric < min ||
+    numeric > max
+  ) {
+    throw new ExternalApiError(`${name} 형식이 올바르지 않습니다.`, {
+      code: 'VALIDATION_ERROR',
+      ...context,
+    });
+  }
+  return numeric;
 }
 
 function normalizeClassificationParams(values, context) {
@@ -253,6 +272,41 @@ function normalizeKeywordPlaceOptions({
       context,
     ),
     arrange: requireOneOf(arrange, 'arrange', SORT_OPTIONS, context),
+    ...normalizePagination(pageNo, numOfRows, context),
+  });
+}
+
+function normalizeLocationPlaceOptions({
+  latitude,
+  longitude,
+  radius,
+  contentTypeId,
+  lclsSystm1,
+  lclsSystm2,
+  lclsSystm3,
+  arrange = 'E',
+  pageNo,
+  numOfRows,
+} = {}) {
+  const context = operationContext('locationBasedList2');
+  const mapY = requireNumberInRange(latitude, 'latitude', context, -90, 90);
+  const mapX = requireNumberInRange(longitude, 'longitude', context, -180, 180);
+  const normalizedRadius = requireNumberInRange(radius, 'radius', context, 1, 20000);
+
+  return Object.freeze({
+    mapX: String(mapX),
+    mapY: String(mapY),
+    radius: String(Math.round(normalizedRadius)),
+    contentTypeId: normalizeOptionalCode(
+      contentTypeId,
+      'contentTypeId',
+      context,
+    ),
+    ...normalizeClassificationParams(
+      { lclsSystm1, lclsSystm2, lclsSystm3 },
+      context,
+    ),
+    arrange: requireOneOf(arrange, 'arrange', LOCATION_SORT_OPTIONS, context),
     ...normalizePagination(pageNo, numOfRows, context),
   });
 }
@@ -525,6 +579,23 @@ function createTourApiService(options = {}) {
         cultureOptions,
       );
     },
+
+    async searchPlacesByLocation(input = {}) {
+      const context = operationContext('locationBasedList2');
+      const normalized = normalizeLocationPlaceOptions(input);
+      const { pageNo, numOfRows, ...params } = normalized;
+      const result = await client.get(context.operation, {
+        params,
+        pageNo,
+        numOfRows,
+      });
+      return mapPlaceResult(
+        result,
+        context.operation,
+        normalizePlace,
+        cultureOptions,
+      );
+    },
   });
 }
 
@@ -564,6 +635,10 @@ function getPlaceDetailTranslated(lang, options) {
 
 function searchPlacesByKeywordTranslated(lang, options) {
   return getTranslationService(lang).searchPlacesByKeyword(options);
+}
+
+function searchPlacesByLocationTranslated(lang, options) {
+  return getTranslationService(lang).searchPlacesByLocation(options);
 }
 
 function getAreaCodes(options) {
@@ -606,6 +681,10 @@ function searchPlacesByKeyword(options) {
   return getDefaultService().searchPlacesByKeyword(options);
 }
 
+function searchPlacesByLocation(options) {
+  return getDefaultService().searchPlacesByLocation(options);
+}
+
 module.exports = {
   createTourApiService,
   getCommonDetail,
@@ -620,6 +699,9 @@ module.exports = {
   getClassificationCodes,
   normalizeAreaBasedPlaceOptions,
   normalizeKeywordPlaceOptions,
+  normalizeLocationPlaceOptions,
   searchPlacesByKeyword,
   searchPlacesByKeywordTranslated,
+  searchPlacesByLocation,
+  searchPlacesByLocationTranslated,
 };
