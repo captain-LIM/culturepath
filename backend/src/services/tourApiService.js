@@ -614,6 +614,7 @@ function getDefaultService() {
 const TRANSLATION_SERVICE_NAMES = Object.freeze({
   en: 'tourEng',
   ja: 'tourJpn',
+  zh: 'tourChs',
 });
 
 const translationServices = {};

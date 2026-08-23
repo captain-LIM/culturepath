@@ -12,6 +12,7 @@ const DEFAULTS = Object.freeze({
   tourApiBaseUrl: 'https://apis.data.go.kr/B551011/KorService2',
   tourApiEngBaseUrl: 'https://apis.data.go.kr/B551011/EngService2',
   tourApiJpnBaseUrl: 'https://apis.data.go.kr/B551011/JpnService2',
+  tourApiChsBaseUrl: 'https://apis.data.go.kr/B551011/ChsService2',
   relatedTourApiBaseUrl: 'https://apis.data.go.kr/B551011/TarRlteTarService1',
   dataLabApiBaseUrl: 'https://apis.data.go.kr/B551011/DataLabService',
 });
@@ -57,6 +58,11 @@ function getExternalApiConfig(env = process.env) {
         name: 'tourJpn',
         baseUrl: env.TOUR_API_JPN_BASE_URL?.trim() || DEFAULTS.tourApiJpnBaseUrl,
         apiKey: env.TOUR_API_JPN_KEY?.trim() || '',
+      },
+      tourChs: {
+        name: 'tourChs',
+        baseUrl: env.TOUR_API_CHS_BASE_URL?.trim() || DEFAULTS.tourApiChsBaseUrl,
+        apiKey: env.TOUR_API_CHS_KEY?.trim() || '',
       },
       relatedTour: {
         name: 'relatedTour',

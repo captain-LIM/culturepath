@@ -534,3 +534,51 @@ test('translation overlay keeps the Korean item when no nearby candidate title m
   assert.equal(overlaid.hasTranslatedInfo, false);
   assert.equal(overlaid.title, '김동명문학관');
 });
+
+test('translation overlay prefers the candidate with more overlapping title tokens over a partial match', async () => {
+  // 실측 사례: 국문 "강릉 오죽헌·시립박물관"에 대해 중문 서비스는 부속기관명을
+  // 축약한 후보("...강릉 오죽헌")와 온전한 후보("...강릉시 오죽헌/시립박물관")를
+  // 함께 반환한다. 괄호 없이 국문이 이어붙는 경우와 부속기관명 표기 차이
+  // ("강릉" vs "강릉시", "·" vs "/")까지 고려해 더 많이 겹치는 쪽을 골라야 한다.
+  const korItem = {
+    contentId: '129784',
+    title: '강릉 오죽헌·시립박물관',
+    latitude: 37.7791389,
+    longitude: 128.8796621,
+  };
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [
+          {
+            contentId: 'partial-match',
+            title: '江陵乌竹轩강릉 오죽헌',
+            latitude: 37.7791,
+            longitude: 128.8797,
+          },
+          {
+            contentId: 'full-match',
+            title: '江陵市乌竹轩/市立博物馆(강릉시 오죽헌/시립박물관)',
+            latitude: 37.7790,
+            longitude: 128.8796,
+          },
+        ],
+      }),
+      getPlaceDetailTranslated: async (lang, { contentId }) => ({
+        contentId,
+        title: contentId === 'full-match' ? '江陵市乌竹轩/市立博物馆' : '江陵乌竹轩',
+      }),
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'zh');
+
+  assert.equal(overlaid.hasTranslatedInfo, true);
+  assert.equal(overlaid.title, '江陵市乌竹轩/市立博物馆');
+});
