@@ -74,20 +74,10 @@ class TrackTimeline extends StatelessWidget {
   Widget _buildActiveTrackPreview(BuildContext context) {
     final track = tracks[activeTrack];
 
+    // 비어있을 때의 안내는 아래 본문의 빈 상태 일러스트에서 이미 보여주므로
+    // 여기서는 중복 안내 없이 자리만 비워둔다.
     if (track.places.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            Icon(Icons.add_circle_outline, size: 14, color: Colors.grey.shade400),
-            const SizedBox(width: 6),
-            Text(
-              'track_preview_empty'.tr(),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-            ),
-          ],
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return SizedBox(
