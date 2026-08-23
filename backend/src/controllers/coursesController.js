@@ -21,6 +21,8 @@ function normalizedCreatePayload({ title, description, tracks, isPublic }) {
         address: place?.address || null,
         category: place?.category || null,
         region: place?.region || null,
+        imageUrl: place?.imageUrl || null,
+        thumbnailUrl: place?.thumbnailUrl || null,
       })) : [],
     })) : [],
   };
@@ -40,6 +42,8 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
       region: t.place_region || null,
       latitude: t.place_latitude != null ? Number(t.place_latitude) : null,
       longitude: t.place_longitude != null ? Number(t.place_longitude) : null,
+      imageUrl: t.place_image_url || null,
+      thumbnailUrl: t.place_thumbnail_url || null,
       tel: '',
       openTime: '',
     });
@@ -135,13 +139,14 @@ async function saveTracks(conn, courseId, tracks) {
       const p = places[i];
       await conn.query(
         `INSERT INTO course_tracks
-           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude, place_image_url, place_thumbnail_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [courseId, track.trackNumber || 1, i + 1,
          p.contentId || null, p.title || null, p.address || null,
          p.category || null, p.region || null,
          Number.isFinite(p.latitude) ? p.latitude : null,
-         Number.isFinite(p.longitude) ? p.longitude : null]
+         Number.isFinite(p.longitude) ? p.longitude : null,
+         p.imageUrl || null, p.thumbnailUrl || null]
       );
     }
   }
@@ -421,11 +426,12 @@ async function forkCourse(req, res) {
     for (const t of origTracks) {
       await conn.query(
         `INSERT INTO course_tracks
-           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude, stay_minutes, memo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (course_id, track_number, sequence, content_id, place_title, place_address, place_category, place_region, place_latitude, place_longitude, place_image_url, place_thumbnail_url, stay_minutes, memo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [newId, t.track_number, t.sequence, t.content_id, t.place_title,
          t.place_address, t.place_category, t.place_region,
-         t.place_latitude, t.place_longitude, t.stay_minutes, t.memo]
+         t.place_latitude, t.place_longitude,
+         t.place_image_url, t.place_thumbnail_url, t.stay_minutes, t.memo]
       );
     }
     await conn.commit();

@@ -139,6 +139,16 @@ class CourseItem {
 
   int get totalPlaces => tracks.fold(0, (sum, t) => sum + t.places.length);
 
+  // 목록 카드의 커버 사진으로 쓸, 사진이 있는 첫 번째 장소.
+  PlaceItem? get coverPlace {
+    for (final track in tracks) {
+      for (final place in track.places) {
+        if (place.thumbnailUrl != null || place.imageUrl != null) return place;
+      }
+    }
+    return null;
+  }
+
   CourseItem createLocalFork({
     required String titleSuffix,
     required String unknownAuthor,

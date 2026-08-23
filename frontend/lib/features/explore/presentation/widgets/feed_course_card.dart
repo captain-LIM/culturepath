@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/place_network_image.dart';
 import '../../../course_builder/data/course_model.dart';
 import '../../../course_builder/data/course_repository.dart';
 
@@ -76,6 +77,7 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
   Widget build(BuildContext context) {
     final course = widget.course;
     final days = course.tracks.where((track) => track.places.isNotEmpty).length;
+    final cover = course.coverPlace;
     return Semantics(
       button: true,
       label: course.title,
@@ -92,7 +94,17 @@ class _FeedCourseCardState extends State<FeedCourseCard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 3, height: 76, color: AppColors.accent),
+              SizedBox(
+                width: 76,
+                height: 76,
+                child: PlaceNetworkImage(
+                  placeTitle: course.title,
+                  thumbnailUrl: cover?.thumbnailUrl,
+                  imageUrl: cover?.imageUrl,
+                  semanticLabel: '${course.title} 코스 사진',
+                  borderRadius: BorderRadius.circular(AppRadius.image),
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
