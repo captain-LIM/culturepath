@@ -23,9 +23,9 @@
         "titlesByLocale": { "ko": ["오죽헌", "강릉 오죽헌·시립박물관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -35,12 +35,12 @@
       "expected": {
         "outcome": "relevant",
         "contentIds": ["2369504"],
-        "titlesByLocale": { "ko": ["박경리기념관"] }
+        "titlesByLocale": { "ko": ["박경리기념관", "박경리 기념관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -50,12 +50,12 @@
       "expected": {
         "outcome": "relevant",
         "contentIds": ["2369504"],
-        "titlesByLocale": { "ko": ["박경리기념관"] }
+        "titlesByLocale": { "ko": ["박경리기념관", "박경리 기념관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -68,9 +68,9 @@
         "titlesByLocale": { "ko": ["전주공예품전시관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -82,14 +82,14 @@
         "contentIds": ["1934593", "130227"],
         "titlesByLocale": { "ko": ["국립현대미술관 서울관", "일민미술관"] },
         "titlesByContentId": {
-          "1934593": { "ko": ["국립현대미술관 서울관"] },
+          "1934593": { "ko": ["국립현대미술관 서울관", "국립현대미술관 서울"] },
           "130227": { "ko": ["일민미술관"] }
         }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -102,9 +102,9 @@
         "titlesByLocale": { "ko": ["김유정문학촌"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -117,9 +117,9 @@
         "titlesByLocale": { "ko": ["군산근대역사박물관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -129,12 +129,12 @@
       "expected": {
         "outcome": "relevant",
         "contentIds": ["2607311"],
-        "titlesByLocale": { "ko": ["목포 근대역사관 1관"] }
+        "titlesByLocale": { "ko": ["목포 근대역사관 1관", "목포근대역사관 1관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -144,12 +144,12 @@
       "expected": {
         "outcome": "relevant",
         "contentIds": ["130176"],
-        "titlesByLocale": { "ko": ["목포 문학관"] }
+        "titlesByLocale": { "ko": ["목포 문학관", "목포문학관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -161,15 +161,15 @@
         "contentIds": ["2369504", "127933", "130176"],
         "titlesByLocale": { "ko": ["박경리기념관", "김유정문학촌", "목포 문학관"] },
         "titlesByContentId": {
-          "2369504": { "ko": ["박경리기념관"] },
+          "2369504": { "ko": ["박경리기념관", "박경리 기념관"] },
           "127933": { "ko": ["김유정문학촌"] },
-          "130176": { "ko": ["목포 문학관"] }
+          "130176": { "ko": ["목포 문학관", "목포문학관"] }
         }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -183,25 +183,24 @@
         "titlesByLocale": { "ko": ["오죽헌", "강릉 오죽헌·시립박물관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
-      "id": "live-gap-terarosa-coffee",
+      "id": "live-terarosa-coffee",
       "query": "강릉 테라로사 커피 여행",
       "expectedFilters": { "region": "강릉", "category": "커피·카페" },
       "expected": {
-        "outcome": "coverage_gap",
-        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "outcome": "relevant",
         "contentIds": ["1950195"],
-        "titlesByLocale": { "ko": ["테라로사 본점"] }
+        "titlesByLocale": { "ko": ["테라로사 본점", "테라로사 커피공장"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -215,9 +214,9 @@
         "titlesByLocale": { "ko": ["유어마인드"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
@@ -231,25 +230,26 @@
         "titlesByLocale": { "ko": ["전주 전통술박물관"] }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     },
     {
-      "id": "live-gap-gunsan-hirosu-heritage",
+      "id": "live-gunsan-hirosu-heritage",
       "query": "군산 히로쓰가옥 근대 문화유산 여행",
       "expectedFilters": { "region": "군산", "category": "근대 문화유산" },
       "expected": {
-        "outcome": "coverage_gap",
-        "coverageGapReason": "UNCLASSIFIED_CULTURE",
+        "outcome": "relevant",
         "contentIds": ["913869"],
-        "titlesByLocale": { "ko": ["군산 히로쓰가옥"] }
+        "titlesByLocale": {
+          "ko": ["군산 히로쓰가옥", "군산 신흥동 일본식가옥(히로쓰 가옥)"]
+        }
       },
       "evidence": {
-        "source": "tourapi-seeded-product-data",
-        "verification": "repository_snapshot_pending_mysql_audit",
-        "observedAt": "2026-08-21"
+        "source": "tourapi-local-mysql-live-seed",
+        "verification": "mysql_verified",
+        "observedAt": "2026-08-24"
       }
     }
   ]

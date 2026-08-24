@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const llmService = require('./llmService');
 const { createQdrantClient, VectorStoreError } = require('./qdrantClient');
 const { createOpenRouterClient } = require('./openRouterClient');

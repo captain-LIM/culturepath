@@ -1,6 +1,6 @@
 # [황찬우 전용] R15 Flutter 디자인 적용과 검증 기록
 
-> **상태:** 구현 중 — 로컬 Flutter 미설치로 CI 및 Android 실기기 검증 대기
+> **상태:** PR #18 머지·GitHub CI 완료 — Android 실기기 수동 검증은 R18에서 진행
 >
 > **기준:** [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md) · [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md)
 
@@ -68,9 +68,9 @@ R15는 승인된 R14 프로토타입의 정보구조와 시각 언어를 기존 
 | 번역 JSON 파싱 | PASS | ko/en/ja/zh 모두 파싱 |
 | `git diff --check` | PASS | whitespace 오류 없음 |
 | Backend 전체 테스트 | PASS | 로컬 harness `230/230` |
-| `flutter analyze` | NOT_TESTED | 로컬 Flutter 미설치, CI에서 실행 |
-| `flutter test` | NOT_TESTED | 로컬 Flutter 미설치, CI에서 실행 |
-| Android release APK | NOT_TESTED | CI에 `flutter build apk --release --no-pub` 추가 |
+| `flutter analyze` | PASS | GitHub CI |
+| `flutter test` | PASS | GitHub CI |
+| Android release APK | PASS | GitHub CI `flutter build apk --release --no-pub` |
 
 추가된 회귀 테스트는 다음 계약을 고정한다.
 
@@ -89,7 +89,7 @@ R15는 승인된 R14 프로토타입의 정보구조와 시각 언어를 기존 
 
 ## 4. 수동 검증 인계
 
-다음 항목은 PR CI 성공 후 실제 Android 기기에서 확인한다.
+다음 항목은 자동 검증 완료와 별개로 R18에서 실제 Android 기기로 확인한다.
 
 1. status bar·gesture navigation safe area
 2. 코스 제목·설명 입력 중 IME가 저장 버튼과 현재 입력을 가리지 않는지

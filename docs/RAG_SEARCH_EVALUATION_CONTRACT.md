@@ -165,7 +165,9 @@ Live case의 `expected.outcome`은 다음 세 값 중 하나다.
 `SOURCE_DATA_INCOMPLETE` 중 근거를 반드시 기록한다. 예를 들어 `contentId=129784`는
 지역 기반 검색에서는 오죽헌으로 사용할 수 있지만 현재 `cultures=[]`이므로
 `강릉 × 문학` case에서는 `UNCLASSIFIED_CULTURE`로 기록한다. 평가 통과를 위해 문화
-규칙이나 `CONTENT_ID_OVERRIDES`를 자동으로 보정하지 않는다.
+규칙이나 `CONTENT_ID_OVERRIDES`를 자동으로 보정하지 않는다. 다만 실제 국문 상세과
+MySQL 표본으로 근대사 장소임을 확인한 `1684836`과 `2607311`은 사용자 승인 후
+`근대 문화유산` override로 등록했다. 일반 박물관 분류 규칙은 완화하지 않았다.
 
 Live의 `titlesByLocale`은 같은 장소의 관측 표시명이다. `오죽헌`,
 `강릉 오죽헌·시립박물관`, 번역 title이 서로 달라도 `contentId`가 같으면 같은 장소다.
@@ -174,11 +176,11 @@ Live의 `titlesByLocale`은 같은 장소의 관측 표시명이다. `오죽헌`
 따로 연결해야 하며, 감사 결과도 ID별 snapshot 일치 여부를 분리해 표시한다.
 
 Live fixture의 각 case는 `evidence.source`, `evidence.verification`,
-`evidence.observedAt`을 가진다. 현재 seed는 저장소에 반영된 실제 TourAPI 숫자 ID를
-사용하지만 로컬 MySQL 서비스를 이번 세션에서 열 수 없어
-`repository_snapshot_pending_mysql_audit` 상태다. 이를 `mysql_verified`로 바꾸기 전에는
-`qualityGate.evidenceVerified=false`, `qualityGate.contractReady=false`,
-`qualityGate.ready=false`이며 production 품질 합격으로 표현하지 않는다.
+`evidence.observedAt`을 가진다. 2026-08-24에 실제 TourAPI 국문 상세를 로컬 MySQL에
+적재해 13개 ID·title·culture를 감사했고 모든 case를 `mysql_verified`로 전환했다.
+따라서 `qualityGate.evidenceVerified=true`지만 현재 gate 상태가 `baseline`이므로
+`qualityGate.contractReady=false`, `qualityGate.ready=false`이며 production 품질
+합격으로 표현하지 않는다.
 `qualityGate.status=approved`로 바꾸려면 0~1 사이의 Hit@K와 MRR 기준도 함께 확정해야 한다.
 `contractReady`는 계약·근거 준비 상태이고, 실행 결과까지 포함한 `ready`는 전체 case가
 오류 없이 현재 threshold를 통과해야만 `true`가 된다.
@@ -229,6 +231,9 @@ Backend 디렉터리에서 실행한다.
 # 외부 호출 없이 Mock 문서로 평가기와 고정 세트를 회귀 검증
 npm run rag:evaluate
 
+# 명시적 live 실행에서 누락 ID만 TourAPI 국문 상세로 적재하고 현재 문화 규칙을 동기화
+npm run rag:seed-live-fixture -- --live
+
 # 외부 API 없이 live fixture의 contentId·문화·locale title 근거를 로컬 MySQL과 대조
 npm run rag:audit-live-fixture
 
@@ -239,7 +244,8 @@ npm run rag:evaluate -- --live --limit=3
 npm run rag:evaluate -- --live
 ```
 
-live 실행에는 다음 설정이 필요하다.
+seed 실행에는 `DB_*`와 `TOUR_API_KEY`가 필요하다. live 평가에는 여기에 OpenRouter와
+Qdrant 설정이 추가로 필요하다.
 
 ```dotenv
 DB_HOST=...
@@ -263,10 +269,12 @@ QDRANT_COLLECTION=culturepath_places_v1
 - OpenRouter BGE-M3 실임베딩, 실제 장소 전체 인덱싱과 live 의미 검색 평가는 실행하지 않았다.
 - 기존 fixture를 그대로 사용했던 과거 live 결과는 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 섞일 수 있으므로 공식 live 합격/실패로 해석하지 않는다.
 - R16은 Mock과 live fixture 로딩·검증·판정을 분리했고 live title은 정답 판정에 사용하지 않는다.
-- Live baseline은 15개 case와 13개 고유 TourAPI `contentId`를 갖는다. 10개는 relevance, 5개는 명시적인 `UNCLASSIFIED_CULTURE` 공백이다.
-- 이번 구현 세션에서는 Windows `MySQL84` 서비스가 중지 상태였고 현재 권한으로 시작할 수 없었다. 따라서 live fixture 근거는 `repository_snapshot_pending_mysql_audit`이며 `npm run rag:audit-live-fixture` 재검증이 남아 있다.
+- Live baseline은 15개 case와 13개 고유 TourAPI `contentId`를 갖는다. 실제 감사 결과 12개는 relevance, 3개는 명시적인 `UNCLASSIFIED_CULTURE` 공백이다.
+- 영어→일본어→중국어 장소 캐시와 코스 이미지 migration을 로컬 MySQL에 적용했고 신규 컬럼 5개를 최소권한 계정으로 확인했다.
+- `rag:seed-live-fixture -- --live`는 누락된 12개 ID만 적재한 뒤 재실행에서 13개를 모두 건너뛰고, 두 근대사 박물관 캐시만 승인된 override로 재분류했다.
+- 2026-08-24 공식 MySQL 감사는 13/13 발견, issue 0, pending evidence 0, `readyForApproval=true`를 반환했다.
 - 감사 명령은 누락 ID, relevance case의 문화 누락, 기존 coverage gap 해소를 서로 다른 진단으로 표시한다. 누락을 Mock이나 가상 장소로 채우지 않는다.
 - 감사 CLI는 자신이 만든 MySQL pool을 성공·오류 경로 모두에서 닫아 JSON 출력 후 프로세스가 종료되도록 한다.
-- R16 변경을 포함한 Backend 하네스 242/242와 별도 `gpt-5.6-sol high` 리뷰를 통과했다.
+- seed 명령은 `--live` 없이는 외부 호출과 DB 쓰기를 거부하며, 이미 존재하는 ID를 재호출하지 않는다.
 - Qdrant 결과를 정답으로 다시 등록하거나 fixture를 현재 검색 결과에 맞춰 바꿔 평가를 통과시키지 않는다.
 - `QDRANT_SCORE_THRESHOLD` 최종값과 live 지연시간 기준은 전체 live 평가 후 확정한다.

@@ -988,12 +988,13 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 
 ## Phase 3E / R15 — Flutter 디자인 적용과 모바일 QA
 
-- [ ] 공통 Theme·컴포넌트와 P0 화면 적용
-- [ ] 탐색 내 코스·홈 추가 섹션 구현
-- [ ] 접근성·긴 다국어·text scale·safe area 대응
-- [ ] 360·390·430dp와 Android 실제 기기 QA
-- [ ] `flutter analyze`, `flutter test`, release 빌드
-- [ ] Figma 명세와 구현 캡처 비교
+- [x] 공통 Theme·컴포넌트와 P0 화면 적용
+- [x] 탐색 내 코스·홈 추가 섹션 구현
+- [x] 접근성·text scale·safe area 자동 회귀 테스트
+- [x] 360·390·430dp 구조 테스트
+- [x] GitHub CI `flutter analyze`, `flutter test`, release 빌드
+- [x] R14 handoff 명세와 Flutter 구현 검토
+- [ ] Android 실기기 safe area·IME·TalkBack·실이미지 성능 수동 QA(R18)
 
 **제외 범위:** 다국어 관광 데이터와 지도 고도화 기능 구현. 팀원 변경이 합쳐진 뒤 공통 디자인이 깨지지 않는지만 통합 QA한다.
 
@@ -1002,11 +1003,12 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 ## Phase 4A / R16 — RAG 평가 계약 확정
 
 - [x] 35개 Mock 회귀 fixture와 실행기
-- [ ] Mock fixture와 live fixture 분리
-- [ ] 실제 TourAPI 기준 `contentId` 중심 정답 계약
-- [ ] title alias·canonicalization·`cultures=[]` 판정 규칙
-- [ ] 검증된 `CONTENT_ID_OVERRIDES`의 근거·변경 절차
-- [ ] live 합격 지표와 fixture 버전 관리
+- [x] Mock fixture와 live fixture 분리
+- [x] 실제 TourAPI 기준 `contentId` 중심 정답 계약
+- [x] title alias·canonicalization·`cultures=[]` 판정 규칙
+- [x] 검증된 `CONTENT_ID_OVERRIDES`의 근거·변경 절차
+- [x] live fixture 버전·evidence와 baseline 합격 지표 관리
+- [ ] OpenRouter/Qdrant live Hit@K·MRR 품질 기준 승인(R17)
 
 **완료 결과:** 실제 데이터 차이를 모델 실패로 오판하지 않는 평가 기준이 생긴다.
 
@@ -1105,8 +1107,8 @@ live 합격 기준으로 사용하지 않는다. R16에서 `contentId` 중심 li
 - [x] 2. R12 관광지 이미지·상세·연관 장소 수직 연결
 - [→ 임수민] R13 다국어 관광지 데이터 계약과 연결
 - [x] 3. R14 Manus 프로토타입·Figma handoff 정보구조·P0 디자인 조건부 확정
-- [ ] 4. R15 Flutter 디자인 적용과 Android 모바일 QA
-- [ ] 5. R16 Mock/live RAG 평가 계약 분리
+- [x] 4. R15 Flutter 디자인 적용과 자동 모바일 QA(실기기 수동 QA는 R18)
+- [x] 5. R16 Mock/live RAG 평가 계약 분리
 - [ ] 6. R17 OpenRouter 최소 실호출·인덱싱·검색·AI 품질/비용 검증
 - [ ] 7. R18 배포 환경·보안·Google Play·공모전 데모 마감
 

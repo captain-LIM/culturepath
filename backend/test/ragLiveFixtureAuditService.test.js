@@ -20,8 +20,11 @@ function cachedPlacesFor(dataset) {
   }));
 }
 
-test('audits live fixture IDs and keeps repository snapshots pending approval', async () => {
+test('audits live fixture IDs and reports explicitly pending repository snapshots', async () => {
   const dataset = loadDataset('live');
+  for (const item of dataset.cases) {
+    item.evidence.verification = 'repository_snapshot_pending_mysql_audit';
+  }
   const places = cachedPlacesFor(dataset);
   const result = await auditRagLiveFixture({
     dataset,

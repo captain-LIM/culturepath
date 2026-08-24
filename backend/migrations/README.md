@@ -12,11 +12,16 @@ mysql --host=<host> --user=<user> --password --database=<database> --execute="so
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260812_add_course_track_coordinates.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260820_add_places_cache_english_detail.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260820_add_places_cache_japanese_detail.sql"
+mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260823_add_places_cache_chinese_detail.sql"
+mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260824_add_course_tracks_place_images.sql"
 ```
 
-The 2026-08-03 migration is repeatable and uses a MySQL advisory lock so two
-deployments cannot race between the column check and `ALTER TABLE`. A lock
-timeout fails the migration instead of silently skipping it.
+The place translation migrations must stay in `en` → `ja` → `zh` order because
+each new column is positioned after the previous locale column. The migrations
+are repeatable and use MySQL advisory locks so two deployments cannot race
+between the column check and `ALTER TABLE`. A lock timeout fails the migration
+instead of silently skipping it. Run schema changes with a migration account;
+the minimum-privilege Backend account is not expected to have `ALTER`.
 
 This repository does not yet contain a migration runner. Local automated tests
 do not start Docker or MySQL, so a staging deployment must verify the migration

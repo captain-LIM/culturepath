@@ -24,7 +24,12 @@ const CULTURE_MATCH_STRENGTH = Object.freeze({
 
 // TourAPI 분류만으로 구분하기 어려운 장소를 contentId 기준으로 보정한다.
 // 검증되지 않은 ID는 추측해서 추가하지 않는다.
-const CONTENT_ID_OVERRIDES = Object.freeze({});
+const CONTENT_ID_OVERRIDES = Object.freeze({
+  // TourAPI 신분류는 일반 박물관(VE07)으로만 제공하지만 장소 자체가
+  // 근대사를 직접 다루는 것이 2026-08-24 국문 상세조회로 확인됐다.
+  1684836: Object.freeze(['근대 문화유산']), // 군산근대역사박물관
+  2607311: Object.freeze(['근대 문화유산']), // 목포근대역사관 1관
+});
 
 // culture만 지정되고 q가 없는 검색에서 searchKeyword2를 직접 호출할 때 쓰는
 // 대표 검색어. KEYWORD_RULES·TourAPI 공식 소분류 명칭과 겹치는 안전한

@@ -158,17 +158,17 @@ test('matches live relevance by contentId and reports known coverage gaps separa
   assert.equal(result.passed, true);
   assert.deepEqual(result.qualityGate, {
     contractReady: false,
-    evidenceVerified: false,
+    evidenceVerified: true,
     ready: false,
     relevanceThresholdsEnforced: false,
     status: 'baseline',
   });
   assert.equal(result.metrics.hitRateAtK, 1);
-  assert.equal(result.metrics.coverageGapCount, 5);
-  assert.equal(result.metrics.coverageGapRate, 5 / 15);
-  assert.equal(result.metrics.classificationCoverageRate, 9 / 14);
-  assert.equal(result.metrics.scorableCaseRate, 10 / 15);
-  assert.deepEqual(result.metrics.coverageGapReasons, { UNCLASSIFIED_CULTURE: 5 });
+  assert.equal(result.metrics.coverageGapCount, 3);
+  assert.equal(result.metrics.coverageGapRate, 3 / 15);
+  assert.equal(result.metrics.classificationCoverageRate, 11 / 14);
+  assert.equal(result.metrics.scorableCaseRate, 12 / 15);
+  assert.deepEqual(result.metrics.coverageGapReasons, { UNCLASSIFIED_CULTURE: 3 });
   assert.equal(result.results[0].matchedBy, 'contentId');
   assert.equal(result.results[0].hit, true);
   assert.deepEqual(result.results[0].expectedTitlesByLocale.ko, [

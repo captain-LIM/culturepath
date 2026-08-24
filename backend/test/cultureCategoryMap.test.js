@@ -57,6 +57,33 @@ test('contentId override is authoritative and follows category order', () => {
   assert.ok(categories.every(category => CULTURE_CATEGORIES.includes(category)));
 });
 
+test('uses only the two MySQL-verified modern-history museum overrides', () => {
+  assert.deepEqual(
+    classifyTourPlace({
+      contentId: '1684836',
+      title: '군산근대역사박물관',
+      lclsSystmCodes: ['VE', 'VE07', 'VE070100'],
+    }),
+    ['근대 문화유산'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({
+      contentId: '2607311',
+      title: '목포근대역사관 1관',
+      lclsSystmCodes: ['VE', 'VE07', 'VE070300'],
+    }),
+    ['근대 문화유산'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({
+      contentId: '999999',
+      title: '지역 역사관',
+      lclsSystmCodes: ['VE', 'VE07', 'VE070100'],
+    }),
+    [],
+  );
+});
+
 test('keeps unmapped places without forcing a culture', () => {
   assert.deepEqual(
     classifyTourPlace({ title: '일반 관광 안내소', lclsSystm1: 'NA' }),

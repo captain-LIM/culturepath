@@ -320,6 +320,36 @@ function createPlaceCacheRepository(options = {}) {
     );
   }
 
+  async function updatePlaceCultures({ contentId, cultures, summary }) {
+    const normalizedContentId = String(contentId ?? '').trim();
+    if (!/^\d+$/.test(normalizedContentId)) {
+      throw new TypeError('문화 재분류 contentId는 숫자 문자열이어야 합니다.');
+    }
+    if (!Array.isArray(cultures) || !cultures.every(item => typeof item === 'string')) {
+      throw new TypeError('문화 재분류 cultures는 문자열 배열이어야 합니다.');
+    }
+    if (!summary || typeof summary !== 'object' || Array.isArray(summary) ||
+        String(summary.contentId ?? '').trim() !== normalizedContentId) {
+      throw new TypeError('문화 재분류 summary의 contentId가 일치해야 합니다.');
+    }
+    const [result] = await database.query(
+      `UPDATE places_cache
+          SET cultures_json = ?,
+              summary_json = JSON_SET(
+                summary_json,
+                '$.cultures',
+                JSON_EXTRACT(?, '$')
+              )
+        WHERE content_id = ?`,
+      [
+        JSON.stringify(cultures),
+        JSON.stringify(cultures),
+        normalizedContentId,
+      ],
+    );
+    return Number(result?.affectedRows || 0) === 1;
+  }
+
   return Object.freeze({
     findPlace,
     findExistingPlaces,
@@ -329,6 +359,7 @@ function createPlaceCacheRepository(options = {}) {
     saveDetail,
     saveDetailTranslation,
     saveQuery,
+    updatePlaceCultures,
   });
 }
 
@@ -351,4 +382,5 @@ module.exports = {
   saveDetail: input => getDefaultRepository().saveDetail(input),
   saveDetailTranslation: input => getDefaultRepository().saveDetailTranslation(input),
   saveQuery: input => getDefaultRepository().saveQuery(input),
+  updatePlaceCultures: input => getDefaultRepository().updatePlaceCultures(input),
 };

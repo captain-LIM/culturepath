@@ -222,6 +222,35 @@ test('stores summary and detail fields in their SQL column order', async () => {
   assert.equal(captured.params[12], expiresAt);
 });
 
+test('updates both denormalized and summary culture fields for a verified cache row', async () => {
+  let captured;
+  const pool = {
+    async query(sql, params) {
+      captured = { sql, params };
+      return [{ affectedRows: 1 }];
+    },
+  };
+  const repository = createPlaceCacheRepository({ pool });
+  const summary = place('1684836', { cultures: [] });
+
+  const updated = await repository.updatePlaceCultures({
+    contentId: '1684836',
+    cultures: ['근대 문화유산'],
+    summary,
+  });
+
+  assert.equal(updated, true);
+  assert.match(captured.sql, /UPDATE places_cache/);
+  assert.match(captured.sql, /JSON_SET/);
+  assert.doesNotMatch(captured.sql, /summary_json = \?/);
+  assert.deepEqual(JSON.parse(captured.params[0]), ['근대 문화유산']);
+  assert.deepEqual(JSON.parse(captured.params[1]), ['근대 문화유산']);
+  assert.equal(captured.params[2], '1684836');
+  await assert.rejects(() => repository.updatePlaceCultures({
+    contentId: 'bad', cultures: [], summary,
+  }), /숫자 문자열/);
+});
+
 test('rolls back and releases a failed query-cache transaction', async () => {
   const events = [];
   const connection = {
