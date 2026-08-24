@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/place_item.dart';
@@ -83,11 +84,20 @@ class CourseMapScreen extends StatefulWidget {
 class _CourseMapScreenState extends State<CourseMapScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
+  bool _locationEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: widget.course.tracks.length, vsync: this);
+    _requestLocationPermission();
+  }
+
+  Future<void> _requestLocationPermission() async {
+    final status = await Permission.locationWhenInUse.request();
+    if (mounted) {
+      setState(() => _locationEnabled = status.isGranted);
+    }
   }
 
   @override
@@ -117,7 +127,9 @@ class _CourseMapScreenState extends State<CourseMapScreen>
       ),
       body: TabBarView(
         controller: _tabCtrl,
-        children: widget.course.tracks.map((t) => _DayMapView(track: t)).toList(),
+        children: widget.course.tracks
+            .map((t) => _DayMapView(track: t, locationEnabled: _locationEnabled))
+            .toList(),
       ),
     );
   }
@@ -143,8 +155,9 @@ String _formatDistance(double meters) {
 
 class _DayMapView extends StatefulWidget {
   final CourseTrack track;
+  final bool locationEnabled;
 
-  const _DayMapView({required this.track});
+  const _DayMapView({required this.track, required this.locationEnabled});
 
   @override
   State<_DayMapView> createState() => _DayMapViewState();
@@ -271,8 +284,12 @@ class _DayMapViewState extends State<_DayMapView> {
               ),
               markers: markers,
               polylines: pinned.length > 1 ? {_routeFor(pinned)} : {},
-              myLocationButtonEnabled: false,
+              myLocationEnabled: widget.locationEnabled,
+              myLocationButtonEnabled: widget.locationEnabled,
               zoomControlsEnabled: false,
+              // 내 위치 버튼은 기본적으로 우측 상단에 붙는데, 우리가 그린
+              // 확대/축소 버튼과 같은 자리라 아래로 밀어 겹치지 않게 한다.
+              padding: const EdgeInsets.only(top: 96),
               gestureRecognizers: {
                 Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
               },
