@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
@@ -13,6 +14,10 @@ import '../../course_builder/data/place_item.dart';
 // 코스 상세 타임라인과 동일한 번호 원 스타일(첫 장소는 강조색 채움, 나머지는
 // 테두리만)로 지도 마커를 그려 순서를 한눈에 보이게 한다.
 final Map<String, BitmapDescriptor> _numberedMarkerCache = {};
+
+// course_track_view.dart와 동일하게, TourAPI가 아닌 임의 ID의 장소는
+// 상세 페이지가 없으므로 이동하지 않고 안내만 보여준다.
+final _numericContentId = RegExp(r'^\d+$');
 
 Future<BitmapDescriptor> _numberedMarkerIcon(int number, {required bool highlighted}) async {
   final cacheKey = '$number-$highlighted';
@@ -167,6 +172,20 @@ class _DayMapViewState extends State<_DayMapView> {
   void _zoomIn() => _controller?.animateCamera(CameraUpdate.zoomIn());
   void _zoomOut() => _controller?.animateCamera(CameraUpdate.zoomOut());
 
+  void _openPlaceDetail(PlaceItem place) {
+    if (!mounted) return;
+    if (_numericContentId.hasMatch(place.contentId)) {
+      context.push('/places/${place.contentId}', extra: place);
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('place_detail_unavailable'.tr()),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<Set<Marker>> _markersFor(List<PlaceItem> pinned) async {
     final markers = <Marker>{};
     for (var i = 0; i < pinned.length; i++) {
@@ -179,6 +198,7 @@ class _DayMapViewState extends State<_DayMapView> {
         infoWindow: InfoWindow(
           title: '${i + 1}. ${pinned[i].title}',
           snippet: pinned[i].address,
+          onTap: () => _openPlaceDetail(pinned[i]),
         ),
       ));
     }
