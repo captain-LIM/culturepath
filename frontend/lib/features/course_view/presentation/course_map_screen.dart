@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,62 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/place_item.dart';
+
+// 코스 상세 타임라인과 동일한 번호 원 스타일(첫 장소는 강조색 채움, 나머지는
+// 테두리만)로 지도 마커를 그려 순서를 한눈에 보이게 한다.
+final Map<String, BitmapDescriptor> _numberedMarkerCache = {};
+
+Future<BitmapDescriptor> _numberedMarkerIcon(int number, {required bool highlighted}) async {
+  final cacheKey = '$number-$highlighted';
+  final cached = _numberedMarkerCache[cacheKey];
+  if (cached != null) return cached;
+
+  const rawSize = 108.0;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  const center = Offset(rawSize / 2, rawSize / 2);
+  const radius = rawSize / 2 - 6;
+
+  canvas.drawCircle(
+    center,
+    radius,
+    Paint()..color = highlighted ? AppColors.accent : AppColors.surface,
+  );
+  canvas.drawCircle(
+    center,
+    radius,
+    Paint()
+      ..color = highlighted ? AppColors.accent : AppColors.line
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5,
+  );
+
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: '$number',
+      style: TextStyle(
+        fontSize: 44,
+        fontWeight: FontWeight.bold,
+        color: highlighted ? Colors.white : AppColors.muted,
+      ),
+    ),
+    textDirection: ui.TextDirection.ltr,
+  )..layout();
+  textPainter.paint(
+    canvas,
+    Offset(center.dx - textPainter.width / 2, center.dy - textPainter.height / 2),
+  );
+
+  final image = await recorder.endRecording().toImage(rawSize.toInt(), rawSize.toInt());
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  final icon = BitmapDescriptor.bytes(
+    bytes!.buffer.asUint8List(),
+    width: 36,
+    height: 36,
+  );
+  _numberedMarkerCache[cacheKey] = icon;
+  return icon;
+}
 
 class CourseMapScreen extends StatefulWidget {
   final CourseItem course;
@@ -79,25 +136,54 @@ String _formatDistance(double meters) {
   return '${(meters / 1000).toStringAsFixed(1)}km';
 }
 
-class _DayMapView extends StatelessWidget {
+class _DayMapView extends StatefulWidget {
   final CourseTrack track;
 
   const _DayMapView({required this.track});
 
-  List<PlaceItem> get _pinnedPlaces =>
-      track.places.where((p) => p.hasCoordinates).toList();
+  @override
+  State<_DayMapView> createState() => _DayMapViewState();
+}
 
-  Set<Marker> _markersFor(List<PlaceItem> pinned) => {
-        for (var i = 0; i < pinned.length; i++)
-          Marker(
-            markerId: MarkerId(pinned[i].contentId),
-            position: LatLng(pinned[i].latitude!, pinned[i].longitude!),
-            infoWindow: InfoWindow(
-              title: '${i + 1}. ${pinned[i].title}',
-              snippet: pinned[i].address,
-            ),
-          ),
-      };
+class _DayMapViewState extends State<_DayMapView> {
+  late final Future<Set<Marker>> _markersFuture;
+  GoogleMapController? _controller;
+
+  List<PlaceItem> get _pinnedPlaces =>
+      widget.track.places.where((p) => p.hasCoordinates).toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _markersFuture = _markersFor(_pinnedPlaces);
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _zoomIn() => _controller?.animateCamera(CameraUpdate.zoomIn());
+  void _zoomOut() => _controller?.animateCamera(CameraUpdate.zoomOut());
+
+  Future<Set<Marker>> _markersFor(List<PlaceItem> pinned) async {
+    final markers = <Marker>{};
+    for (var i = 0; i < pinned.length; i++) {
+      final icon = await _numberedMarkerIcon(i + 1, highlighted: i == 0);
+      markers.add(Marker(
+        markerId: MarkerId(pinned[i].contentId),
+        position: LatLng(pinned[i].latitude!, pinned[i].longitude!),
+        icon: icon,
+        anchor: const Offset(0.5, 0.5),
+        infoWindow: InfoWindow(
+          title: '${i + 1}. ${pinned[i].title}',
+          snippet: pinned[i].address,
+        ),
+      ));
+    }
+    return markers;
+  }
 
   Polyline _routeFor(List<PlaceItem> pinned) => Polyline(
         polylineId: const PolylineId('route'),
@@ -152,38 +238,100 @@ class _DayMapView extends StatelessWidget {
     final legs = _legDistances(pinned);
     final total = legs.fold(0.0, (sum, d) => sum + d);
 
-    return Stack(
-      children: [
-        GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: LatLng(pinned.first.latitude!, pinned.first.longitude!),
-            zoom: 12,
-          ),
-          markers: _markersFor(pinned),
-          polylines: pinned.length > 1 ? {_routeFor(pinned)} : {},
-          myLocationButtonEnabled: false,
-          gestureRecognizers: {
-            Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
-          },
-          onMapCreated: (controller) {
-            if (pinned.length > 1) {
-              controller.animateCamera(CameraUpdate.newLatLngBounds(_boundsFor(pinned), 48));
-            }
-          },
-        ),
-        if (legs.isNotEmpty)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: _RouteDistancePanel(pinned: pinned, legs: legs, total: total),
+    return FutureBuilder<Set<Marker>>(
+      future: _markersFuture,
+      builder: (context, snapshot) {
+        final markers = snapshot.data ?? const <Marker>{};
+        return Stack(
+          children: [
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: LatLng(pinned.first.latitude!, pinned.first.longitude!),
+                zoom: 12,
+              ),
+              markers: markers,
+              polylines: pinned.length > 1 ? {_routeFor(pinned)} : {},
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              gestureRecognizers: {
+                Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
+              },
+              onMapCreated: (controller) {
+                _controller = controller;
+                if (pinned.length > 1) {
+                  controller.animateCamera(CameraUpdate.newLatLngBounds(_boundsFor(pinned), 48));
+                }
+              },
             ),
-          ),
-      ],
+            Positioned(
+              right: 12,
+              top: 12,
+              child: SafeArea(
+                bottom: false,
+                child: _MapZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
+              ),
+            ),
+            if (legs.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: _RouteDistancePanel(pinned: pinned, legs: legs, total: total),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
+}
+
+class _MapZoomControls extends StatelessWidget {
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+
+  const _MapZoomControls({required this.onZoomIn, required this.onZoomOut});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ZoomButton(icon: Icons.add, onTap: onZoomIn),
+          Container(height: 1, color: AppColors.line),
+          _ZoomButton(icon: Icons.remove, onTap: onZoomOut),
+        ],
+      ),
+    );
+  }
+}
+
+class _ZoomButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ZoomButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(icon, size: 20, color: AppColors.primary),
+          ),
+        ),
+      );
 }
 
 class _RouteDistancePanel extends StatelessWidget {
