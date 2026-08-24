@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -11,66 +10,11 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/place_item.dart';
-
-// 코스 상세 타임라인과 동일한 번호 원 스타일(첫 장소는 강조색 채움, 나머지는
-// 테두리만)로 지도 마커를 그려 순서를 한눈에 보이게 한다.
-final Map<String, BitmapDescriptor> _numberedMarkerCache = {};
+import 'widgets/course_map_helpers.dart';
 
 // course_track_view.dart와 동일하게, TourAPI가 아닌 임의 ID의 장소는
 // 상세 페이지가 없으므로 이동하지 않고 안내만 보여준다.
 final _numericContentId = RegExp(r'^\d+$');
-
-Future<BitmapDescriptor> _numberedMarkerIcon(int number, {required bool highlighted}) async {
-  final cacheKey = '$number-$highlighted';
-  final cached = _numberedMarkerCache[cacheKey];
-  if (cached != null) return cached;
-
-  const rawSize = 108.0;
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder);
-  const center = Offset(rawSize / 2, rawSize / 2);
-  const radius = rawSize / 2 - 6;
-
-  canvas.drawCircle(
-    center,
-    radius,
-    Paint()..color = highlighted ? AppColors.accent : AppColors.surface,
-  );
-  canvas.drawCircle(
-    center,
-    radius,
-    Paint()
-      ..color = highlighted ? AppColors.accent : AppColors.line
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5,
-  );
-
-  final textPainter = TextPainter(
-    text: TextSpan(
-      text: '$number',
-      style: TextStyle(
-        fontSize: 44,
-        fontWeight: FontWeight.bold,
-        color: highlighted ? Colors.white : AppColors.muted,
-      ),
-    ),
-    textDirection: ui.TextDirection.ltr,
-  )..layout();
-  textPainter.paint(
-    canvas,
-    Offset(center.dx - textPainter.width / 2, center.dy - textPainter.height / 2),
-  );
-
-  final image = await recorder.endRecording().toImage(rawSize.toInt(), rawSize.toInt());
-  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-  final icon = BitmapDescriptor.bytes(
-    bytes!.buffer.asUint8List(),
-    width: 36,
-    height: 36,
-  );
-  _numberedMarkerCache[cacheKey] = icon;
-  return icon;
-}
 
 class CourseMapScreen extends StatefulWidget {
   final CourseItem course;
@@ -202,7 +146,7 @@ class _DayMapViewState extends State<_DayMapView> {
   Future<Set<Marker>> _markersFor(List<PlaceItem> pinned) async {
     final markers = <Marker>{};
     for (var i = 0; i < pinned.length; i++) {
-      final icon = await _numberedMarkerIcon(i + 1, highlighted: i == 0);
+      final icon = await numberedMarkerIcon(i + 1, highlighted: i == 0);
       markers.add(Marker(
         markerId: MarkerId(pinned[i].contentId),
         position: LatLng(pinned[i].latitude!, pinned[i].longitude!),
@@ -234,25 +178,6 @@ class _DayMapViewState extends State<_DayMapView> {
       legs.add(_haversineMeters(a, b));
     }
     return legs;
-  }
-
-  LatLngBounds _boundsFor(List<PlaceItem> pinned) {
-    var minLat = pinned.first.latitude!;
-    var maxLat = pinned.first.latitude!;
-    var minLng = pinned.first.longitude!;
-    var maxLng = pinned.first.longitude!;
-    for (final place in pinned) {
-      final lat = place.latitude!;
-      final lng = place.longitude!;
-      if (lat < minLat) minLat = lat;
-      if (lat > maxLat) maxLat = lat;
-      if (lng < minLng) minLng = lng;
-      if (lng > maxLng) maxLng = lng;
-    }
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
   }
 
   @override
@@ -296,7 +221,7 @@ class _DayMapViewState extends State<_DayMapView> {
               onMapCreated: (controller) {
                 _controller = controller;
                 if (pinned.length > 1) {
-                  controller.animateCamera(CameraUpdate.newLatLngBounds(_boundsFor(pinned), 48));
+                  controller.animateCamera(CameraUpdate.newLatLngBounds(boundsForPlaces(pinned), 48));
                 }
               },
             ),

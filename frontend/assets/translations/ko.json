@@ -77,6 +77,7 @@
   "course_map_no_coordinates": "위치 정보가 있는 장소가 없습니다.",
   "course_map_total_distance": "이동 거리 약 {distance}",
   "course_map_distance_note": "직선거리 기준 예상 거리예요",
+  "course_map_expand": "지도 크게 보기",
   "edit_course": "코스 수정",
   "delete_course": "코스 삭제",
   "delete_confirm": "\"{title}\"을 삭제하시겠습니까?",

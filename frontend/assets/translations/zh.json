@@ -77,6 +77,7 @@
   "course_map_no_coordinates": "没有带位置信息的地点。",
   "course_map_total_distance": "移动距离约 {distance}",
   "course_map_distance_note": "按直线距离估算",
+  "course_map_expand": "查看完整地图",
   "edit_course": "编辑路线",
   "delete_course": "删除路线",
   "delete_confirm": "确定删除「{title}」吗？",

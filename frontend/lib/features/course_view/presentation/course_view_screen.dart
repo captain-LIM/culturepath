@@ -12,8 +12,8 @@ import '../../course_builder/presentation/course_builder_screen.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
 import 'course_ai_edit_screen.dart';
-import 'course_map_screen.dart';
 import 'widgets/fork_badge.dart';
+import 'widgets/course_track_map_preview.dart';
 import 'widgets/course_track_view.dart';
 
 final courseDetailProvider = FutureProvider.autoDispose.family<CourseItem, int>(
@@ -311,17 +311,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
             ),
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'map') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => CourseMapScreen(course: course)),
-                );
-              }
               if (value == 'share') _shareCourse();
               if (value == 'ai') _handleAiEdit();
               if (value == 'delete') _handleDelete();
             },
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'map', child: Text('course_map'.tr())),
               PopupMenuItem(value: 'share', child: Text('share_course'.tr())),
               PopupMenuItem(value: 'ai', child: Text('ai_course_edit'.tr())),
               if (widget.isOwner || course.isOwner)
@@ -389,7 +383,13 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               children: course.tracks
                   .map((t) => SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
-                        child: CourseTrackView(track: t),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            CourseTrackMapPreview(course: course, track: t),
+                            CourseTrackView(track: t),
+                          ],
+                        ),
                       ))
                   .toList(),
             ),

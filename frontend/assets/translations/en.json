@@ -77,6 +77,7 @@
   "course_map_no_coordinates": "No places with location data.",
   "course_map_total_distance": "About {distance} total",
   "course_map_distance_note": "Estimated as straight-line distance",
+  "course_map_expand": "View full map",
   "edit_course": "Edit Course",
   "delete_course": "Delete Course",
   "delete_confirm": "Delete \"{title}\"?",

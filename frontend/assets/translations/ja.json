@@ -77,6 +77,7 @@
   "course_map_no_coordinates": "位置情報のある場所がありません。",
   "course_map_total_distance": "移動距離 約{distance}",
   "course_map_distance_note": "直線距離による概算です",
+  "course_map_expand": "地図を大きく見る",
   "edit_course": "コース編集",
   "delete_course": "コース削除",
   "delete_confirm": "「{title}」を削除しますか？",
