@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -97,7 +98,7 @@ class _CourseDeepLinkScreen extends ConsumerWidget {
       ),
       error: (e, _) => Scaffold(
         appBar: AppBar(),
-        body: Center(child: Text('코스를 불러올 수 없습니다.\n$e')),
+        body: Center(child: Text('course_deep_link_error'.tr(namedArgs: {'error': '$e'}))),
       ),
       data: (course) => CourseViewScreen(course: course),
     );
@@ -113,6 +114,6 @@ class _ErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('잘못된 링크입니다.')),
+        body: Center(child: Text('invalid_link'.tr())),
       );
 }

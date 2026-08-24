@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const { createPlaceSummary } = require('../models/placeSummary');
 
 // 국문 외 언어별 상세 캐시. 컬럼명은 `detail_json_${lang}` 형태로 통일한다.
-const TRANSLATION_LANGS = Object.freeze(['en', 'ja']);
+const TRANSLATION_LANGS = Object.freeze(['en', 'ja', 'zh']);
 
 const PLACE_COLUMNS = `
   content_id,

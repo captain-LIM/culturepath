@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/course_model.dart';
@@ -57,7 +58,7 @@ class TrackTimeline extends StatelessWidget {
                 ),
               ),
               Text(
-                '${track.places.length}곳',
+                'place_count'.tr(namedArgs: {'n': '${track.places.length}'}),
                 style: TextStyle(
                   fontSize: 10,
                   color: isActive ? Colors.white70 : Colors.grey.shade400,
@@ -73,20 +74,10 @@ class TrackTimeline extends StatelessWidget {
   Widget _buildActiveTrackPreview(BuildContext context) {
     final track = tracks[activeTrack];
 
+    // 비어있을 때의 안내는 아래 본문의 빈 상태 일러스트에서 이미 보여주므로
+    // 여기서는 중복 안내 없이 자리만 비워둔다.
     if (track.places.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            Icon(Icons.add_circle_outline, size: 14, color: Colors.grey.shade400),
-            const SizedBox(width: 6),
-            Text(
-              '장소를 추가해 코스를 구성하세요',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-            ),
-          ],
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return SizedBox(

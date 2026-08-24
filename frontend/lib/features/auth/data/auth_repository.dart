@@ -35,11 +35,11 @@ class AuthRepository {
 
   Future<String> signInWithGoogle() async {
     final account = await _googleSignIn.signIn();
-    if (account == null) throw Exception('로그인이 취소되었습니다.');
+    if (account == null) throw Exception('GOOGLE_SIGNIN_CANCELLED');
 
     final auth = await account.authentication;
     final idToken = auth.idToken;
-    if (idToken == null) throw Exception('인증 토큰을 가져올 수 없습니다.');
+    if (idToken == null) throw Exception('GOOGLE_TOKEN_MISSING');
 
     final res = await _client.post('/auth/google', {'idToken': idToken});
     final token = res.data['token'] as String;

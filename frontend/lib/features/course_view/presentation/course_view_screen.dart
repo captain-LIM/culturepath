@@ -107,7 +107,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final buffer = StringBuffer()
         ..writeln('📍 ${course.title}')
-        ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
+        ..writeln('share_course_summary'.tr(namedArgs: {'days': '$activeDays', 'count': '${course.totalPlaces}'}));
       if (course.description.isNotEmpty) {
         buffer
           ..writeln()
@@ -116,7 +116,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (course.id != null && widget.guestCourseIndex == null) {
         buffer
           ..writeln()
-          ..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
+          ..write('share_view_in_app'.tr(namedArgs: {'app': 'app_name'.tr(), 'url': 'culturepath://app/courses/${course.id}'}));
       }
       await Share.share(buffer.toString().trim(), subject: course.title);
     } catch (e) {
@@ -126,18 +126,18 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final fallback = StringBuffer()
         ..writeln('📍 ${course.title}')
-        ..writeln('$activeDays일 코스 · 총 ${course.totalPlaces}곳');
+        ..writeln('share_course_summary'.tr(namedArgs: {'days': '$activeDays', 'count': '${course.totalPlaces}'}));
       if (course.description.isNotEmpty) {
         fallback..writeln()..writeln(course.description);
       }
       if (course.id != null && widget.guestCourseIndex == null) {
-        fallback..writeln()..write('따라가방 앱에서 보기: culturepath://app/courses/${course.id}');
+        fallback..writeln()..write('share_view_in_app'.tr(namedArgs: {'app': 'app_name'.tr(), 'url': 'culturepath://app/courses/${course.id}'}));
       }
       await Clipboard.setData(ClipboardData(text: fallback.toString().trim()));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('링크가 클립보드에 복사되었습니다. 카카오톡에 붙여넣기 하세요!'),
+          SnackBar(
+            content: Text('share_link_copied'.tr()),
             behavior: SnackBarBehavior.floating,
           ),
         );

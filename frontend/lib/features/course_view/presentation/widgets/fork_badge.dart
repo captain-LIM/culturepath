@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_builder/data/course_model.dart';
@@ -25,9 +26,9 @@ class ForkBadge extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '이 코스는 포크된 코스입니다',
-                  style: TextStyle(
+                Text(
+                  'forked_course_notice'.tr(),
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.accentGold,
                     fontWeight: FontWeight.w600,
@@ -35,7 +36,7 @@ class ForkBadge extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '원본: "${forkedFrom.title}"  by ${forkedFrom.authorId}',
+                  'forked_from'.tr(namedArgs: {'title': forkedFrom.title, 'author': forkedFrom.authorId}),
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.accentGold.withValues(alpha: 0.8),

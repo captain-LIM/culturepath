@@ -25,9 +25,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
+        final message = e.toString().contains('GOOGLE_SIGNIN_CANCELLED')
+            ? 'login_cancelled'.tr()
+            : e.toString().contains('GOOGLE_TOKEN_MISSING')
+                ? 'login_token_missing'.tr()
+                : 'login_failed'.tr(namedArgs: {'error': e.toString()});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('login_failed'.tr(namedArgs: {'error': e.toString()})),
+            content: Text(message),
             behavior: SnackBarBehavior.floating,
           ),
         );

@@ -118,6 +118,34 @@ test('calls searchKeyword2 with trimmed Korean keyword', async () => {
   assert.equal(result.items[0].contentId, '2390314');
 });
 
+test('calls locationBasedList2 with coordinates and radius', async () => {
+  const fake = createRecordingClient(() =>
+    resultWith([{ contentid: '129784', title: 'Ojukheon House (강릉 오죽헌)' }]),
+  );
+  const service = createTourApiService({ client: fake.client });
+
+  const result = await service.searchPlacesByLocation({
+    latitude: 37.7791389,
+    longitude: 128.8796621,
+    radius: 500.6,
+    numOfRows: 20,
+  });
+
+  assert.equal(fake.calls[0].operation, 'locationBasedList2');
+  assert.deepEqual(fake.calls[0].options.params, {
+    mapX: '128.8796621',
+    mapY: '37.7791389',
+    radius: '501',
+    contentTypeId: null,
+    lclsSystm1: null,
+    lclsSystm2: null,
+    lclsSystm3: null,
+    arrange: 'E',
+  });
+  assert.equal(fake.calls[0].options.numOfRows, 20);
+  assert.equal(result.items[0].contentId, '129784');
+});
+
 test('validates required values, sort options, code shapes, and pagination', async t => {
   const fake = createRecordingClient(() => resultWith([]));
   const service = createTourApiService({ client: fake.client });
@@ -185,6 +213,24 @@ test('validates required values, sort options, code shapes, and pagination', asy
     );
     await assert.rejects(
       service.getClassificationCodes({ lclsSystm1: 'garbage' }),
+      error => error.code === 'VALIDATION_ERROR',
+    );
+  });
+  await t.test('location search requires in-range coordinates and a bounded radius', async () => {
+    await assert.rejects(
+      service.searchPlacesByLocation({ latitude: 91, longitude: 128, radius: 500 }),
+      error => error.code === 'VALIDATION_ERROR',
+    );
+    await assert.rejects(
+      service.searchPlacesByLocation({ latitude: 37, longitude: 181, radius: 500 }),
+      error => error.code === 'VALIDATION_ERROR',
+    );
+    await assert.rejects(
+      service.searchPlacesByLocation({ latitude: 37, longitude: 128, radius: 0 }),
+      error => error.code === 'VALIDATION_ERROR',
+    );
+    await assert.rejects(
+      service.searchPlacesByLocation({ latitude: 37, longitude: 128, radius: 20001 }),
       error => error.code === 'VALIDATION_ERROR',
     );
   });

@@ -146,17 +146,17 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
                 error: (e, _) => SliverToBoxAdapter(
                   child: Center(
                     child: Text(
-                      '관광지 정보를 불러올 수 없습니다.\n$e',
+                      'region_spots_load_failed'.tr(namedArgs: {'error': '$e'}),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
                 data: (spots) => spots.isEmpty
-                    ? const SliverToBoxAdapter(
+                    ? SliverToBoxAdapter(
                         child: Center(
                           child: Padding(
-                            padding: EdgeInsets.all(40),
-                            child: Text('추천 관광지가 없습니다.'),
+                            padding: const EdgeInsets.all(40),
+                            child: Text('region_spots_empty'.tr()),
                           ),
                         ),
                       )

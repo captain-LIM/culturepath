@@ -81,12 +81,50 @@ function canUseStale(error) {
   );
 }
 
-// EngService2/JpnService2는 KorService2와 별개의 contentId 공간을 쓰기 때문에
-// (같은 장소도 서로 다른 ID), 국문 contentId로 번역 서비스 상세를 직접 조회할
-// 수 없다. 대신 국문 제목으로 번역 서비스를 키워드 검색한 뒤, 좌표가 가장
-// 가까운 결과를 같은 장소로 판단한다.
-const SUPPORTED_TRANSLATION_LANGS = Object.freeze(new Set(['en', 'ja']));
-const MAX_TRANSLATION_MATCH_DISTANCE_METERS = 150;
+// EngService2/JpnService2/ChsService2는 KorService2와 별개의 contentId 공간을
+// 쓰기 때문에(같은 장소도 서로 다른 ID), 국문 contentId로 번역 서비스 상세를
+// 직접 조회할 수 없다. 번역 서비스의 keyword 검색은 번역된 제목만 대상으로
+// 하기 때문에 국문 제목으로는 거의 매칭되지 않는다(실측: EngService2에 국문
+// 키워드로 검색하면 0건). 대신 국문 좌표 주변을 locationBasedList2로 조회한
+// 뒤, 제목 토큰이 가장 많이 겹치는 후보를 같은 장소로 채택한다.
+const SUPPORTED_TRANSLATION_LANGS = Object.freeze(new Set(['en', 'ja', 'zh']));
+const TRANSLATION_MATCH_RADIUS_METERS = 500;
+const MAX_TRANSLATION_MATCH_DISTANCE_METERS = 500;
+
+// 번역 서비스 제목은 보통 "English Name (국문 이름)" 형태로 끝에 국문 이름을
+// 괄호로 덧붙이지만, 서비스마다 괄호 없이 국문을 이어 붙이거나("Ojukheon강릉
+// 오죽헌") 부속기관명 표기가 다르기도 하다("강릉 오죽헌" vs "강릉시 오죽헌").
+// 그래서 국문 제목 전체 일치 대신 공백·구분기호로 나눈 토큰 단위로 얼마나
+// 겹치는지를 점수화해서 가장 많이 겹치는 후보를 채택한다.
+function extractTrailingParenthetical(title) {
+  const match = /\(([^()]+)\)\s*$/.exec(String(title || '').trim());
+  return match ? match[1] : null;
+}
+
+function extractTokens(value) {
+  return String(value || '')
+    .split(/[\s()·\-,./]+/)
+    .map(token => token.trim())
+    .filter(token => token.length >= 2);
+}
+
+function countMatchingTokens(korTitle, candidateTitle) {
+  const korTokens = extractTokens(korTitle);
+  const candidateTokens = extractTokens(
+    extractTrailingParenthetical(candidateTitle) || candidateTitle,
+  );
+  if (korTokens.length === 0 || candidateTokens.length === 0) {
+    return 0;
+  }
+  return korTokens.filter(token =>
+    candidateTokens.some(
+      candidateToken =>
+        candidateToken === token ||
+        candidateToken.includes(token) ||
+        token.includes(candidateToken),
+    ),
+  ).length;
+}
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const earthRadius = 6371000;
@@ -335,15 +373,22 @@ function createCachedPlacesService(options = {}) {
       return null;
     }
 
-    const searchResult = await upstream.searchPlacesByKeywordTranslated(lang, {
-      keyword: korItem.title,
-      numOfRows: 10,
+    const searchResult = await upstream.searchPlacesByLocationTranslated(lang, {
+      latitude: korItem.latitude,
+      longitude: korItem.longitude,
+      radius: TRANSLATION_MATCH_RADIUS_METERS,
+      numOfRows: 20,
     });
 
     let bestContentId = null;
+    let bestScore = 0;
     let bestDistance = Infinity;
     for (const candidate of searchResult.items) {
       if (candidate.latitude == null || candidate.longitude == null) {
+        continue;
+      }
+      const score = countMatchingTokens(korItem.title, candidate.title);
+      if (score === 0) {
         continue;
       }
       const distance = haversineMeters(
@@ -352,7 +397,8 @@ function createCachedPlacesService(options = {}) {
         candidate.latitude,
         candidate.longitude,
       );
-      if (distance < bestDistance) {
+      if (score > bestScore || (score === bestScore && distance < bestDistance)) {
+        bestScore = score;
         bestDistance = distance;
         bestContentId = candidate.contentId;
       }

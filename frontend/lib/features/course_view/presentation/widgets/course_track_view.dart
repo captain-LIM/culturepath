@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/i18n/category_localization.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/place_network_image.dart';
 import '../../../course_builder/data/course_model.dart';
 
 final _numericContentId = RegExp(r'^\d+$');
@@ -18,7 +19,7 @@ class CourseTrackView extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
-          '이 트랙에는 장소가 없습니다.',
+          'track_no_places'.tr(),
           style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
         ),
       );
@@ -83,42 +84,60 @@ class CourseTrackView extends StatelessWidget {
                       color: AppColors.surface,
                       border: Border(bottom: BorderSide(color: AppColors.line)),
                     ),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          place.title,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                        SizedBox(
+                          width: 72,
+                          height: 72,
+                          child: PlaceNetworkImage(
+                            placeTitle: place.title,
+                            thumbnailUrl: place.thumbnailUrl,
+                            imageUrl: place.imageUrl,
+                            borderRadius: BorderRadius.circular(AppRadius.image),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text(
-                              localizedCategory(place.category),
-                              style: const TextStyle(fontSize: 11, color: AppColors.accent),
-                            ),
-                            if (place.region != null) ...[
-                              const SizedBox(width: 6),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                place.region!,
-                                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                place.title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
                               ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    localizedCategory(place.category),
+                                    style: const TextStyle(fontSize: 11, color: AppColors.accent),
+                                  ),
+                                  if (place.region != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      place.region!,
+                                      style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (place.address.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  place.address,
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
-                          ],
-                        ),
-                        if (place.address.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            place.address,
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),

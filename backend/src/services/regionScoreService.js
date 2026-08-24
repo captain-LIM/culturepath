@@ -97,12 +97,14 @@ function combineCacheStatuses(statuses) {
 function localizedName(entry, lang) {
   if (lang === 'en' && entry.nameEn) return entry.nameEn;
   if (lang === 'ja' && entry.nameJa) return entry.nameJa;
+  if (lang === 'zh' && entry.nameZh) return entry.nameZh;
   return entry.name;
 }
 
 function localizedDescription(entry, lang) {
   if (lang === 'en' && entry.descriptionEn) return entry.descriptionEn;
   if (lang === 'ja' && entry.descriptionJa) return entry.descriptionJa;
+  if (lang === 'zh' && entry.descriptionZh) return entry.descriptionZh;
   return entry.description;
 }
 

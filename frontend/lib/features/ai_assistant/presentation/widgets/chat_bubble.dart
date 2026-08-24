@@ -84,7 +84,7 @@ class _CourseSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = courseJson['title'] as String? ?? '추천 코스';
+    final title = courseJson['title'] as String? ?? 'ai_suggested_course_fallback'.tr();
     final tracks = courseJson['tracks'] as List? ?? [];
     final totalPlaces = tracks.fold<int>(0, (sum, t) {
       final places = (t as Map<String, dynamic>)['places'] as List? ?? [];
