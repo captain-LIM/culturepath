@@ -3,8 +3,11 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  DATASET_PATH,
   evaluationExitCode,
+  LIVE_DATASET_PATH,
   loadDataset,
+  MOCK_DATASET_PATH,
   parseArgs,
   safeFailure,
   usage,
@@ -12,9 +15,14 @@ const {
 } = require('../scripts/evaluateRag');
 
 test('loads the versioned evaluation set and parses explicit live options', () => {
-  const dataset = loadDataset();
-  assert.equal(dataset.owner, '황찬우');
-  assert.ok(dataset.cases.length >= 30);
+  const mockDataset = loadDataset();
+  const liveDataset = loadDataset('live');
+  assert.equal(mockDataset.owner, '황찬우');
+  assert.ok(mockDataset.cases.length >= 30);
+  assert.equal(liveDataset.mode, 'live');
+  assert.equal(liveDataset.cases.length, 15);
+  assert.equal(DATASET_PATH, MOCK_DATASET_PATH);
+  assert.notEqual(MOCK_DATASET_PATH, LIVE_DATASET_PATH);
   assert.deepEqual(parseArgs(['--live', '--limit=3']), {
     help: false,
     limit: 3,
