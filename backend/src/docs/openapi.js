@@ -2,6 +2,7 @@
 
 const {
   CULTURE_CATEGORIES,
+  MAX_CULTURE_PAGE,
   MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
 const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
@@ -116,7 +117,7 @@ module.exports = Object.freeze({
         tags: ['Regions'],
         summary: '지역별 관광 장소 조회',
         description:
-          '`culture`가 있으면 지역 일반 목록과 문화 대표 키워드 검색 후보를 합친 뒤, contentId override·공식 분류 코드·제목 규칙으로 다시 검증해 관련 장소만 반환합니다. 관련도 점수는 내부 정렬에만 사용합니다.',
+          '`culture`가 있으면 지역 일반 목록과 최대 3개의 문화 검색어 후보를 합친 뒤, contentId override·공식 분류 코드·제목 규칙으로 다시 검증해 관련 장소만 반환합니다. 첫 후보 페이지가 충분하면 보조 검색을 조기 종료하고 이후에도 같은 후보 소스 순서를 사용하며, 관련도 점수는 내부 정렬에만 사용합니다.',
         parameters: [
           {
             name: 'code',
@@ -134,11 +135,25 @@ module.exports = Object.freeze({
               enum: [...CULTURE_CATEGORIES],
             },
           },
+          { $ref: '#/components/parameters/CulturePageNo' },
+          { $ref: '#/components/parameters/NumOfRows' },
         ],
         responses: {
           200: {
             description: '관련도 근거가 강한 순서의 장소 배열. 일치 장소가 없으면 빈 배열입니다.',
-            headers: { 'X-Cache-Status': cacheStatusHeader },
+            headers: {
+              'X-Cache-Status': cacheStatusHeader,
+              'X-Page-No': { schema: { type: 'integer', minimum: 1 } },
+              'X-Num-Of-Rows': { schema: { type: 'integer', minimum: 1, maximum: 50 } },
+              'X-Has-More': {
+                description: '다음 후보 페이지가 있을 수 있는지 나타냅니다.',
+                schema: { type: 'boolean' },
+              },
+              'X-Next-Page': {
+                description: 'X-Has-More가 true일 때 요청할 다음 pageNo입니다.',
+                schema: { type: 'integer', minimum: 2 },
+              },
+            },
             content: {
               'application/json': {
                 schema: {
@@ -305,7 +320,7 @@ module.exports = Object.freeze({
         tags: ['Places'],
         summary: '장소 목록 또는 키워드 검색',
         description:
-          '`q`가 있으면 키워드 검색, `q` 없이 `lDongRegnCd`가 있으면 지역 목록을 반환합니다. culture가 있으면 허용된 문화인지 검증하고, q가 없는 경우 지역 목록과 대표 키워드 검색을 합친 뒤 엄격하게 재분류합니다. 문화 필터 결과는 최대 20개입니다.',
+          '`q`가 있으면 키워드 검색, `q` 없이 `lDongRegnCd`가 있으면 지역 목록을 반환합니다. culture가 있으면 허용된 문화인지 검증하고, q가 없는 경우 지역 목록과 최대 3개의 문화 검색어 후보를 합친 뒤 엄격하게 재분류합니다. 문화 필터 결과는 최대 50개입니다.',
         parameters: [
           {
             name: 'q',
@@ -468,7 +483,19 @@ module.exports = Object.freeze({
       PageNo: {
         name: 'pageNo',
         in: 'query',
+        description: `culture만 지정한 통합 후보 조회는 최대 ${MAX_CULTURE_PAGE}페이지입니다.`,
         schema: { type: 'integer', minimum: 1, default: 1 },
+      },
+      CulturePageNo: {
+        name: 'pageNo',
+        in: 'query',
+        description: '통합 후보 재조회 비용을 제한하기 위한 지역 장소 페이지입니다.',
+        schema: {
+          type: 'integer',
+          minimum: 1,
+          maximum: MAX_CULTURE_PAGE,
+          default: 1,
+        },
       },
       NumOfRows: {
         name: 'numOfRows',
