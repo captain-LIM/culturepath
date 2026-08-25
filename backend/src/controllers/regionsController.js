@@ -1,5 +1,6 @@
 const regionScoreService = require('../services/regionScoreService');
 const cachedPlacesService = require('../services/cachedPlacesService');
+const coursePlaceUsageRepository = require('../repositories/coursePlaceUsageRepository');
 const {
   DEFAULT_CULTURE_RESULTS,
   MAX_CULTURE_PAGE,
@@ -142,13 +143,32 @@ function toPublicSpot(place) {
     longitude: place.longitude ?? null,
     imageUrl: place.imageUrl ?? null,
     thumbnailUrl: place.thumbnailUrl ?? null,
+    publicCourseCount: place.publicCourseCount ?? null,
   };
 }
 
 function createRegionsController(options = {}) {
   const service = options.regionScoreService || regionScoreService;
   const placesService = options.placesService || cachedPlacesService;
+  const placeUsageRepository = options.placeUsageRepository || coursePlaceUsageRepository;
   const logger = options.logger || console;
+
+  async function attachPublicCourseCounts(items) {
+    try {
+      const counts = await placeUsageRepository.findPublicCourseCounts(
+        items.map(item => item.contentId),
+      );
+      return items.map(item => ({
+        ...item,
+        publicCourseCount: counts.get(String(item.contentId)) ?? 0,
+      }));
+    } catch (error) {
+      logger?.warn?.('공개 코스 장소 사용 횟수 집계에 실패했습니다.', {
+        errorName: error?.name || 'Error',
+      });
+      return items.map(item => ({ ...item, publicCourseCount: null }));
+    }
+  }
 
   async function getRegionsByCulture(req, res) {
     const rawCultureId = String(req.params?.id || '').trim();
@@ -258,7 +278,8 @@ function createRegionsController(options = {}) {
       const publicItems = lang !== 'ko'
         ? await placesService.attachTranslationOverlay(items, lang)
         : items;
-      return res.json(publicItems.map(toPublicSpot));
+      const itemsWithUsage = await attachPublicCourseCounts(publicItems);
+      return res.json(itemsWithUsage.map(toPublicSpot));
     } catch (error) {
       if (cultureFilter) {
         const response = publicPlaceError(error);
@@ -285,7 +306,8 @@ function createRegionsController(options = {}) {
         pagination,
         fallbackOffset + pagination.numOfRows < fallbackItems.length,
       );
-      return res.json(publicFallback.map(toPublicSpot));
+      const fallbackWithUsage = await attachPublicCourseCounts(publicFallback);
+      return res.json(fallbackWithUsage.map(toPublicSpot));
     }
   }
 

@@ -23,3 +23,20 @@ test('defines idempotency keys with case-sensitive ASCII collation', () => {
   );
   assert.match(migration, /UNIQUE KEY uk_course_idempotency \(user_id, idempotency_key\)/);
 });
+
+test('defines a repeatable contentId index for public-course place usage', () => {
+  const schema = read('schema.sql');
+  const migration = read('migrations/20260825_add_course_place_usage_index.sql');
+
+  assert.match(
+    schema,
+    /INDEX idx_course_tracks_content_course \(content_id, course_id\)/,
+  );
+  assert.match(migration, /GET_LOCK\(/);
+  assert.match(migration, /information_schema\.STATISTICS/);
+  assert.match(
+    migration,
+    /ADD INDEX idx_course_tracks_content_course \(content_id, course_id\)/,
+  );
+  assert.match(migration, /RELEASE_LOCK\(/);
+});

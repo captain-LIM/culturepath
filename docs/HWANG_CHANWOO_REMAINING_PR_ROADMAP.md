@@ -13,6 +13,7 @@
 - R15 승인 디자인의 Flutter 반영과 CI 검증 완료
 - R16 Mock/live RAG 평가 계약 분리와 MySQL fixture 감사 완료
 - R16.1 문화별 복수 검색어, 안전한 교차 분류, 지역 경계와 Backend 페이지 계약 완료
+- R16.3 공개 코스 장소 사용 횟수 집계와 Backend 응답 계약 완료
 - 로컬 MySQL 8.4.11 및 Qdrant 연결 검증 완료
 - OpenRouter 실연결·실임베딩·실생성은 아직 하지 않음
 - PR #21 기준 Backend 자동 테스트 `270/270` 통과, 독립 `gpt-5.6-sol high` 리뷰 `APPROVE`
@@ -24,9 +25,9 @@ TourAPI 제한 표본은 기존 14개 문화×지역 조합 중 비어 있지 �
 | 우선순위 | PR | 상태 | 핵심 결과 |
 | --- | --- | --- | --- |
 | 1 | R16.2 Flutter 장소 추가 로딩 | 다음 작업 후보 | 첫 50개 뒤 다음 50개를 안전하게 이어 붙이는 모바일 UX |
-| 2 | R17 OpenRouter live RAG·AI 검증 | 키·예산 준비 후 진행 | 실제 임베딩, Qdrant 검색 평가, AI 코스 변경안 smoke |
-| 3 | R18 배포·실기기·Google Play 준비 | 마지막 통합 단계 | 운영 Backend/DB/비밀값, Android release, 장애·비용 검증 |
-| 선택 | R16.3 장소 사용 횟수 랭킹 | 핵심 완료 후 판단 | 공개 코스에서 실제 사용된 장소를 별도 인기 신호로 집계 |
+| 2 | 장소 사용 횟수 UI | R16.2 이후 결정 | `공개 코스 N개에 담김` 표시, 정렬 변경은 별도 판단 |
+| 3 | R17 OpenRouter live RAG·AI 검증 | 키·예산 준비 후 진행 | 실제 임베딩, Qdrant 검색 평가, AI 코스 변경안 smoke |
+| 4 | R18 배포·실기기·Google Play 준비 | 마지막 통합 단계 | 운영 Backend/DB/비밀값, Android release, 장애·비용 검증 |
 
 한 번에 하나의 코드 PR만 진행한다. 카카오·네이버 상업시설 보완과 추가 디자인 손질은 현재 우선순위에서 보류한다.
 
@@ -99,9 +100,9 @@ Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Nex
 - 개인정보, 키, 인증 URL, 민감 로그 최종 점검
 - 공모전 데모와 Google Play 설명·스크린샷·개인정보처리방침 준비
 
-## 6. 선택 후속 — 장소 사용 횟수 랭킹
+## 6. 완료 계약 — R16.3 Backend 장소 사용 횟수
 
-구현한다면 같은 장소가 한 코스에 여러 번 들어가도 한 번만 세고, 공개 코스만 집계하는 것을 기본 계약으로 한다. 좋아요·완주·최신성 신호와 섞기 전에는 `공개 코스 사용 횟수`를 독립 지표로 유지한다. 집계 쿼리, 인덱스, 동률 정렬, 비공개 전환 시 반영을 별도 PR에서 설계한다.
+같은 장소가 한 코스에 여러 번 들어가도 한 번만 세고, 공개 코스만 집계한다. 좋아요·완주·최신성 신호와 섞지 않고 `공개 코스 사용 횟수`를 독립 지표로 유지한다. 이번 PR은 `GET /regions/:code/spots`의 nullable `publicCourseCount` 응답과 집계 인덱스까지만 포함한다. Flutter 표시와 사용 횟수 기반 정렬은 제외하며, 기존 문화 관련도 순서를 유지한다. 세부 계약은 [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md)을 따른다.
 
 ## 7. 보류·담당 제외
 
@@ -135,6 +136,7 @@ Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Nex
 - [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md)
 - [장소 캐시 계약](./PLACE_CACHE_CONTRACT.md)
 - [관광지 이미지 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md)
+- [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md)
 - [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)
 - [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)
 - [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md)
