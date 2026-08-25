@@ -17,6 +17,8 @@ const app = express();
 app.use(cors({
   exposedHeaders: [
     'X-Cache-Status',
+    'X-Has-More',
+    'X-Next-Page',
     'X-Page-No',
     'X-Num-Of-Rows',
     'X-Region-Data-Status',

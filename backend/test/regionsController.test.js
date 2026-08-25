@@ -161,6 +161,8 @@ test('merges region and keyword candidates, removes false positives, and ranks e
     'https://example.com/place-thumb.jpg',
   );
   assert.equal(res.headers['X-Cache-Status'], 'STALE');
+  assert.equal(res.headers['X-Page-No'], 1);
+  assert.equal(res.headers['X-Num-Of-Rows'], 20);
   assert.equal(calls[0][1].lDongRegnCd, '48');
   assert.equal(calls[1][1].keyword, '문학관');
 });
@@ -211,7 +213,7 @@ test('rejects unsupported cultures before TourAPI calls', async () => {
   assert.equal(calls, 0);
 });
 
-test('returns structured external errors instead of synthetic culture fallback', async () => {
+test('returns a partial culture response when at least one candidate source succeeds', async () => {
   const controller = createRegionsController({
     placesService: {
       getAreaBasedPlaces: async () => {
@@ -230,12 +232,197 @@ test('returns structured external errors instead of synthetic culture fallback',
     res,
   );
 
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, []);
+});
+
+test('returns structured external errors when every culture candidate source fails', async () => {
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => {
+        throw new ExternalApiError('timed out', {
+          code: 'TIMEOUT',
+          retryable: true,
+        });
+      },
+      searchPlacesByKeyword: async () => {
+        throw new ExternalApiError('timed out', {
+          code: 'TIMEOUT',
+          retryable: true,
+        });
+      },
+    },
+    logger: null,
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '문학' } },
+    res,
+  );
+
   assert.equal(res.statusCode, 504);
   assert.deepEqual(res.body, {
     code: 'EXTERNAL_API_TIMEOUT',
     message: '관광정보 응답 시간이 초과되었습니다.',
     retryable: true,
   });
+});
+
+test('supports up to 50 region spots and publishes next-page headers', async () => {
+  const received = [];
+  const items = Array.from({ length: 50 }, (_, index) => tourPlace({
+    contentId: String(index + 1),
+    title: `문학관 ${index + 1}`,
+  }));
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        received.push(options);
+        return {
+          items,
+          pagination: { pageNo: 1, numOfRows: 50, totalCount: 80 },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async options => {
+        received.push(options);
+        return {
+          items: [],
+          pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+          cacheStatus: 'HIT',
+        };
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { culture: '문학', pageNo: '1', numOfRows: '50' },
+  }, res);
+
+  assert.equal(res.body.length, 50);
+  assert.equal(res.headers['X-Has-More'], 'true');
+  assert.equal(res.headers['X-Next-Page'], 2);
+  assert.equal(received[0].numOfRows, 50);
+});
+
+test('combines both Jeonju districts without widening the request to Jeonbuk', async () => {
+  const calls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        calls.push(['area', options]);
+        return {
+          items: [tourPlace({
+            contentId: options.lDongSignguCd,
+            title: `${options.lDongSignguCd} 공방`,
+            lclsSystmCodes: ['EX', 'EX02'],
+            cultures: ['공예·공방'],
+            category: '공예·공방',
+          })],
+          pagination: { pageNo: 1, numOfRows: 20, totalCount: 1 },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async options => {
+        calls.push(['keyword', options]);
+        return {
+          items: [],
+          pagination: { pageNo: 1, numOfRows: 20, totalCount: 0 },
+          cacheStatus: 'HIT',
+        };
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'jeonju' },
+    query: { culture: '공예·공방' },
+  }, res);
+
+  assert.deepEqual(res.body.map(item => item.contentId), ['111', '113']);
+  assert.deepEqual(
+    [...new Set(calls.map(([, options]) => options.lDongSignguCd))].sort(),
+    ['111', '113'],
+  );
+  assert.equal(calls.every(([, options]) => options.lDongRegnCd === '52'), true);
+});
+
+test('rejects invalid region spot pagination before candidate calls', async () => {
+  let calls = 0;
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => { calls += 1; },
+      searchPlacesByKeyword: async () => { calls += 1; },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { culture: '문학', numOfRows: '51' },
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.code, 'VALIDATION_ERROR');
+  assert.equal(calls, 0);
+});
+
+test('rejects region pages above the bounded cumulative-fetch window', async () => {
+  let calls = 0;
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => { calls += 1; },
+      searchPlacesByKeyword: async () => { calls += 1; },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { culture: '문학', pageNo: '6' },
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.code, 'VALIDATION_ERROR');
+  assert.equal(calls, 0);
+});
+
+test('does not advertise a sixth region page at the cumulative-fetch boundary', async () => {
+  let callIndex = 0;
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => ({
+        items: [tourPlace({
+          contentId: `area-${++callIndex}`,
+          title: `문학관 ${callIndex}`,
+        })],
+        pagination: { ...options, totalCount: 100 },
+        cacheStatus: 'HIT',
+      }),
+      searchPlacesByKeyword: async options => ({
+        items: [tourPlace({
+          contentId: `keyword-${++callIndex}`,
+          title: `문학관 ${callIndex}`,
+        })],
+        pagination: { ...options, totalCount: 100 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { culture: '문학', pageNo: '5', numOfRows: '1' },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['X-Has-More'], 'false');
+  assert.equal(Object.hasOwn(res.headers, 'X-Next-Page'), false);
 });
 
 test('keeps the image contract when the unfiltered region request falls back', async () => {
@@ -259,4 +446,25 @@ test('keeps the image contract when the unfiltered region request falls back', a
   assert.equal(Object.hasOwn(res.body[0], 'thumbnailUrl'), true);
   assert.equal(res.body[0].imageUrl, null);
   assert.equal(res.body[0].thumbnailUrl, null);
+});
+
+test('paginates the unfiltered seed fallback without repeating page one', async () => {
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => {
+        throw new Error('TourAPI unavailable');
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { pageNo: '2', numOfRows: '2' },
+  }, res);
+
+  assert.equal(res.body.length, 2);
+  assert.equal(res.body[0].contentId, 'ty003');
+  assert.equal(res.headers['X-Has-More'], 'true');
+  assert.equal(res.headers['X-Next-Page'], 3);
 });

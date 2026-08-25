@@ -27,7 +27,7 @@ test('documents the implemented public place routes and compatibility contract',
   assert.equal(
     search.responses[200].content['application/json']
       .schema['x-culture-filter-max-items'],
-    20,
+    50,
   );
   assert.ok(
     openApiDocument.paths['/places/{id}']
@@ -84,8 +84,18 @@ test('documents strict culture filtering for region spots', () => {
     success.content['application/json'].schema.items.$ref,
     '#/components/schemas/RegionSpot',
   );
-  assert.equal(success.content['application/json'].schema.maxItems, 20);
+  assert.equal(success.content['application/json'].schema.maxItems, 50);
   assert.ok(success.headers['X-Cache-Status']);
+  assert.ok(success.headers['X-Has-More']);
+  assert.ok(success.headers['X-Next-Page']);
+  assert.ok(spots.parameters.some(
+    parameter => parameter.$ref?.endsWith('/CulturePageNo'),
+  ));
+  assert.equal(
+    openApiDocument.components.parameters.CulturePageNo.schema.maximum,
+    5,
+  );
+  assert.ok(spots.parameters.some(parameter => parameter.$ref?.endsWith('/NumOfRows')));
   assert.ok(spots.responses[400]);
   assert.ok(spots.responses[404]);
   assert.ok(spots.responses[502]);
