@@ -8,7 +8,7 @@
 >
 > **대상:** Google Play에 배포할 Android 모바일 앱
 >
-> **연결 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)
+> **연결 문서:** [서비스 계획서](../문화여행_따라가방_서비스_계획서.md) · [R14 Manus 프로토타입 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) · [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [R14 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md)
 
 ## 1. R14의 목적과 경계
 

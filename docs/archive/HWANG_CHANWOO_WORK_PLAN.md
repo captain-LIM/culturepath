@@ -10,7 +10,7 @@
 >
 > **최종 갱신:** 2026-08-18
 >
-> **관련 문서:** [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](./TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
+> **관련 문서:** [서비스 계획서](../문화여행_따라가방_서비스_계획서.md) · [팀 역할 및 협업 기준](../TEAM_ROLES.md) · [잔여 PR 로드맵과 세션 인수인계](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)
 
 ---
 
@@ -358,7 +358,7 @@ place_query_cache
 - [x] 로컬 MySQL 8.4.11에서 schema·migration·최소 권한 연결과 실제 캐시 저장을 검증한다.
 - [ ] 캐시를 삭제해도 TourAPI에서 다시 만들 수 있는지 통합 환경에서 확인한다.
 
-구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md)을 따른다. 자동 테스트는 외부 서비스 없이 실행하고, 별도의 수동 실환경 검증에서 로컬 MySQL 연결과 TourAPI 기반 캐시 저장을 확인했다. 배포 DB의 migration·삭제 후 재구축 검증은 R18에 남긴다.
+구현 세부사항은 [TourAPI 장소 MySQL 캐시 계약](../PLACE_CACHE_CONTRACT.md)을 따른다. 자동 테스트는 외부 서비스 없이 실행하고, 별도의 수동 실환경 검증에서 로컬 MySQL 연결과 TourAPI 기반 캐시 저장을 확인했다. 배포 DB의 migration·삭제 후 재구축 검증은 R18에 남긴다.
 
 ## A-9. 내부 API 교체 순서
 
@@ -510,7 +510,7 @@ npm run rag:index -- --prune
 - [x] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
 - [x] 문서 버전과 임베딩 모델 기록
 
-구체적인 실행·삭제 안전장치와 payload는 [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
+구체적인 실행·삭제 안전장치와 payload는 [Qdrant 장소 인덱싱 계약](../QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## B-6. 검색 전략
 
