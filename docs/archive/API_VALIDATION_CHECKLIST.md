@@ -341,7 +341,7 @@ _type=json  # 백엔드 또는 직접 호출에서 수동으로 추가
 - [x] 공개 지역 배열 body 유지, `X-Region-Data-Status` 헤더와 OpenAPI 계약 추가
 - [x] 승인된 최대 4회 live smoke 실행 — 최근 두 날짜가 모두 0건이어서 기준일 갱신은 보류
 
-여러 자치구를 합친 값은 도시 전체의 중복 제거 순방문자 수가 아니다. 이번 점수에서는 동일 코드 그룹을 같은 방식으로 비교하는 변화 지표로만 사용한다. 상세 계산·캐시·fallback 계약은 [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md)을 따른다.
+여러 자치구를 합친 값은 도시 전체의 중복 제거 순방문자 수가 아니다. 이번 점수에서는 동일 코드 그룹을 같은 방식으로 비교하는 변화 지표로만 사용한다. 상세 계산·캐시·fallback 계약은 [DataLab 지역점수 계약](../DATALAB_REGION_SCORE_CONTRACT.md)을 따른다.
 
 2026-07-24 승인된 live smoke 결과:
 
