@@ -3,9 +3,22 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
-  createRegionsController,
+  createRegionsController: createProductionRegionsController,
 } = require('../src/controllers/regionsController');
 const { ExternalApiError } = require('../src/utils/externalApiError');
+
+const emptyPlaceUsageRepository = Object.freeze({
+  async findPublicCourseCounts() {
+    return new Map();
+  },
+});
+
+function createRegionsController(options = {}) {
+  return createProductionRegionsController({
+    placeUsageRepository: emptyPlaceUsageRepository,
+    ...options,
+  });
+}
 
 function response() {
   return {
@@ -165,6 +178,72 @@ test('merges region and keyword candidates, removes false positives, and ranks e
   assert.equal(res.headers['X-Num-Of-Rows'], 20);
   assert.equal(calls[0][1].lDongRegnCd, '48');
   assert.equal(calls[1][1].keyword, '문학관');
+});
+
+test('adds distinct public-course usage counts without changing place order', async () => {
+  const requestedIds = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => ({
+        items: [
+          tourPlace({ contentId: '1', title: '첫 번째 문학관' }),
+          tourPlace({ contentId: '2', title: '두 번째 문학관' }),
+        ],
+        cacheStatus: 'HIT',
+      }),
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+    placeUsageRepository: {
+      async findPublicCourseCounts(contentIds) {
+        requestedIds.push(...contentIds);
+        return new Map([['1', 2]]);
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '문학' } },
+    res,
+  );
+
+  assert.deepEqual(requestedIds, ['1', '2']);
+  assert.deepEqual(res.body.map(item => item.contentId), ['1', '2']);
+  assert.deepEqual(res.body.map(item => item.publicCourseCount), [2, 0]);
+});
+
+test('keeps place results available with null usage when usage aggregation fails', async () => {
+  const warnings = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async () => ({
+        items: [tourPlace({ contentId: '1' })],
+        cacheStatus: 'HIT',
+      }),
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+    placeUsageRepository: {
+      async findPublicCourseCounts() {
+        throw new Error('database unavailable');
+      },
+    },
+    logger: {
+      warn(message, detail) {
+        warnings.push({ message, detail });
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '문학' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body[0].publicCourseCount, null);
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].detail.errorName, 'Error');
 });
 
 test('returns an honest empty culture result without synthetic seed places', async () => {

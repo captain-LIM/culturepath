@@ -104,8 +104,11 @@ test('documents strict culture filtering for region spots', () => {
   const regionSpot = openApiDocument.components.schemas.RegionSpot;
   assert.ok(regionSpot.required.includes('imageUrl'));
   assert.ok(regionSpot.required.includes('thumbnailUrl'));
+  assert.ok(regionSpot.required.includes('publicCourseCount'));
   assert.equal(regionSpot.properties.imageUrl.nullable, true);
   assert.equal(regionSpot.properties.thumbnailUrl.nullable, true);
+  assert.equal(regionSpot.properties.publicCourseCount.minimum, 0);
+  assert.equal(regionSpot.properties.publicCourseCount.nullable, true);
   assert.equal(
     openApiDocument.components.schemas.PlaceDetail.allOf[1]
       .properties.images.maxItems,

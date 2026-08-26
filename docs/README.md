@@ -17,6 +17,7 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 | [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md) | 목록·검색·상세, 문화 필터, 페이지와 오류 계약 |
 | [장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md) | 장소·검색 캐시, TTL·stale·fail-open |
 | [관광지 이미지 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md) | 목록 이미지, 상세 갤러리, placeholder와 캐시 |
+| [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md) | 공개 코스 중복 제거 집계, API 필드와 fail-open |
 | [연관 방문 장소 계약](./RELATED_PLACES_CONTRACT.md) | 연관 장소 매핑, 호출 상한과 공개 응답 |
 | [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md) | 방문자 점수, 전용 캐시와 fallback |
 | [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md) | `/ai/transform`, 인증·검증·호출 제한 |
@@ -26,9 +27,9 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 ## 현재 남은 큰 작업
 
 1. R16.2 Flutter 장소 목록 추가 로딩
-2. R17 OpenRouter live RAG·AI 품질/비용 검증
-3. R18 배포·실기기·Google Play 준비
-4. 선택 후속: 공개 코스 기반 장소 사용 횟수 랭킹
+2. 공개 코스 장소 사용 횟수 UI 표시 여부 결정
+3. R17 OpenRouter live RAG·AI 품질/비용 검증
+4. R18 배포·실기기·Google Play 준비
 
 상세 범위와 담당 제외 항목은 [현행 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)을 기준으로 한다.
 

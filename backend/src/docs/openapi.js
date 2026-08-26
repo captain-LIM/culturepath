@@ -553,6 +553,7 @@ module.exports = Object.freeze({
           'longitude',
           'imageUrl',
           'thumbnailUrl',
+          'publicCourseCount',
         ],
         properties: {
           contentId: { type: 'string' },
@@ -568,6 +569,12 @@ module.exports = Object.freeze({
           longitude: { type: 'number', format: 'double', nullable: true },
           imageUrl: { type: 'string', format: 'uri', nullable: true },
           thumbnailUrl: { type: 'string', format: 'uri', nullable: true },
+          publicCourseCount: {
+            type: 'integer',
+            minimum: 0,
+            nullable: true,
+            description: '해당 장소를 한 번 이상 담은 공개 코스 수. 집계 장애 시 null',
+          },
         },
       },
       ApiError: {
