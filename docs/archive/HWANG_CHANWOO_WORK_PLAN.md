@@ -510,7 +510,7 @@ npm run rag:index -- --prune
 - [x] 같은 작업을 재실행해도 중복 point가 생기지 않도록 멱등성 보장
 - [x] 문서 버전과 임베딩 모델 기록
 
-구체적인 실행·삭제 안전장치와 payload는 [Qdrant 장소 인덱싱 계약](../QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
+구체적인 당시 실행·삭제 안전장치와 payload는 [폐기 보관된 Qdrant 장소 인덱싱 계약](../decay/QDRANT_PLACE_INDEXING_CONTRACT.md)을 따른다.
 
 ## B-6. 검색 전략
 

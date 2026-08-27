@@ -141,7 +141,7 @@ OPENROUTER_API_KEY=...
 OPENROUTER_EMBEDDING_MODEL=baai/bge-m3
 OPENROUTER_EMBEDDING_DIMENSIONS=1024
 QDRANT_URL=...
-QDRANT_API_KEY=...
+QDRANT_API_KEY=... # Qdrant Cloud 등 인증이 필요한 배포에서만 사용
 QDRANT_COLLECTION=culturepath_places_v1
 RAG_INDEX_BATCH_SIZE=32
 RAG_INDEX_PAGE_SIZE=200
@@ -157,7 +157,7 @@ RAG_INDEX_PAGE_SIZE=200
 - 기본 검증은 fake MySQL repository와 가짜 OpenRouter·Qdrant HTTP 응답만 사용한다.
 - 실제 키·네트워크·MySQL은 자동 테스트에서 사용하지 않고 수동 승인 smoke에서만 사용한다.
 - 황찬우가 Qdrant 환경·연결과 로컬 MySQL 8.4.11의 장소 캐시 저장을 검증했다.
-- OpenRouter는 아직 연결하지 않았으므로 `baai/bge-m3` 실벡터 생성, 실제 MySQL 장소의 production-contract upsert와 재실행 hash skip은 완료로 간주하지 않는다.
+- 2026-08-26 OpenRouter 임베딩 1건으로 BGE-M3 1024차원 실벡터 생성을 확인했다. 실제 MySQL 장소의 production-contract upsert와 재실행 hash skip은 `QDRANT_URL` 설정 후 검증한다.
 - 제한된 live 인덱싱은 R16의 Mock/live 평가 계약을 확정하고 OpenRouter 키·비용 한도를 준비한 뒤 R17에서 수행한다.
 - 기존 35개 Mock fixture만으로 검색 적합성이나 점수 임계값을 확정하지 않는다. 실제 TourAPI `contentId` 중심 live fixture 결과로 확정한다.
 - Qdrant가 삭제돼도 MySQL에서 재구축한다는 원칙과 컬렉션 차원·distance 계약은 그대로 유지한다.
