@@ -1,8 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
+import '../../course_builder/data/course_repository.dart';
+import '../../course_builder/data/place_item.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
 import '../data/chat_model.dart';
 import '../data/ai_repository.dart';
@@ -11,7 +14,9 @@ import 'widgets/chat_bubble.dart';
 // ─── 상태 관리 ──────────────────────────────────────────────────────────────
 
 class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
-  _ChatNotifier()
+  final AiRepository _repository;
+
+  _ChatNotifier(this._repository)
       : super([
           ChatMessage(
             role: 'assistant',
@@ -26,22 +31,45 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
   Future<void> send(String content) async {
     if (_loading || content.trim().isEmpty) return;
 
+    await _request(content.trim(), appendUser: true);
+  }
+
+  Future<void> retry(String content) async {
+    if (_loading || content.trim().isEmpty) return;
+    await _request(content.trim(), appendUser: false);
+  }
+
+  Future<void> _request(String content, {required bool appendUser}) async {
+    final retained = state.where((message) => message.retryContent == null).toList();
+
     state = [
-      ...state,
-      ChatMessage(role: 'user', content: content.trim(), timestamp: DateTime.now()),
+      ...retained,
+      if (appendUser)
+        ChatMessage(role: 'user', content: content, timestamp: DateTime.now()),
       ChatMessage(role: 'assistant', content: '', timestamp: DateTime.now(), isLoading: true),
     ];
     _loading = true;
 
     try {
-      final reply = await AiRepository().chat(state);
+      final reply = await _repository.chat(state);
       state = [
         ...state.where((m) => !m.isLoading),
         ChatMessage(
           role: 'assistant',
           content: reply.content,
           timestamp: DateTime.now(),
+          sources: reply.sources,
           suggestedCourse: reply.suggestedCourse,
+        ),
+      ];
+    } on AiChatFailure catch (failure) {
+      state = [
+        ...state.where((m) => !m.isLoading),
+        ChatMessage(
+          role: 'assistant',
+          content: _failureMessage(failure),
+          timestamp: DateTime.now(),
+          retryContent: content,
         ),
       ];
     } catch (_) {
@@ -51,6 +79,7 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
           role: 'assistant',
           content: tr('ai_error'),
           timestamp: DateTime.now(),
+          retryContent: content,
         ),
       ];
     } finally {
@@ -58,7 +87,27 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
     }
   }
 
-  void clear() {
+  String _failureMessage(AiChatFailure failure) {
+    switch (failure.type) {
+      case AiChatFailureType.unauthorized:
+        return tr('ai_error_login');
+      case AiChatFailureType.rateLimited:
+        final seconds = failure.retryAfterSeconds;
+        return seconds == null
+            ? tr('ai_error_rate_limited')
+            : tr('ai_error_rate_limited_seconds', namedArgs: {'seconds': '$seconds'});
+      case AiChatFailureType.serviceUnavailable:
+        return tr('ai_error_service');
+      case AiChatFailureType.network:
+        return tr('ai_error_network');
+      case AiChatFailureType.invalidResponse:
+      case AiChatFailureType.unknown:
+        return tr('ai_error');
+    }
+  }
+
+  Future<void> clear() async {
+    await _repository.closeSession();
     state = [
       ChatMessage(
         role: 'assistant',
@@ -69,9 +118,9 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 }
 
-final _chatProvider =
-    StateNotifierProvider.autoDispose<_ChatNotifier, List<ChatMessage>>(
-  (ref) => _ChatNotifier(),
+final _chatProvider = StateNotifierProvider.autoDispose
+    .family<_ChatNotifier, List<ChatMessage>, AiRepository>(
+  (ref, repository) => _ChatNotifier(repository),
 );
 
 // ─── 빠른 질문 목록 ──────────────────────────────────────────────────────────
@@ -87,7 +136,10 @@ List<String> _quickPrompts() => [
 // ─── 화면 ────────────────────────────────────────────────────────────────────
 
 class AiAssistantScreen extends ConsumerStatefulWidget {
-  const AiAssistantScreen({super.key});
+  final AiRepository? repository;
+  final int? courseId;
+
+  const AiAssistantScreen({super.key, this.repository, this.courseId});
 
   @override
   ConsumerState<AiAssistantScreen> createState() => _AiAssistantScreenState();
@@ -96,6 +148,26 @@ class AiAssistantScreen extends ConsumerStatefulWidget {
 class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
   final _inputCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  late final AiRepository _repository;
+  CourseItem? _courseOriginal;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? AiRepository(courseId: widget.courseId);
+    _loadCourseOriginal();
+  }
+
+  Future<void> _loadCourseOriginal() async {
+    final courseId = widget.courseId;
+    if (courseId == null) return;
+    try {
+      final course = await CourseRepository().getCourse(courseId);
+      if (mounted) setState(() => _courseOriginal = course);
+    } catch (_) {
+      // Backend가 실제 대화 요청에서도 코스 권한과 존재 여부를 다시 검증한다.
+    }
+  }
 
   @override
   void dispose() {
@@ -106,16 +178,9 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   void _send(String text) {
     if (text.trim().isEmpty) return;
-    ref.read(_chatProvider.notifier).send(text.trim());
+    ref.read(_chatProvider(_repository).notifier).send(text.trim());
     _inputCtrl.clear();
     _scrollToBottom();
-  }
-
-  void _openCourseBuilder(Map<String, dynamic> courseJson) {
-    final course = CourseItem.fromJson(courseJson);
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ProviderScope(child: CourseBuilderScreen(initialCourse: course)),
-    ));
   }
 
   void _scrollToBottom() {
@@ -130,14 +195,86 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     });
   }
 
+  Future<void> _openSuggestedCourse(Map<String, dynamic> json) async {
+    try {
+      final suggested = CourseItem.fromJson(json);
+      await _openCourseBuilder(suggested);
+    } on FormatException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ai_error'.tr())),
+      );
+    } on TypeError {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ai_error'.tr())),
+      );
+    }
+  }
+
+  Future<void> _openSourceInCourse(ChatSource source) async {
+    final place = PlaceItem(
+      contentId: source.contentId,
+      title: source.title,
+      address: source.address,
+      tel: '',
+      openTime: '',
+      category: source.category.isEmpty ? '기타' : source.category,
+      region: source.region.isEmpty ? null : source.region,
+    );
+    final original = _courseOriginal;
+    late final CourseItem draft;
+    if (original == null) {
+      draft = CourseItem(
+        title: '${source.region} ${source.category} 코스'.trim(),
+        description: '',
+        tracks: [CourseTrack(trackNumber: 1, places: [place])],
+      );
+    } else {
+      final alreadyIncluded = original.tracks.any(
+        (track) => track.places.any((item) => item.contentId == source.contentId),
+      );
+      if (alreadyIncluded) {
+        await _openCourseBuilder(original);
+        return;
+      }
+      final tracks = original.tracks
+          .map((track) => CourseTrack(
+                trackNumber: track.trackNumber,
+                places: [...track.places],
+              ))
+          .toList(growable: false);
+      tracks[0] = tracks[0].copyWith(places: [...tracks[0].places, place]);
+      draft = original.copyWith(tracks: tracks);
+    }
+    await _openCourseBuilder(draft);
+  }
+
+  Future<void> _openCourseBuilder(CourseItem draft) async {
+    final saved = await Navigator.of(context, rootNavigator: true).push<CourseItem>(
+      MaterialPageRoute(
+        builder: (_) => CourseBuilderScreen(
+          initialCourse: draft,
+          aiOriginalCourse: _courseOriginal,
+        ),
+      ),
+    );
+    if (saved?.id != null) {
+      await _repository.markCourseSaved(saved!.id!);
+      if (mounted) setState(() => _courseOriginal = saved);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     EasyLocalization.of(context);
-    final messages = ref.watch(_chatProvider);
-    final notifier = ref.read(_chatProvider.notifier);
+    final provider = _chatProvider(_repository);
+    final messages = ref.watch(provider);
+    final notifier = ref.read(provider.notifier);
+    final loading = messages.any((message) => message.isLoading);
 
     // 새 메시지 오면 스크롤
-    ref.listen(_chatProvider, (_, next) => _scrollToBottom());
+    ref.listen(provider, (_, next) => _scrollToBottom());
 
     final showQuickPrompts = messages.length == 1; // 환영 메시지만 있을 때
 
@@ -146,10 +283,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: widget.courseId != null,
+        leading: widget.courseId == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
         title: Row(
           children: [
             Container(
@@ -179,14 +319,37 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.grey),
             tooltip: 'ai_reset'.tr(),
-            onPressed: () {
-              notifier.clear();
-            },
+            onPressed: notifier.clear,
           ),
         ],
       ),
       body: Column(
         children: [
+          if (widget.courseId != null)
+            Container(
+              key: const ValueKey('ai-course-context'),
+              width: double.infinity,
+              color: AppColors.accent.withValues(alpha: 0.08),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.route_outlined, color: AppColors.accent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${'ai_course_edit'.tr()} · ${_courseOriginal?.title ?? '...'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               controller: _scrollCtrl,
@@ -202,9 +365,16 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                 final msg = messages[i];
                 return ChatBubble(
                   message: msg,
-                  onAddToCourse: msg.suggestedCourse != null
-                      ? () => _openCourseBuilder(msg.suggestedCourse!)
-                      : null,
+                  onAddToCourse: msg.suggestedCourse == null
+                      ? null
+                      : () => _openSuggestedCourse(msg.suggestedCourse!),
+                  onOpenSource: (source) =>
+                      context.push('/places/${source.contentId}'),
+                  onAddSourceToCourse: _openSourceInCourse,
+                  onRetry: msg.retryContent == null
+                      ? null
+                      : () => notifier.retry(msg.retryContent!),
+                  originalCourse: _courseOriginal,
                 );
               },
             ),
@@ -212,6 +382,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           _InputBar(
             controller: _inputCtrl,
             onSend: _send,
+            enabled: !loading,
           ),
         ],
       ),
@@ -276,8 +447,13 @@ class _QuickPromptChips extends StatelessWidget {
 class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final void Function(String) onSend;
+  final bool enabled;
 
-  const _InputBar({required this.controller, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.onSend,
+    required this.enabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -289,9 +465,11 @@ class _InputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              onSubmitted: onSend,
+              enabled: enabled,
+              onSubmitted: enabled ? onSend : null,
               textInputAction: TextInputAction.send,
               maxLines: null,
+              maxLength: AiRepository.maxChatMessageLength,
               decoration: InputDecoration(
                 hintText: 'ai_input_hint'.tr(),
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
@@ -306,16 +484,21 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => onSend(controller.text),
-            child: Container(
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('ai-chat-send'),
+              onTap: enabled ? () => onSend(controller.text) : null,
+              customBorder: const CircleBorder(),
+              child: Container(
               width: 42,
               height: 42,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
+              decoration: BoxDecoration(
+                color: enabled ? AppColors.primary : Colors.grey.shade300,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+            ),
             ),
           ),
         ],

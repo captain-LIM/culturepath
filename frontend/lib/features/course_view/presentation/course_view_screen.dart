@@ -9,9 +9,7 @@ import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/data/my_courses_provider.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
-import 'course_ai_edit_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_map_preview.dart';
 import 'widgets/course_track_view.dart';
@@ -207,26 +205,15 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       return;
     }
     if (!mounted) return;
-    final saved = await showCourseAiEditScreen(
-      context,
-      _course,
-      isOwner: widget.isOwner || _course.isOwner,
-      onUnauthorized: () async {
-        await AuthRepository().clearExpiredSession();
-        ref.invalidate(authStateProvider);
-        if (mounted) context.go('/login');
-      },
-      onCourseUnavailable: () {
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ai_edit_course_unavailable'.tr())),
-        );
-      },
-    );
-    if (saved != null && mounted) {
+    await context.push('/ai-assistant?courseId=${_course.id}');
+    if (!mounted) return;
+    try {
+      final refreshed = await CourseRepository().getCourse(_course.id!);
+      if (!mounted) return;
+      setState(() => _course = refreshed);
       ref.invalidate(myCoursesProvider);
-      Navigator.of(context).pop();
+    } catch (_) {
+      // 대화 중 저장하지 않았거나 코스가 삭제된 경우 현재 상세를 그대로 유지한다.
     }
   }
 

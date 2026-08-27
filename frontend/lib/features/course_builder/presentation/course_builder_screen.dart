@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/course_model.dart';
 import '../data/course_repository.dart';
@@ -260,6 +261,8 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.initialCourse == null)
+            const _AiAssistantEntryCard(),
           if (isFork)
             _ForkBanner(originalTitle: course.forkedFrom!.title, authorId: course.forkedFrom!.authorId),
           if (widget.aiOriginalCourse != null)
@@ -420,6 +423,86 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
             style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AiAssistantEntryCard extends StatelessWidget {
+  const _AiAssistantEntryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Material(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          key: const ValueKey('open-ai-assistant'),
+          onTap: () => context.go('/ai'),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.24)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'AI',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ai_entry_title'.tr(),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'ai_entry_description'.tr(),
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.primary),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

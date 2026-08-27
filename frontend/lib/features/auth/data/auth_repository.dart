@@ -48,8 +48,16 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    await _googleSignIn.signOut();
-    await clearExpiredSession();
+    try {
+      await _client.delete('/ai/chat/sessions');
+    } catch (_) {
+      // 서버 세션은 TTL로도 만료된다. 로그아웃 자체는 네트워크 장애로 막지 않는다.
+    }
+    try {
+      await _googleSignIn.signOut();
+    } finally {
+      await clearExpiredSession();
+    }
   }
 
   Future<void> clearExpiredSession() async {
