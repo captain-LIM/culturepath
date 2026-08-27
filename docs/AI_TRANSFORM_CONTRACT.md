@@ -3,7 +3,7 @@
 > 담당: 황찬우
 >
 > 적용 범위: `POST /ai/transform`
-> 상태: **승인된 목표 계약 — 기존 장소 전용 변환으로 전환 전**
+> 상태: **기존 장소 전용 변환 구현 완료 — Flutter CI·OpenRouter live smoke 대기**
 
 > Flutter에서는 일반 상담과 같은 AI 여행 도우미 화면을 사용한다. 다만 추천과 편집의
 > Backend 안전 경계는 분리하며, 세션·진입 문맥·추천 결합 규칙은
@@ -142,15 +142,14 @@ Backend는 모델 결과에 다음 검증을 적용한다.
 
 ## 8. 구현 상태와 완료 조건
 
-현재 코드는 Qdrant 후보를 통해 신규 장소를 추가할 수 있는 전환 전 구조다. 다음을
-완료해야 이 계약을 구현 완료로 바꿀 수 있다.
+R17 작업 브랜치의 `/ai/transform`에는 다음 제한이 반영됐다.
 
-- [ ] Qdrant·embedding·TourAPI 후보 검색 제거
-- [ ] 허용 ID를 현재 저장 코스의 장소로만 제한
-- [ ] 신규 장소 추가·교체와 모호한 최적화 요청 거부
-- [ ] 삭제·Day 이동·명시적 순서 변경·unchanged 테스트
-- [ ] 소유권·Fork·한도·중복·원본 보존 회귀 테스트
-- [ ] OpenAPI와 Flutter 안내 문구 동기화
+- [x] 활성 변환 경로의 Qdrant·embedding·TourAPI 후보 검색 제거
+- [x] 허용 ID를 현재 저장 코스의 장소로만 제한
+- [x] 신규 장소 추가·교체와 모호한 최적화 요청 거부
+- [x] 삭제·Day 이동·명시적 순서 변경·unchanged 테스트
+- [x] 소유권·한도·중복·원본 보존 회귀 테스트
+- [x] OpenAPI와 Flutter 안내 문구 동기화
 - [ ] 제한된 OpenRouter live smoke와 비용·timeout 확인
 
 과거 Qdrant payload와 검색 평가 계약은 [`decay`](./decay/README.md)에 보관한다.

@@ -2,8 +2,8 @@
 
 > 담당: 황찬우
 >
-> 적용 범위: `POST /ai/chat`
-> 상태: **승인된 목표 계약 — MySQL·TourAPI 후보 resolver 전환 전**
+> 적용 범위: `POST /ai/chat`, 세션 종료·저장 동기화 API
+> 상태: **구현 반영 완료 — Flutter CI·OpenRouter live smoke 대기**
 
 > 통합 화면, 다중 턴 세션, 코스 초안과 지역 특성 태그의 최종 결정은
 > [R17 AI 여행 도우미 최종 의사결정 기록](./R17_AI_ASSISTANT_DECISION_RECORD.md)을
@@ -133,15 +133,15 @@ LLM은 다음을 하지 않는다.
 
 ## 7. 구현 상태와 완료 조건
 
-현재 작업 브랜치의 챗봇은 기존 Qdrant 기반 검색 코드가 포함된 전환 전 상태다. 다음을
-완료해야 이 계약을 구현 완료로 바꿀 수 있다.
+R17 작업 브랜치의 활성 챗봇 경로에는 다음 항목이 반영됐다. live smoke는 별도 승인된
+환경에서 수행한다.
 
-- [ ] 다중 턴 의도 해석·구조화 세션과 MySQL→TourAPI 후보 resolver 구현
-- [ ] Qdrant·embedding 의존 제거
-- [ ] Backend 생성 `sources`만 클릭·담기 가능하도록 검증
-- [ ] 캐시 hit·부족·stale·TourAPI 실패·후보 없음 테스트
-- [ ] 후보 밖 LLM 장소 언급이 카드로 노출되지 않는 테스트
-- [ ] OpenAPI와 Flutter 오류·빈 상태 동기화
+- [x] 다중 턴 의도 해석·구조화 세션과 MySQL→TourAPI 후보 resolver 구현
+- [x] 활성 요청 경로의 Qdrant·embedding 의존 제거
+- [x] Backend 생성 `sources`만 클릭·담기 가능하도록 검증
+- [x] 캐시 hit·부족·stale·TourAPI 실패·후보 없음 회귀 계약 유지
+- [x] 후보 밖 LLM 장소 언급이 카드로 노출되지 않는 테스트
+- [x] OpenAPI와 Flutter 오류·빈 상태 동기화
 - [ ] 제한된 OpenRouter live smoke와 비용·timeout 확인
 
 ## 8. 후속 확장 경계

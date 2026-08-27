@@ -27,13 +27,14 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 | [AI 여행 챗봇 계약](./AI_CHAT_CONTRACT.md) | `/ai/chat`, MySQL→TourAPI 후보와 신뢰 장소 카드 |
 | [AI 코스 다듬기 계약](./AI_TRANSFORM_CONTRACT.md) | `/ai/transform`, 기존 장소 전용 편집과 원본 보호 |
 
-AI 문서는 현재 **승인된 목표 계약**이다. 작업 브랜치의 기존 Qdrant 기반 코드를 이
-계약으로 전환하는 작업이 끝나기 전에는 문서 상태 문구와 실제 코드를 함께 확인한다.
+AI 문서는 현재 **R17 구현에 반영된 계약**이다. 활성 AI 요청 경로는 Qdrant 없이
+MySQL→TourAPI 후보 resolver와 기존 장소 전용 transform을 사용한다. Flutter CI와
+OpenRouter live smoke는 아직 남은 검증 항목이다.
 
 ## 현재 남은 큰 작업
 
-1. R17에서 Qdrant·BGE-M3 의존을 제거하고 MySQL→TourAPI 후보 resolver로 전환
-2. AI 여행 챗봇과 기존 장소 전용 코스 다듬기 구현·회귀·OpenRouter 최소 smoke
+1. R17 Flutter CI·Android 빌드 검증과 OpenRouter 최소 live smoke
+2. R17 실제 MySQL·TourAPI·OpenRouter 통합 흐름의 제한된 수동 검수
 3. 공개 코스 장소 사용 횟수 UI 표시 여부 결정
 4. R18 배포·실기기·Google Play 준비
 
@@ -47,5 +48,5 @@ AI 문서는 현재 **승인된 목표 계약**이다. 작업 브랜치의 기�
 - 완료된 PR의 프롬프트·검수표·장문 계획·일회성 결과는 `archive`로 이동한다.
 - 최신 결정으로 폐기된 계약·runbook은 `decay`로 이동하며 현행 지침으로 사용하지 않는다.
 - 현행 계약, `archive`, `decay`가 충돌하면 실제 소스코드와 루트의 현행 계약을 함께
-  확인한다. 목표 계약이 구현 전이면 그 차이를 결함 또는 남은 작업으로 추적한다.
+  확인한다. 문서와 실제 코드가 다르면 그 차이를 결함 또는 남은 작업으로 추적한다.
 - 역할이나 제품 범위가 바뀌면 서비스 계획서와 팀 역할 문서를 함께 갱신한다.
