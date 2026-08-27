@@ -84,7 +84,8 @@ test('documents strict culture filtering for region spots', () => {
     success.content['application/json'].schema.items.$ref,
     '#/components/schemas/RegionSpot',
   );
-  assert.equal(success.content['application/json'].schema.maxItems, 20);
+  // 이 엔드포인트는 상한 없이 일치하는 장소를 모두 반환한다.
+  assert.equal(success.content['application/json'].schema.maxItems, undefined);
   assert.ok(success.headers['X-Cache-Status']);
   assert.ok(spots.responses[400]);
   assert.ok(spots.responses[404]);

@@ -1,6 +1,7 @@
 const regionScoreService = require('../services/regionScoreService');
 const cachedPlacesService = require('../services/cachedPlacesService');
 const {
+  CULTURE_CANDIDATE_FETCH_ROWS,
   CULTURE_SEARCH_KEYWORDS,
   MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
@@ -120,10 +121,100 @@ function toPublicSpot(place) {
   };
 }
 
+// culture 필터가 걸린 지역별 스팟 조회는 "이 문화에 해당하는 관광지를 전부
+// 보여달라"는 요청이므로 한 페이지(50건)만 보고 끝내지 않고, 더 볼 게
+// 남아있는 한 계속 다음 페이지를 가져온다. 페이지당 최대 6번(최대 300건)
+// 까지만 허용해 외부 API를 무한히 호출하지 않도록 안전장치를 둔다 — 실제
+// 지역 하나에 이보다 더 많은 후보가 나오는 경우는 없다.
+const CULTURE_FETCH_MAX_PAGES = 6;
+
+async function fetchAllCulturePages(fetchPage, baseParams) {
+  const items = [];
+  let cacheStatus;
+
+  for (let pageNo = 1; pageNo <= CULTURE_FETCH_MAX_PAGES; pageNo += 1) {
+    const result = await fetchPage({
+      ...baseParams,
+      pageNo,
+      numOfRows: CULTURE_CANDIDATE_FETCH_ROWS,
+    });
+    items.push(...result.items);
+    cacheStatus = combineCultureCacheStatus(cacheStatus, result.cacheStatus);
+
+    const totalCount = Number(result.pagination?.totalCount);
+    const hasMore = Number.isFinite(totalCount)
+      ? items.length < totalCount
+      : result.items.length === CULTURE_CANDIDATE_FETCH_ROWS;
+    if (!hasMore) {
+      break;
+    }
+  }
+
+  return { items, cacheStatus };
+}
+
+// 문화 필터로 실제 매칭되는 관광지 전부를 가져온다 (상한 없음).
+// getSpotsByRegion과 getRegionsByCulture의 실시간 장소 수 보정이 함께 쓴다.
+async function getCulturePlaces(placesService, tourCodes, cultureName) {
+  const keywords = CULTURE_SEARCH_KEYWORDS[cultureName] || [];
+  const [areaResult, ...keywordResults] = await Promise.all([
+    fetchAllCulturePages(
+      params => placesService.getAreaBasedPlaces(params),
+      tourCodes,
+    ),
+    ...keywords.map(keyword =>
+      fetchAllCulturePages(
+        params => placesService.searchPlacesByKeyword(params),
+        { ...tourCodes, keyword },
+      ),
+    ),
+  ]);
+  const items = selectPlacesForCulture(
+    [areaResult.items, ...keywordResults.map(result => result.items)],
+    cultureName,
+    { limit: Infinity },
+  );
+  const cacheStatus = [areaResult, ...keywordResults]
+    .map(result => result.cacheStatus)
+    .reduce(
+      (combined, status) => combineCultureCacheStatus(combined, status),
+      undefined,
+    );
+  return { items, cacheStatus };
+}
+
 function createRegionsController(options = {}) {
   const service = options.regionScoreService || regionScoreService;
   const placesService = options.placesService || cachedPlacesService;
   const logger = options.logger || console;
+
+  // 지역 카드의 "장소 N개"는 큐레이션 시점에 손으로 넣어둔 추정치라
+  // 실제 문화 필터 결과와 어긋날 수 있다. TourAPI 조회가 가능하면 실제
+  // 매칭 개수로 덮어써서 카드에 뜬 숫자와 상세 화면에서 보이는 목록
+  // 개수가 일치하게 한다. 조회에 실패하면 가용성을 위해 기존 큐레이션
+  // 추정치를 그대로 둔다.
+  async function attachLiveSpotCounts(items, cultureName) {
+    return Promise.all(items.map(async item => {
+      const tourCodes = REGION_TOUR_CODES[item.areaCode];
+      if (!tourCodes) {
+        return item;
+      }
+      try {
+        const { items: places } = await getCulturePlaces(
+          placesService,
+          tourCodes,
+          cultureName,
+        );
+        return { ...item, spotCount: places.length };
+      } catch (error) {
+        logger?.warn?.('실시간 장소 수 계산에 실패해 큐레이션 수치를 유지합니다.', {
+          areaCode: item.areaCode,
+          errorName: error?.name || 'Error',
+        });
+        return item;
+      }
+    }));
+  }
 
   async function getRegionsByCulture(req, res) {
     const rawCultureId = String(req.params?.id || '').trim();
@@ -143,8 +234,12 @@ function createRegionsController(options = {}) {
           message: '해당 문화 카테고리를 찾을 수 없습니다.',
         });
       }
+      const cultureName = CULTURE_ID_TO_NAME[Number(rawCultureId)];
+      const items = cultureName
+        ? await attachLiveSpotCounts(result.items, cultureName)
+        : result.items;
       setRegionDataStatusHeader(res, result.dataStatus);
-      return res.json(result.items);
+      return res.json(items);
     } catch (error) {
       logger?.error?.('문화별 지역점수 처리에 실패했습니다.', {
         errorName: error?.name || 'Error',
@@ -178,27 +273,12 @@ function createRegionsController(options = {}) {
       let cacheStatus;
 
       if (cultureFilter) {
-        const keyword = CULTURE_SEARCH_KEYWORDS[cultureFilter];
-        const [areaResult, keywordResult] = await Promise.all([
-          placesService.getAreaBasedPlaces({
-            ...tourCodes,
-            numOfRows: MAX_CULTURE_RESULTS,
-          }),
-          placesService.searchPlacesByKeyword({
-            ...tourCodes,
-            keyword,
-            numOfRows: MAX_CULTURE_RESULTS,
-          }),
-        ]);
-        items = selectPlacesForCulture(
-          [areaResult.items, keywordResult.items],
-          cultureFilter,
-          { limit: MAX_CULTURE_RESULTS },
-        );
-        cacheStatus = combineCultureCacheStatus(
-          areaResult.cacheStatus,
-          keywordResult.cacheStatus,
-        );
+        // 이 화면은 "선택한 문화에 해당하는 관광지를 전부" 보여주는 화면이라
+        // MAX_CULTURE_RESULTS로 상한을 두지 않는다 (getCulturePlaces가
+        // limit: Infinity로 조회한다).
+        const result = await getCulturePlaces(placesService, tourCodes, cultureFilter);
+        items = result.items;
+        cacheStatus = result.cacheStatus;
       } else {
         const result = await placesService.getAreaBasedPlaces({
           ...tourCodes,

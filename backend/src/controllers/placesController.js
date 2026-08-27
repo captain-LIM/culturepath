@@ -2,6 +2,7 @@ const cachedPlacesService = require('../services/cachedPlacesService');
 const relatedPlacesService = require('../services/relatedPlacesService');
 const { ExternalApiError } = require('../utils/externalApiError');
 const {
+  CULTURE_CANDIDATE_FETCH_ROWS,
   CULTURE_SEARCH_KEYWORDS,
   MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
@@ -109,21 +110,30 @@ function createPlacesController(options = {}) {
         : await service.getAreaBasedPlaces(request);
 
       // q 없이 culture만 지정된 요청은 지역 목록을 사후 필터링만 하면
-      // 모수가 너무 작다. TourAPI에 culture 대표 키워드로 직접 검색한
-      // 결과를 합쳐서 실제로 존재하는 장소를 더 찾아낸다.
-      const cultureKeyword = culture && !query ? CULTURE_SEARCH_KEYWORDS[culture] : null;
+      // 모수가 너무 작다. TourAPI에 culture 대표 키워드들로 직접 검색한
+      // 결과를 합쳐서 실제로 존재하는 장소를 더 찾아낸다. 대표 키워드 하나만
+      // 쓰면 그 단어가 제목에 없는 장소가 통째로 빠지므로 문화별로 여러
+      // 키워드를 병렬 검색한다.
+      const cultureKeywords = culture && !query ? CULTURE_SEARCH_KEYWORDS[culture] || [] : [];
       const placeGroups = [result.items];
       let cacheStatus = result.cacheStatus;
-      if (cultureKeyword) {
-        const keywordResult = await service.searchPlacesByKeyword({
-          ...request,
-          keyword: cultureKeyword,
-        });
-        placeGroups.push(keywordResult.items);
-        cacheStatus = combineCultureCacheStatus(
-          cacheStatus,
-          keywordResult.cacheStatus,
+      if (cultureKeywords.length) {
+        const keywordResults = await Promise.all(
+          cultureKeywords.map(keyword =>
+            service.searchPlacesByKeyword({
+              ...request,
+              keyword,
+              numOfRows: CULTURE_CANDIDATE_FETCH_ROWS,
+            }),
+          ),
         );
+        for (const keywordResult of keywordResults) {
+          placeGroups.push(keywordResult.items);
+          cacheStatus = combineCultureCacheStatus(
+            cacheStatus,
+            keywordResult.cacheStatus,
+          );
+        }
       }
 
       const requestedCultureLimit = Number(

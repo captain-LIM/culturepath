@@ -15,6 +15,12 @@ const CULTURE_CATEGORIES = Object.freeze([
 
 const MAX_CULTURE_RESULTS = 20;
 
+// culture 필터가 걸린 검색에서 TourAPI로부터 끌어올 원본 후보 개수.
+// MAX_CULTURE_RESULTS(최종 응답 개수)보다 넉넉히 크게 잡아야 분류 필터를
+// 통과하는 실제 매칭 장소가 충분히 남는다. 공공데이터포털 페이지당 최대치인
+// 50으로 맞춘다.
+const CULTURE_CANDIDATE_FETCH_ROWS = 50;
+
 const CULTURE_MATCH_STRENGTH = Object.freeze({
   NONE: 0,
   TITLE_KEYWORD: 1,
@@ -32,19 +38,21 @@ const CONTENT_ID_OVERRIDES = Object.freeze({
 });
 
 // culture만 지정되고 q가 없는 검색에서 searchKeyword2를 직접 호출할 때 쓰는
-// 대표 검색어. KEYWORD_RULES·TourAPI 공식 소분류 명칭과 겹치는 안전한
-// 단어만 사용한다.
+// 대표 검색어들. 문화 카테고리 하나당 검색어 하나만 쓰면 그 단어가 제목에
+// 없는 실제 장소들이 후보에서 통째로 빠져 결과가 지나치게 적어진다. 문화별로
+// 서로 다른 관점의 대표어 2개를 병렬 검색해 후보 폭을 넓힌다. KEYWORD_RULES·
+// TourAPI 공식 소분류 명칭과 겹치는 안전한 단어만 사용한다.
 const CULTURE_SEARCH_KEYWORDS = Object.freeze({
-  '독립서점·책방': '서점',
-  '문학': '문학관',
-  '음악': '공연장',
-  '전통주·양조장': '양조장',
-  '로컬 미식': '전통시장',
-  '공예·공방': '공방',
-  '근대 문화유산': '근대건축물',
-  '미술·갤러리': '미술관',
-  '영화·애니메이션': '영화관',
-  '커피·카페': '카페',
+  '독립서점·책방': Object.freeze(['서점', '책방']),
+  '문학': Object.freeze(['문학관', '문학']),
+  '음악': Object.freeze(['공연장', '음악']),
+  '전통주·양조장': Object.freeze(['양조장', '전통주']),
+  '로컬 미식': Object.freeze(['전통시장', '맛집']),
+  '공예·공방': Object.freeze(['공방', '공예']),
+  '근대 문화유산': Object.freeze(['근대건축물', '근대']),
+  '미술·갤러리': Object.freeze(['미술관', '갤러리']),
+  '영화·애니메이션': Object.freeze(['영화관', '애니메이션']),
+  '커피·카페': Object.freeze(['카페', '커피']),
 });
 
 // lclsSystmCode2(신분류체계) 중분류·소분류 코드값은 getClassificationCodes()
@@ -63,8 +71,23 @@ const SUB_CLASSIFICATION_CODE_RULES = Object.freeze({
   HS011100: '근대 문화유산', // 근대건축물
 });
 
+// 대형마트·올리브영·백화점 같은 프랜차이즈 지점명이 지명+'점'으로 끝날 때
+// (예: '이마트 수서점', '올리브영 연신내범서점', 'NC백화점 강서점') 그
+// 지명의 마지막 음절이 우연히 '서'로 끝나면 '서점'이라는 부분 문자열과
+// 그대로 일치해 버려 실사용에서 다수의 오탐이 확인됐다. '독립'서점이라는
+// 카테고리 취지상 체인점은 애초에 대상이 아니므로, 잘 알려진 프랜차이즈
+// 표기가 제목에 포함되면 서점·책방 키워드가 있어도 매칭에서 제외한다.
+const FRANCHISE_EXCLUSION_LOOKAHEAD =
+  '(?!.*(?:이마트|홈플러스|롯데마트|다이소|올리브영|ABC\\s*마트|GS25|CU|세븐일레븐|스타벅스|투썸플레이스|백화점|아울렛|편의점|교보문고|영풍문고))';
+
 const KEYWORD_RULES = Object.freeze([
-  ['독립서점·책방', /독립\s*서점|서점|책방|북스테이|헌책방|고서점/i],
+  [
+    '독립서점·책방',
+    new RegExp(
+      `^${FRANCHISE_EXCLUSION_LOOKAHEAD}.*(?:독립\\s*서점|서점|책방|북스테이|헌책방|고서점)`,
+      'i',
+    ),
+  ],
   ['문학', /문학|문학관|작가|소설가|시인|박경리|유치환|청마/i],
   ['음악', /음악|공연장|콘서트|국악|오페라|재즈|뮤직/i],
   ['전통주·양조장', /전통주|막걸리|소주|양조장|브루어리|주조장|와이너리|술도가/i],
@@ -166,6 +189,7 @@ function getCultureMatchStrength(item, culture, options = {}) {
 
 module.exports = {
   CONTENT_ID_OVERRIDES,
+  CULTURE_CANDIDATE_FETCH_ROWS,
   CULTURE_CATEGORIES,
   CULTURE_MATCH_STRENGTH,
   CULTURE_SEARCH_KEYWORDS,

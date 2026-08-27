@@ -32,10 +32,14 @@ function selectPlacesForCulture(placeGroups, culture, options = {}) {
     throw new RangeError('지원하지 않는 문화 카테고리입니다.');
   }
 
-  const requestedLimit = Number(options.limit);
-  const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
-    ? Math.min(requestedLimit, MAX_CULTURE_RESULTS)
-    : MAX_CULTURE_RESULTS;
+  // limit: Infinity는 "찾은 만큼 전부 반환"을 명시적으로 요청하는
+  // 신호다. 그 외에는 기존처럼 MAX_CULTURE_RESULTS로 상한을 둔다.
+  const requestedLimit = options.limit === Infinity ? Infinity : Number(options.limit);
+  const limit = requestedLimit === Infinity
+    ? Infinity
+    : Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, MAX_CULTURE_RESULTS)
+      : MAX_CULTURE_RESULTS;
   const candidates = new Map();
   let discoveryIndex = 0;
 

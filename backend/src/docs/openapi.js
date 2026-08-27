@@ -116,7 +116,7 @@ module.exports = Object.freeze({
         tags: ['Regions'],
         summary: '지역별 관광 장소 조회',
         description:
-          '`culture`가 있으면 지역 일반 목록과 문화 대표 키워드 검색 후보를 합친 뒤, contentId override·공식 분류 코드·제목 규칙으로 다시 검증해 관련 장소만 반환합니다. 관련도 점수는 내부 정렬에만 사용합니다.',
+          '`culture`가 있으면 지역 일반 목록과 문화 대표 키워드 검색 후보(페이지네이션으로 전량 수집)를 합친 뒤, contentId override·공식 분류 코드·제목 규칙으로 다시 검증해 관련 장소만 반환합니다. 상한 없이 일치하는 장소를 모두 반환하며, 관련도 점수는 내부 정렬에만 사용합니다.',
         parameters: [
           {
             name: 'code',
@@ -143,7 +143,6 @@ module.exports = Object.freeze({
               'application/json': {
                 schema: {
                   type: 'array',
-                  maxItems: MAX_CULTURE_RESULTS,
                   items: { $ref: '#/components/schemas/RegionSpot' },
                 },
               },

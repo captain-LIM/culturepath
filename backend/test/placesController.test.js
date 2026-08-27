@@ -201,7 +201,7 @@ test('augments an area listing with a culture keyword search when q is absent', 
   }, res);
 
   assert.equal(calls.areaBased, 1);
-  assert.deepEqual(calls.keyword, ['카페']);
+  assert.deepEqual(calls.keyword, ['카페', '커피']);
   assert.equal(res.body.length, 1);
   assert.equal(res.body[0].contentId, '2');
   assert.equal(res.headers['X-Cache-Status'], 'REFRESHED');
