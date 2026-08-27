@@ -27,7 +27,7 @@ test('documents the implemented public place routes and compatibility contract',
   assert.equal(
     search.responses[200].content['application/json']
       .schema['x-culture-filter-max-items'],
-    20,
+    50,
   );
   assert.ok(
     openApiDocument.paths['/places/{id}']
@@ -84,9 +84,18 @@ test('documents strict culture filtering for region spots', () => {
     success.content['application/json'].schema.items.$ref,
     '#/components/schemas/RegionSpot',
   );
-  // 이 엔드포인트는 상한 없이 일치하는 장소를 모두 반환한다.
-  assert.equal(success.content['application/json'].schema.maxItems, undefined);
+  assert.equal(success.content['application/json'].schema.maxItems, 50);
   assert.ok(success.headers['X-Cache-Status']);
+  assert.ok(success.headers['X-Has-More']);
+  assert.ok(success.headers['X-Next-Page']);
+  assert.ok(spots.parameters.some(
+    parameter => parameter.$ref?.endsWith('/CulturePageNo'),
+  ));
+  assert.equal(
+    openApiDocument.components.parameters.CulturePageNo.schema.maximum,
+    5,
+  );
+  assert.ok(spots.parameters.some(parameter => parameter.$ref?.endsWith('/NumOfRows')));
   assert.ok(spots.responses[400]);
   assert.ok(spots.responses[404]);
   assert.ok(spots.responses[502]);
@@ -95,8 +104,11 @@ test('documents strict culture filtering for region spots', () => {
   const regionSpot = openApiDocument.components.schemas.RegionSpot;
   assert.ok(regionSpot.required.includes('imageUrl'));
   assert.ok(regionSpot.required.includes('thumbnailUrl'));
+  assert.ok(regionSpot.required.includes('publicCourseCount'));
   assert.equal(regionSpot.properties.imageUrl.nullable, true);
   assert.equal(regionSpot.properties.thumbnailUrl.nullable, true);
+  assert.equal(regionSpot.properties.publicCourseCount.minimum, 0);
+  assert.equal(regionSpot.properties.publicCourseCount.nullable, true);
   assert.equal(
     openApiDocument.components.schemas.PlaceDetail.allOf[1]
       .properties.images.maxItems,

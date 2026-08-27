@@ -1,35 +1,41 @@
 # CulturePath 문서
 
-CulturePath(문화여행·따라가방)의 기획과 협업 문서를 관리하는 디렉터리다.
+CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 단계의 상세 기록은 [`archive`](./archive/README.md)에 보관한다.
 
-## 문서 목록
+## 먼저 읽을 문서
+
+| 문서 | 용도 |
+| --- | --- |
+| [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) | 제품 목적, 사용자 흐름, 핵심 기능과 기술 구조 |
+| [팀 역할 및 협업 기준](./TEAM_ROLES.md) | 임수민·황찬우 담당 범위와 연동 경계 |
+| [황찬우 현행 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | 현재 완료 상태, 다음 PR, 보류 항목과 새 세션 인수인계 |
+
+## 현행 제품·API 계약
 
 | 문서 | 내용 |
 | --- | --- |
-| [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) | 서비스 컨셉, 사용자 흐름, 기능, 데이터, 기술 구조, 디자인 시스템 및 로드맵 |
-| [팀 역할 및 협업 기준](./TEAM_ROLES.md) | 임수민과 황찬우의 담당 범위, 연동 지점, 일정별 산출물 및 협업 원칙 |
-| [황찬우 전용 실행계획](./HWANG_CHANWOO_WORK_PLAN.md) | 황찬우가 담당하는 RAG, 외부 API 연동, FE 디자인의 상세 작업과 완료 기준 |
-| [황찬우 전용 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | R1~R12 구현 이력과 황찬우 R14~R18 실행 순서(Manus 프로토타입→Figma→Flutter 디자인→RAG 평가→OpenRouter→배포), 임수민 담당 R13 다국어·지도 경계와 세션 인수인계 |
-| [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) | 최신 Flutter·서비스 계획서 기준 홈·탐색 정보구조, 문화 여행 편집지 시각 언어, 토큰·컴포넌트·상태·반응형 계약 |
-| [R14 Manus 프로토타입 실행 프롬프트](./R14_MANUS_PROTOTYPE_PROMPTS.md) | 외부 서비스와 격리된 Android 모바일 프로토타입을 기반→화면→상태→2회 자체검수 순서로 만드는 주 실행 프롬프트 |
-| [R14 Figma 최종 정리 프롬프트](./R14_FIGMA_MAKE_PROMPTS.md) | 승인된 Manus 결과를 Figma 변수·컴포넌트·Variant·Auto Layout·Prototype으로 정리하는 후속 프롬프트 |
-| [R14 프로토타입·Figma 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) | Manus와 Figma 결과의 정보구조·실데이터·비-AI형 시각 언어·접근성·Flutter 핸드오프를 두 번 검수하는 승인 기준 |
-| [R14 Manus 프로토타입 최종 결과와 R15 인계](./R14_MANUS_PROTOTYPE_RESULT.md) | 조건부 승인 결과, 최종 검증 근거, 접근성 보정, 승인 예외와 R15 Flutter 불변 조건 |
-| [R15 Flutter 디자인 적용과 검증 기록](./R15_FLUTTER_DESIGN_INTEGRATION.md) | R14 승인안을 제품 Flutter에 적용한 범위, 데이터·소유권 계약, 자동·실기기 QA 상태 |
-| [관광지 이미지·상세·연관 장소 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md) | R12 목록 썸네일, 최대 10장 상세 갤러리, 안전한 캐시·placeholder, 연관 장소와 코스 담기 흐름 |
-| [외부 관광 API 검증 체크리스트](./API_VALIDATION_CHECKLIST.md) | 국문·연관·DataLab 검증 완료 내역과 영·일·중문 TourAPI 활용 신청·실호출·locale 계약 체크리스트 |
-| [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md) | TourAPI 목록·검색·상세 파라미터, PlaceSummary·PlaceDetail, 공개 장소 API와 오류 계약 |
-| [TourAPI 장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md) | 장소·검색 2단계 캐시, TTL·stale·fail-open 정책, 로컬 MySQL 검증과 잔여 배포 환경 검증 |
-| [연관 방문 장소 API 계약](./RELATED_PLACES_CONTRACT.md) | 차량 이동 기반 연관 데이터의 해시 ID 매핑, 호출 상한, 캐시와 공개 응답 계약 |
-| [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md) | 지역 방문자 정규화, 초기 40/30/30 점수, 전용 캐시, fallback과 공개 지역 카드 계약 |
-| [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md) | 인증·호출 제한, OpenRouter·Qdrant 경계, `/ai/transform` 요청·응답과 장소 ID 검증 규칙 |
-| [R10 AI 변경안 UX·Figma 명세](./R10_AI_TRANSFORM_UX.md) | Android 전체 화면, semantic diff, 경고·오류·Fork·원본 복구와 Figma Make 프롬프트 |
-| [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md) | BGE-M3·버전 컬렉션, 장소 문서·payload, 증분 upsert·명시적 prune와 실행 명령 |
-| [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md) | 규칙 기반 routing, strict filter, MySQL 원본 재검증, 35개 고정 평가 세트와 live 실행 경계 |
-| [안정화 변경 배포 메모](./STABILIZATION_DEPLOYMENT_NOTES.md) | 기존 MySQL migration, 생성·Fork 멱등성, AI 호출 제한의 배포 조건과 잔여 실환경 검증 |
+| [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md) | 목록·검색·상세, 문화 필터, 페이지와 오류 계약 |
+| [장소 MySQL 캐시 계약](./PLACE_CACHE_CONTRACT.md) | 장소·검색 캐시, TTL·stale·fail-open |
+| [관광지 이미지 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md) | 목록 이미지, 상세 갤러리, placeholder와 캐시 |
+| [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md) | 공개 코스 중복 제거 집계, API 필드와 fail-open |
+| [연관 방문 장소 계약](./RELATED_PLACES_CONTRACT.md) | 연관 장소 매핑, 호출 상한과 공개 응답 |
+| [DataLab 지역점수 계약](./DATALAB_REGION_SCORE_CONTRACT.md) | 방문자 점수, 전용 캐시와 fallback |
+| [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md) | `/ai/transform`, 인증·검증·호출 제한 |
+| [Qdrant 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md) | BGE-M3, collection·payload, 증분 인덱싱 |
+| [RAG 검색·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md) | query routing, strict filter, Mock/live 평가 |
+
+## 현재 남은 큰 작업
+
+1. R16.2 Flutter 장소 목록 추가 로딩
+2. 공개 코스 장소 사용 횟수 UI 표시 여부 결정
+3. R17 OpenRouter live RAG·AI 품질/비용 검증
+4. R18 배포·실기기·Google Play 준비
+
+상세 범위와 담당 제외 항목은 [현행 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)을 기준으로 한다.
 
 ## 문서 관리 기준
 
-- 서비스 범위나 우선순위가 바뀌면 서비스 계획서를 먼저 갱신한다.
-- 담당 범위나 일정이 바뀌면 팀 역할 문서를 함께 갱신한다.
-- 구현 세부 문서가 필요해지면 RAG 설계, API 명세, 디자인 가이드 등을 별도 파일로 분리한다.
+- 현재 동작을 규정하는 계약은 이 디렉터리 루트에 둔다.
+- 완료된 PR의 프롬프트·검수표·장문 계획·일회성 결과는 `archive`로 이동한다.
+- 아카이브와 현행 계약이 충돌하면 실제 소스코드와 현행 계약이 우선한다.
+- 역할이나 제품 범위가 바뀌면 서비스 계획서와 팀 역할 문서를 함께 갱신한다.

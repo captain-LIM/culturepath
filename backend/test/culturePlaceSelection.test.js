@@ -3,6 +3,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  collectAreaPlacePage,
+  collectCulturePlacePage,
   combineCultureCacheStatus,
   isSupportedCulture,
   selectPlacesForCulture,
@@ -64,7 +66,155 @@ test('preserves discovery order for equal evidence and enforces the result limit
   );
   assert.equal(
     selectPlacesForCulture([oversized], '문학', { limit: 50 }).length,
-    20,
+    25,
+  );
+});
+
+test('allows only evidence-backed cross-class matches found in live TourAPI data', () => {
+  const result = selectPlacesForCulture([[
+    place('1', '군산 작은 책방', ['AC', 'AC06', 'AC060200']),
+    place('2', '인생서점 북페어', ['EV', 'EV03', 'EV030400']),
+    place('3', '명인안동소주', ['EX', 'EX06', 'EX060800']),
+    place('4', '안동소주전통음식박물관', ['VE', 'VE07', 'VE070100']),
+  ]], '독립서점·책방');
+
+  assert.deepEqual(result.map(item => item.contentId), ['1']);
+  assert.deepEqual(
+    selectPlacesForCulture([[
+      place('3', '명인안동소주', ['EX', 'EX06', 'EX060800']),
+      place('4', '안동소주전통음식박물관', ['VE', 'VE07', 'VE070100']),
+    ]], '전통주·양조장').map(item => item.contentId),
+    ['3', '4'],
+  );
+});
+
+test('activates supplemental keywords only until the first culture page is full', async () => {
+  const keywordCalls = [];
+  const result = await collectCulturePlacePage({
+    culture: '음악',
+    request: { pageNo: 1, numOfRows: 2 },
+    limit: 2,
+    logger: null,
+    placesService: {
+      getAreaBasedPlaces: async () => ({ items: [], cacheStatus: 'HIT' }),
+      searchPlacesByKeyword: async ({ keyword }) => {
+        keywordCalls.push(keyword);
+        return {
+          items: keyword === '음악당'
+            ? [place('1', '통영국제음악당'), place('2', '작은 음악당')]
+            : [],
+          cacheStatus: 'REFRESHED',
+        };
+      },
+    },
+  });
+
+  assert.deepEqual(keywordCalls, ['공연장', '음악당']);
+  assert.deepEqual(result.items.map(item => item.contentId), ['1', '2']);
+  assert.equal(result.cacheStatus, 'REFRESHED');
+  assert.equal(result.hasMore, false);
+});
+
+test('keeps multi-district area pagination stable across cumulative pages', async () => {
+  const calls = [];
+  const placesService = {
+    getAreaBasedPlaces: async options => {
+      calls.push(`${options.pageNo}:${options.lDongSignguCd}`);
+      return {
+        items: [place(
+          `${options.pageNo}-${options.lDongSignguCd}`,
+          `문학관 ${options.pageNo}-${options.lDongSignguCd}`,
+        )],
+        pagination: { ...options, totalCount: 2 },
+        cacheStatus: 'HIT',
+      };
+    },
+  };
+
+  const result = await collectAreaPlacePage({
+    placesService,
+    requests: [
+      { lDongRegnCd: '52', lDongSignguCd: '111' },
+      { lDongRegnCd: '52', lDongSignguCd: '113' },
+    ],
+    pagination: { pageNo: 2, numOfRows: 1 },
+    logger: null,
+  });
+
+  assert.deepEqual(calls, ['1:111', '1:113', '2:111', '2:113']);
+  assert.deepEqual(result.items.map(item => item.contentId), ['1-113']);
+  assert.equal(result.hasMore, true);
+});
+
+test('keeps earlier culture pages stable when later upstream pages have stronger matches', async () => {
+  const placesService = {
+    getAreaBasedPlaces: async options => ({
+      items: options.pageNo === 1
+        ? [place('title-1', '첫 카페'), place('title-2', '둘 카페')]
+        : [
+            place('official-1', '셋', ['FD', 'FD05']),
+            place('official-2', '넷', ['FD', 'FD05']),
+          ],
+      pagination: { ...options, totalCount: 4 },
+      cacheStatus: 'HIT',
+    }),
+    searchPlacesByKeyword: async options => ({
+      items: [],
+      pagination: { ...options, totalCount: 0 },
+      cacheStatus: 'HIT',
+    }),
+  };
+
+  const first = await collectCulturePlacePage({
+    placesService,
+    culture: '커피·카페',
+    request: { pageNo: 1, numOfRows: 2 },
+    limit: 2,
+    logger: null,
+  });
+  const second = await collectCulturePlacePage({
+    placesService,
+    culture: '커피·카페',
+    request: { pageNo: 2, numOfRows: 2 },
+    limit: 2,
+    logger: null,
+  });
+
+  assert.deepEqual(first.items.map(item => item.contentId), ['title-1', 'title-2']);
+  assert.deepEqual(second.items.map(item => item.contentId), ['official-1', 'official-2']);
+  assert.equal(second.hasMore, false);
+});
+
+test('returns partial culture candidates but throws when every source fails', async () => {
+  const timeout = new Error('timeout');
+  const partial = await collectCulturePlacePage({
+    culture: '문학',
+    request: { pageNo: 1, numOfRows: 1 },
+    limit: 1,
+    logger: null,
+    placesService: {
+      getAreaBasedPlaces: async () => { throw timeout; },
+      searchPlacesByKeyword: async () => ({
+        items: [place('1', '김동명문학관')],
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  assert.equal(partial.partial, true);
+  assert.equal(partial.items.length, 1);
+
+  await assert.rejects(
+    collectCulturePlacePage({
+      culture: '문학',
+      request: { pageNo: 1, numOfRows: 1 },
+      limit: 1,
+      logger: null,
+      placesService: {
+        getAreaBasedPlaces: async () => { throw timeout; },
+        searchPlacesByKeyword: async () => { throw timeout; },
+      },
+    }),
+    error => error === timeout,
   );
 });
 

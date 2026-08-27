@@ -13,7 +13,9 @@ const CULTURE_CATEGORIES = Object.freeze([
   '커피·카페',
 ]);
 
-const MAX_CULTURE_RESULTS = 20;
+const DEFAULT_CULTURE_RESULTS = 20;
+const MAX_CULTURE_PAGE = 5;
+const MAX_CULTURE_RESULTS = 50;
 
 // culture 필터가 걸린 검색에서 TourAPI로부터 끌어올 원본 후보 개수.
 // MAX_CULTURE_RESULTS(최종 응답 개수)보다 넉넉히 크게 잡아야 분류 필터를
@@ -45,11 +47,11 @@ const CONTENT_ID_OVERRIDES = Object.freeze({
 const CULTURE_SEARCH_KEYWORDS = Object.freeze({
   '독립서점·책방': Object.freeze(['서점', '책방']),
   '문학': Object.freeze(['문학관', '문학']),
-  '음악': Object.freeze(['공연장', '음악']),
-  '전통주·양조장': Object.freeze(['양조장', '전통주']),
-  '로컬 미식': Object.freeze(['전통시장', '맛집']),
+  '음악': Object.freeze(['공연장', '음악당', '콘서트홀']),
+  '전통주·양조장': Object.freeze(['양조장', '전통주', '소주']),
+  '로컬 미식': Object.freeze(['전통시장', '중앙시장', '향토음식']),
   '공예·공방': Object.freeze(['공방', '공예']),
-  '근대 문화유산': Object.freeze(['근대건축물', '근대']),
+  '근대 문화유산': Object.freeze(['근대건축물', '근대역사', '개항']),
   '미술·갤러리': Object.freeze(['미술관', '갤러리']),
   '영화·애니메이션': Object.freeze(['영화관', '애니메이션']),
   '커피·카페': Object.freeze(['카페', '커피']),
@@ -100,11 +102,19 @@ const KEYWORD_RULES = Object.freeze([
 ]);
 
 const TOP_LEVEL_CANDIDATES = Object.freeze({
+  AC: new Set(['독립서점·책방']),
   FD: new Set(['전통주·양조장', '로컬 미식', '커피·카페']),
-  VE: new Set(['문학', '음악', '공예·공방', '미술·갤러리', '영화·애니메이션']),
+  VE: new Set([
+    '문학',
+    '음악',
+    '전통주·양조장',
+    '공예·공방',
+    '미술·갤러리',
+    '영화·애니메이션',
+  ]),
   HS: new Set(['문학', '근대 문화유산']),
   SH: new Set(['독립서점·책방', '공예·공방']),
-  EX: new Set(['공예·공방']),
+  EX: new Set(['전통주·양조장', '공예·공방']),
 });
 
 function normalizeCategories(categories) {
@@ -193,6 +203,8 @@ module.exports = {
   CULTURE_CATEGORIES,
   CULTURE_MATCH_STRENGTH,
   CULTURE_SEARCH_KEYWORDS,
+  DEFAULT_CULTURE_RESULTS,
+  MAX_CULTURE_PAGE,
   MAX_CULTURE_RESULTS,
   classifyTourPlace,
   getCultureMatchStrength,

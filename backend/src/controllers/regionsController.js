@@ -1,17 +1,18 @@
 const regionScoreService = require('../services/regionScoreService');
 const cachedPlacesService = require('../services/cachedPlacesService');
+const coursePlaceUsageRepository = require('../repositories/coursePlaceUsageRepository');
 const {
-  CULTURE_CANDIDATE_FETCH_ROWS,
-  CULTURE_SEARCH_KEYWORDS,
-  MAX_CULTURE_RESULTS,
+  DEFAULT_CULTURE_RESULTS,
+  MAX_CULTURE_PAGE,
 } = require('../config/cultureCategoryMap');
 const {
-  combineCultureCacheStatus,
+  collectAreaPlacePage,
+  collectCulturePlacePage,
   isSupportedCulture,
-  selectPlacesForCulture,
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { resolveLang } = require('../utils/resolveLang');
+const { normalizePagination } = require('../utils/publicDataValidation');
 
 const CULTURE_ID_TO_NAME = Object.freeze({
   1: '독립서점·책방',
@@ -85,10 +86,16 @@ const SPOT_MAP = {
 const REGION_TOUR_CODES = Object.freeze({
   seoul:     { lDongRegnCd: '11' },
   gangneung: { lDongRegnCd: '51', lDongSignguCd: '150' },
-  jeonju:    { lDongRegnCd: '52' },
+  jeonju:    [
+    { lDongRegnCd: '52', lDongSignguCd: '111' },
+    { lDongRegnCd: '52', lDongSignguCd: '113' },
+  ],
   tongyeong: { lDongRegnCd: '48', lDongSignguCd: '220' },
   chuncheon: { lDongRegnCd: '51', lDongSignguCd: '110' },
-  pohang:    { lDongRegnCd: '47' },
+  pohang:    [
+    { lDongRegnCd: '47', lDongSignguCd: '111' },
+    { lDongRegnCd: '47', lDongSignguCd: '113' },
+  ],
   andong:    { lDongRegnCd: '47', lDongSignguCd: '170' },
   hadong:    { lDongRegnCd: '48', lDongSignguCd: '850' },
   gunsan:    { lDongRegnCd: '52', lDongSignguCd: '130' },
@@ -106,6 +113,24 @@ function setRegionDataStatusHeader(res, status) {
   res.setHeader?.('X-Region-Data-Status', status);
 }
 
+function setSpotPaginationHeaders(res, pagination, hasMore) {
+  const values = {
+    'X-Page-No': pagination.pageNo,
+    'X-Num-Of-Rows': pagination.numOfRows,
+    'X-Has-More': String(hasMore),
+  };
+  if (hasMore) {
+    values['X-Next-Page'] = pagination.pageNo + 1;
+  }
+  if (typeof res.set === 'function') {
+    res.set(values);
+    return;
+  }
+  for (const [name, value] of Object.entries(values)) {
+    res.setHeader?.(name, String(value));
+  }
+}
+
 function toPublicSpot(place) {
   return {
     contentId: place.contentId,
@@ -118,6 +143,7 @@ function toPublicSpot(place) {
     longitude: place.longitude ?? null,
     imageUrl: place.imageUrl ?? null,
     thumbnailUrl: place.thumbnailUrl ?? null,
+    publicCourseCount: place.publicCourseCount ?? null,
   };
 }
 
@@ -186,34 +212,24 @@ async function getCulturePlaces(placesService, tourCodes, cultureName) {
 function createRegionsController(options = {}) {
   const service = options.regionScoreService || regionScoreService;
   const placesService = options.placesService || cachedPlacesService;
+  const placeUsageRepository = options.placeUsageRepository || coursePlaceUsageRepository;
   const logger = options.logger || console;
 
-  // 지역 카드의 "장소 N개"는 큐레이션 시점에 손으로 넣어둔 추정치라
-  // 실제 문화 필터 결과와 어긋날 수 있다. TourAPI 조회가 가능하면 실제
-  // 매칭 개수로 덮어써서 카드에 뜬 숫자와 상세 화면에서 보이는 목록
-  // 개수가 일치하게 한다. 조회에 실패하면 가용성을 위해 기존 큐레이션
-  // 추정치를 그대로 둔다.
-  async function attachLiveSpotCounts(items, cultureName) {
-    return Promise.all(items.map(async item => {
-      const tourCodes = REGION_TOUR_CODES[item.areaCode];
-      if (!tourCodes) {
-        return item;
-      }
-      try {
-        const { items: places } = await getCulturePlaces(
-          placesService,
-          tourCodes,
-          cultureName,
-        );
-        return { ...item, spotCount: places.length };
-      } catch (error) {
-        logger?.warn?.('실시간 장소 수 계산에 실패해 큐레이션 수치를 유지합니다.', {
-          areaCode: item.areaCode,
-          errorName: error?.name || 'Error',
-        });
-        return item;
-      }
-    }));
+  async function attachPublicCourseCounts(items) {
+    try {
+      const counts = await placeUsageRepository.findPublicCourseCounts(
+        items.map(item => item.contentId),
+      );
+      return items.map(item => ({
+        ...item,
+        publicCourseCount: counts.get(String(item.contentId)) ?? 0,
+      }));
+    } catch (error) {
+      logger?.warn?.('공개 코스 장소 사용 횟수 집계에 실패했습니다.', {
+        errorName: error?.name || 'Error',
+      });
+      return items.map(item => ({ ...item, publicCourseCount: null }));
+    }
   }
 
   async function getRegionsByCulture(req, res) {
@@ -268,34 +284,68 @@ function createRegionsController(options = {}) {
       });
     }
 
+    let pagination;
+    try {
+      pagination = normalizePagination(
+        req.query?.pageNo,
+        req.query?.numOfRows,
+        { service: 'tour', operation: 'regionSpots' },
+        {
+          defaultNumOfRows: DEFAULT_CULTURE_RESULTS,
+          maxPageNo: MAX_CULTURE_PAGE,
+          maxNumOfRows: 50,
+        },
+      );
+    } catch (error) {
+      const response = publicPlaceError(error);
+      return res.status(response.status).json(response.body);
+    }
+
     try {
       let items;
       let cacheStatus;
+      let hasMore;
+      const regionRequests = (Array.isArray(tourCodes) ? tourCodes : [tourCodes])
+        .map(regionCodes => ({ ...regionCodes, ...pagination }));
 
       if (cultureFilter) {
-        // 이 화면은 "선택한 문화에 해당하는 관광지를 전부" 보여주는 화면이라
-        // MAX_CULTURE_RESULTS로 상한을 두지 않는다 (getCulturePlaces가
-        // limit: Infinity로 조회한다).
-        const result = await getCulturePlaces(placesService, tourCodes, cultureFilter);
-        items = result.items;
-        cacheStatus = result.cacheStatus;
-      } else {
-        const result = await placesService.getAreaBasedPlaces({
-          ...tourCodes,
-          numOfRows: MAX_CULTURE_RESULTS,
+        const result = await collectCulturePlacePage({
+          placesService,
+          culture: cultureFilter,
+          request: regionRequests[0],
+          requests: regionRequests,
+          limit: pagination.numOfRows,
+          logger,
         });
         items = result.items;
         cacheStatus = result.cacheStatus;
+        hasMore = result.hasMore;
+      } else {
+        const result = await collectAreaPlacePage({
+          placesService,
+          requests: regionRequests,
+          pagination,
+          logger,
+        });
+        items = result.items;
+        cacheStatus = result.cacheStatus;
+        hasMore = result.hasMore;
       }
 
       if (typeof res.set === 'function' && cacheStatus) {
         res.set({ 'X-Cache-Status': cacheStatus });
       }
+      setSpotPaginationHeaders(
+        res,
+        pagination,
+        hasMore && pagination.pageNo < MAX_CULTURE_PAGE,
+      );
 
       const publicItems = lang !== 'ko'
         ? await placesService.attachTranslationOverlay(items, lang)
         : items;
-      return res.json(publicItems.map(toPublicSpot));
+      const itemsWithUsage = await attachPublicCourseCounts(publicItems);
+      return res.json(itemsWithUsage.map(toPublicSpot));
     } catch (error) {
       if (cultureFilter) {
         const response = publicPlaceError(error);
@@ -309,10 +359,21 @@ function createRegionsController(options = {}) {
 
       // 문화 필터가 없는 이전 흐름은 가용성을 위해 기존 seed fallback을 유지한다.
       const fallbackItems = SPOT_MAP[code] || [];
+      const fallbackOffset = (pagination.pageNo - 1) * pagination.numOfRows;
+      const fallbackPage = fallbackItems.slice(
+        fallbackOffset,
+        fallbackOffset + pagination.numOfRows,
+      );
       const publicFallback = lang !== 'ko'
-        ? await placesService.attachTranslationOverlay(fallbackItems, lang)
-        : fallbackItems;
-      return res.json(publicFallback.map(toPublicSpot));
+        ? await placesService.attachTranslationOverlay(fallbackPage, lang)
+        : fallbackPage;
+      setSpotPaginationHeaders(
+        res,
+        pagination,
+        fallbackOffset + pagination.numOfRows < fallbackItems.length,
+      );
+      const fallbackWithUsage = await attachPublicCourseCounts(publicFallback);
+      return res.json(fallbackWithUsage.map(toPublicSpot));
     }
   }
 
@@ -326,4 +387,5 @@ module.exports = {
   getRegionsByCulture,
   getSpotsByRegion,
   setRegionDataStatusHeader,
+  setSpotPaginationHeaders,
 };

@@ -62,6 +62,7 @@ function normalizePagination(
 ) {
   const defaultPageNo = options.defaultPageNo || 1;
   const defaultNumOfRows = options.defaultNumOfRows || 20;
+  const maxPageNo = options.maxPageNo || Number.MAX_SAFE_INTEGER;
   const maxNumOfRows = options.maxNumOfRows || 50;
   const normalizedPageNo = pageNo ?? defaultPageNo;
   const normalizedNumOfRows = numOfRows ?? defaultNumOfRows;
@@ -69,12 +70,16 @@ function normalizePagination(
   if (
     !Number.isInteger(Number(normalizedPageNo)) ||
     Number(normalizedPageNo) < 1 ||
+    Number(normalizedPageNo) > maxPageNo ||
     !Number.isInteger(Number(normalizedNumOfRows)) ||
     Number(normalizedNumOfRows) < 1 ||
     Number(normalizedNumOfRows) > maxNumOfRows
   ) {
+    const pageRange = Number.isSafeInteger(options.maxPageNo)
+      ? `1~${maxPageNo}`
+      : '1 이상';
     throw new ExternalApiError(
-      `pageNo는 1 이상, numOfRows는 1~${maxNumOfRows} 범위여야 합니다.`,
+      `pageNo는 ${pageRange}, numOfRows는 1~${maxNumOfRows} 범위여야 합니다.`,
       {
         code: 'VALIDATION_ERROR',
         service: context.service,

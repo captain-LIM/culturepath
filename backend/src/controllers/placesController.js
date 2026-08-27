@@ -2,18 +2,19 @@ const cachedPlacesService = require('../services/cachedPlacesService');
 const relatedPlacesService = require('../services/relatedPlacesService');
 const { ExternalApiError } = require('../utils/externalApiError');
 const {
-  CULTURE_CANDIDATE_FETCH_ROWS,
-  CULTURE_SEARCH_KEYWORDS,
+  DEFAULT_CULTURE_RESULTS,
+  MAX_CULTURE_PAGE,
   MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
 const {
-  combineCultureCacheStatus,
+  collectCulturePlacePage,
   isSupportedCulture,
   selectPlacesForCulture,
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { MAX_PLACE_DETAIL_IMAGES } = require('../config/placeMedia');
 const { resolveLang } = require('../utils/resolveLang');
+const { normalizePagination } = require('../utils/publicDataValidation');
 
 function toPublicPlace(place) {
   const result = {
@@ -105,56 +106,60 @@ function createPlacesController(options = {}) {
         pageNo: req.query?.pageNo,
         numOfRows: req.query?.numOfRows,
       };
-      const result = query
-        ? await service.searchPlacesByKeyword({ ...request, keyword: query })
-        : await service.getAreaBasedPlaces(request);
+      const culturePagination = culture && !query
+        ? normalizePagination(
+            request.pageNo,
+            request.numOfRows,
+            { service: 'tour', operation: 'placesSearch' },
+            {
+              defaultNumOfRows: DEFAULT_CULTURE_RESULTS,
+              maxPageNo: MAX_CULTURE_PAGE,
+              maxNumOfRows: MAX_CULTURE_RESULTS,
+            },
+          )
+        : null;
+      let filteredItems;
+      let pagination;
+      let cacheStatus;
 
-      // q 없이 culture만 지정된 요청은 지역 목록을 사후 필터링만 하면
-      // 모수가 너무 작다. TourAPI에 culture 대표 키워드들로 직접 검색한
-      // 결과를 합쳐서 실제로 존재하는 장소를 더 찾아낸다. 대표 키워드 하나만
-      // 쓰면 그 단어가 제목에 없는 장소가 통째로 빠지므로 문화별로 여러
-      // 키워드를 병렬 검색한다.
-      const cultureKeywords = culture && !query ? CULTURE_SEARCH_KEYWORDS[culture] || [] : [];
-      const placeGroups = [result.items];
-      let cacheStatus = result.cacheStatus;
-      if (cultureKeywords.length) {
-        const keywordResults = await Promise.all(
-          cultureKeywords.map(keyword =>
-            service.searchPlacesByKeyword({
-              ...request,
-              keyword,
-              numOfRows: CULTURE_CANDIDATE_FETCH_ROWS,
-            }),
-          ),
-        );
-        for (const keywordResult of keywordResults) {
-          placeGroups.push(keywordResult.items);
-          cacheStatus = combineCultureCacheStatus(
-            cacheStatus,
-            keywordResult.cacheStatus,
-          );
-        }
+      if (culture && !query) {
+        const cultureResult = await collectCulturePlacePage({
+          placesService: service,
+          culture,
+          request: {
+            ...request,
+            ...culturePagination,
+          },
+          limit: culturePagination.numOfRows,
+          logger,
+        });
+        filteredItems = cultureResult.items;
+        cacheStatus = cultureResult.cacheStatus;
+        pagination = {
+          pageNo: culturePagination.pageNo,
+          numOfRows: culturePagination.numOfRows,
+          totalCount: filteredItems.length,
+        };
+      } else {
+        const result = query
+          ? await service.searchPlacesByKeyword({ ...request, keyword: query })
+          : await service.getAreaBasedPlaces(request);
+        cacheStatus = result.cacheStatus;
+        const cultureLimit = Number(result.pagination?.numOfRows) ||
+          DEFAULT_CULTURE_RESULTS;
+        filteredItems = culture
+          ? selectPlacesForCulture([result.items], culture, {
+              limit: cultureLimit,
+            })
+          : result.items;
+        pagination = culture
+          ? {
+              ...result.pagination,
+              numOfRows: cultureLimit,
+              totalCount: filteredItems.length,
+            }
+          : result.pagination;
       }
-
-      const requestedCultureLimit = Number(
-        result.pagination?.numOfRows || request.numOfRows,
-      );
-      const cultureLimit = Number.isInteger(requestedCultureLimit) &&
-        requestedCultureLimit > 0
-        ? Math.min(requestedCultureLimit, MAX_CULTURE_RESULTS)
-        : MAX_CULTURE_RESULTS;
-      const filteredItems = culture
-        ? selectPlacesForCulture(placeGroups, culture, {
-            limit: cultureLimit,
-          })
-        : result.items;
-      const pagination = culture
-        ? {
-            ...result.pagination,
-            numOfRows: cultureLimit,
-            totalCount: filteredItems.length,
-          }
-        : result.pagination;
 
       setCacheStatusHeader(res, cacheStatus);
       setPaginationHeaders(res, pagination, filteredItems.length);

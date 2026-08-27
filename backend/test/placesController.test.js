@@ -207,7 +207,7 @@ test('augments an area listing with a culture keyword search when q is absent', 
   assert.equal(res.headers['X-Cache-Status'], 'REFRESHED');
 });
 
-test('clamps culture-filtered search results and headers to 20', async () => {
+test('allows culture-filtered search results and headers up to 50', async () => {
   const items = Array.from({ length: 25 }, (_, index) =>
     place({
       contentId: String(index + 1),
@@ -231,9 +231,28 @@ test('clamps culture-filtered search results and headers to 20', async () => {
     query: { q: '문학관', culture: '문학', numOfRows: '50' },
   }, res);
 
-  assert.equal(res.body.length, 20);
-  assert.equal(res.headers['X-Num-Of-Rows'], 20);
-  assert.equal(res.headers['X-Total-Count'], 20);
+  assert.equal(res.body.length, 25);
+  assert.equal(res.headers['X-Num-Of-Rows'], 50);
+  assert.equal(res.headers['X-Total-Count'], 25);
+});
+
+test('rejects invalid culture-only pagination instead of silently clamping it', async () => {
+  let calls = 0;
+  const controller = createPlacesController({
+    tourApiService: {
+      getAreaBasedPlaces: async () => { calls += 1; },
+      searchPlacesByKeyword: async () => { calls += 1; },
+    },
+  });
+  const res = createResponse();
+
+  await controller.searchPlaces({
+    query: { lDongRegnCd: '48', culture: '문학', numOfRows: '51' },
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.code, 'VALIDATION_ERROR');
+  assert.equal(calls, 0);
 });
 
 test('marks the response STALE when the culture keyword search falls back to stale data', async () => {

@@ -8,7 +8,7 @@
 >
 > **기록일:** 2026-08-20
 >
-> **연결 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [관광지 이미지 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md)
+> **연결 문서:** [R14 P0 디자인 명세](./R14_FIGMA_P0_DESIGN_SPEC.md) · [R14 디자인 검수표](./R14_DESIGN_REVIEW_CHECKLIST.md) · [관광지 이미지 UI 계약](../PLACE_MEDIA_UI_CONTRACT.md)
 
 ## 1. 최종 판정
 

@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS course_tracks (
   stay_minutes   INT DEFAULT 60,
   memo           TEXT,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-  UNIQUE KEY uk_track_seq (course_id, track_number, sequence)
+  UNIQUE KEY uk_track_seq (course_id, track_number, sequence),
+  INDEX idx_course_tracks_content_course (content_id, course_id)
 );
 
 -- ─── 좋아요 ───────────────────────────────────────────────────────────────────
