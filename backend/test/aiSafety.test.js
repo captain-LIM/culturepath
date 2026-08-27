@@ -3,15 +3,19 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  normalizeEntryContext,
   normalizeConstraints,
+  normalizeSessionId,
+  providerStatus,
   validateCourse,
   validateMessages,
 } = require('../src/controllers/aiController');
+const { ExternalApiError } = require('../src/utils/externalApiError');
 const { createRateLimit } = require('../src/middleware/rateLimit');
 const {
   buildAugmentedPrompt,
+  buildChatSources,
   buildReferenceContext,
-  chat,
   editCourse,
   normalizeTransformOutput,
 } = require('../src/services/ragPipeline');
@@ -23,7 +27,10 @@ function course() {
     description: '',
     tracks: [{
       trackNumber: 1,
-      places: [{ contentId: '100', title: '기존 장소', address: '', category: '문학' }],
+      places: [
+        { contentId: '100', title: '기존 장소', address: '', category: '문학' },
+        { contentId: '200', title: '두 번째 장소', address: '', category: '문학' },
+      ],
     }],
   };
 }
@@ -37,6 +44,26 @@ test('validates bounded AI chat and transform inputs', () => {
   assert.deepEqual(normalizeConstraints({ days: 3 }), { days: 3 });
   assert.equal(normalizeConstraints({ days: 4 }), null);
   assert.equal(normalizeConstraints({ unknown: true }), null);
+  assert.deepEqual(normalizeEntryContext(null), { type: 'general', courseId: null });
+  assert.deepEqual(normalizeEntryContext({ type: 'course', courseId: 7 }), {
+    type: 'course', courseId: 7,
+  });
+  assert.equal(normalizeEntryContext({ type: 'course' }), null);
+  assert.equal(normalizeSessionId('bad-id'), undefined);
+  assert.equal(normalizeSessionId(null), null);
+});
+
+test('maps TourAPI failures to stable public HTTP statuses', () => {
+  assert.equal(providerStatus(new RangeError('invalid resolver input')), 400);
+  assert.equal(providerStatus(new ExternalApiError('invalid', {
+    code: 'VALIDATION_ERROR',
+  })), 400);
+  assert.equal(providerStatus(new ExternalApiError('missing config', {
+    code: 'CONFIG_ERROR',
+  })), 503);
+  assert.equal(providerStatus(new ExternalApiError('timeout', {
+    code: 'TIMEOUT',
+  })), 504);
 });
 
 test('rejects hallucinated contentIds and reconstructs trusted place data', () => {
@@ -46,18 +73,18 @@ test('rejects hallucinated contentIds and reconstructs trusted place data', () =
   ]);
   const normalized = normalizeTransformOutput({
     status: 'changed',
-    summary: '검증 장소를 추가했습니다.',
-    title: '수정 코스',
-    description: '설명',
-    tracks: [{ trackNumber: 1, contentIds: ['100', '200'] }],
+    summary: '기존 장소를 변경했습니다.',
+    title: '통영 문학 여행',
+    description: '',
+    tracks: [{ trackNumber: 1, contentIds: ['200'] }],
     warnings: [],
   }, course(), trusted);
-  assert.equal(normalized.course.tracks[0].places[1].title, '검증 장소');
+  assert.equal(normalized.course.tracks[0].places[0].title, '검증 장소');
 
   assert.throws(() => normalizeTransformOutput({
     status: 'changed',
     summary: '가짜 장소',
-    title: '수정 코스',
+    title: '통영 문학 여행',
     description: '',
     tracks: [{ trackNumber: 1, contentIds: ['new_1'] }],
     warnings: [],
@@ -114,18 +141,47 @@ test('bounds retrieved context and labels embedded instructions as untrusted dat
   assert.equal((context.match(/description/g) || []).length, 10);
 });
 
-test('keeps accepted chat messages compatible with the bounded RAG query', async () => {
-  const longMessage = `통영 문학 ${'가'.repeat(1000)}`;
-  const result = await chat([{ role: 'user', content: longMessage }], {
-    env: { USE_MOCK_RAG: 'true' },
-  });
-  assert.equal(result.routeInfo.normalizedQuery.length, 500);
-  assert.equal(result.routeInfo.region, '통영');
+test('exposes only trusted numeric TourAPI places as chat sources', () => {
+  const sources = buildChatSources([
+    {
+      metadata: {
+        address: '통영시',
+        category: '문학',
+        contentId: '100',
+        place_name: '박경리기념관',
+        region: '통영',
+        trustedSource: true,
+      },
+    },
+    {
+      metadata: {
+        contentId: '100',
+        place_name: '중복 장소',
+        trustedSource: true,
+      },
+    },
+    {
+      metadata: {
+        contentId: 'kakao:1',
+        place_name: '외부 장소',
+        trustedSource: true,
+      },
+    },
+    {
+      metadata: {
+        contentId: '200',
+        place_name: '검증되지 않은 장소',
+      },
+    },
+  ]);
 
-  const assistantOnly = await chat([{ role: 'assistant', content: '이전 안내' }], {
-    env: { USE_MOCK_RAG: 'true' },
-  });
-  assert.equal(assistantOnly.routeInfo.normalizedQuery, '');
+  assert.deepEqual(sources, [{
+    contentId: '100',
+    title: '박경리기념관',
+    address: '통영시',
+    category: '문학',
+    region: '통영',
+  }]);
 });
 
 test('rejects AI transforms with more than 50 places in total', () => {
@@ -138,57 +194,35 @@ test('rejects AI transforms with more than 50 places in total', () => {
       return contentId;
     }),
   }));
+  const oversizedOriginal = {
+    ...course(),
+    tracks: tracks.map(track => ({
+      trackNumber: track.trackNumber,
+      places: track.contentIds.map(contentId => trusted.get(contentId)),
+    })),
+  };
   assert.throws(() => normalizeTransformOutput({
     status: 'changed',
     summary: '변경',
-    title: '수정 코스',
+    title: '통영 문학 여행',
     description: '',
     tracks,
     warnings: [],
-  }, course(), trusted), /전체 장소 수/);
+  }, oversizedOriginal, trusted), /전체 장소 수/);
 });
 
-test('rehydrates Qdrant candidates from the trusted place cache', async () => {
-  const result = await editCourse(course(), '새 장소를 추가해줘', {}, {
-    env: { USE_MOCK_RAG: 'false', RAG_TOP_K: '5' },
-    qdrantClient: {
-      async search() {
-        return [{
-          id: 'point-200',
-          content: 'untrusted overview',
-          metadata: {
-            contentId: '200',
-            place_name: 'Forged Qdrant title',
-            address: 'Forged Qdrant address',
-          },
-          score: 0.9,
-        }];
-      },
-    },
-    placeRepository: {
-      async findExistingPlaces(ids) {
-        assert.deepEqual(ids, ['200']);
-        return [{
-          contentId: '200',
-          summary: {
-            contentId: '200',
-            title: 'Trusted cache title',
-            address: 'Trusted cache address',
-            category: '문학',
-            regionName: '통영',
-          },
-        }];
-      },
-    },
+test('rejects a transform that tries to add a candidate outside the current course', async () => {
+  await assert.rejects(editCourse(course(), '새 장소를 추가해줘', {}, {
+    env: { USE_MOCK_AI: 'false' },
     client: {
       async generate() {
         return {
           content: JSON.stringify({
             status: 'changed',
             summary: '장소 추가',
-            title: '수정 코스',
+            title: '통영 문학 여행',
             description: '',
-            tracks: [{ trackNumber: 1, contentIds: ['100', '200'] }],
+            tracks: [{ trackNumber: 1, contentIds: ['100', '200', '300'] }],
             warnings: [],
           }),
           model: 'test-model',
@@ -196,11 +230,7 @@ test('rehydrates Qdrant candidates from the trusted place cache', async () => {
         };
       },
     },
-  });
-
-  assert.equal(result.course.tracks[0].places[1].title, 'Trusted cache title');
-  assert.equal(result.course.tracks[0].places[1].address, 'Trusted cache address');
-  assert.equal(result.sources[0].title, 'Trusted cache title');
+  }), /허용되지 않은 장소/);
 });
 
 test('uses the cost-safe default of three AI requests per minute', () => {

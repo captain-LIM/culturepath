@@ -150,8 +150,32 @@ test('documents the authenticated structured AI transform contract', () => {
 
   const chat = openApiDocument.paths['/ai/chat'].post;
   assert.deepEqual(chat.security, [{ bearerAuth: [] }]);
+  assert.equal(
+    chat.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/AiChatRequest',
+  );
   assert.ok(chat.responses[401]);
   assert.ok(chat.responses[429]);
+  assert.ok(openApiDocument.components.schemas.AiChatResponse.required.includes('sources'));
+  assert.ok(openApiDocument.components.schemas.AiChatResponse.required.includes('sessionId'));
+  assert.ok(openApiDocument.components.schemas.AiChatResponse.required.includes('action'));
+  assert.equal(
+    openApiDocument.components.schemas.AiChatResponse.properties.sources.maxItems,
+    10,
+  );
+  assert.equal(
+    openApiDocument.paths['/ai/chat/sessions/{sessionId}'].delete.responses[204].description,
+    '세션 종료 성공',
+  );
+  assert.equal(
+    openApiDocument.paths['/ai/chat/sessions'].delete.responses[204].description,
+    '사용자 AI 세션 전체 종료 성공',
+  );
+  assert.equal(
+    openApiDocument.paths['/ai/chat/sessions/{sessionId}/course-saved'].post
+      .requestBody.content['application/json'].schema.properties.courseId.minimum,
+    1,
+  );
 
   const compatibilityAlias = openApiDocument.paths['/ai/edit-course'].post;
   assert.equal(compatibilityAlias.deprecated, true);

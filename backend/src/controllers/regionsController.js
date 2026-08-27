@@ -13,6 +13,7 @@ const {
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { resolveLang } = require('../utils/resolveLang');
 const { normalizePagination } = require('../utils/publicDataValidation');
+const { REGION_TOUR_CODES } = require('../config/tourRegionCodes');
 
 const CULTURE_ID_TO_NAME = Object.freeze({
   1: '독립서점·책방',
@@ -81,26 +82,6 @@ const SPOT_MAP = {
     { contentId: 'mp002', title: '국립해양문화재연구소', address: '목포시 남농로 136', tel: '061-270-2000', openTime: '09:00~18:00', category: '근대 문화유산' },
   ],
 };
-
-// 지역별 TourAPI 법정동 코드 (lDongRegnCd: 2자리 시도, lDongSignguCd: 3자리 시군구)
-const REGION_TOUR_CODES = Object.freeze({
-  seoul:     { lDongRegnCd: '11' },
-  gangneung: { lDongRegnCd: '51', lDongSignguCd: '150' },
-  jeonju:    [
-    { lDongRegnCd: '52', lDongSignguCd: '111' },
-    { lDongRegnCd: '52', lDongSignguCd: '113' },
-  ],
-  tongyeong: { lDongRegnCd: '48', lDongSignguCd: '220' },
-  chuncheon: { lDongRegnCd: '51', lDongSignguCd: '110' },
-  pohang:    [
-    { lDongRegnCd: '47', lDongSignguCd: '111' },
-    { lDongRegnCd: '47', lDongSignguCd: '113' },
-  ],
-  andong:    { lDongRegnCd: '47', lDongSignguCd: '170' },
-  hadong:    { lDongRegnCd: '48', lDongSignguCd: '850' },
-  gunsan:    { lDongRegnCd: '52', lDongSignguCd: '130' },
-  mokpo:     { lDongRegnCd: '46', lDongSignguCd: '110' },
-});
 
 function setRegionDataStatusHeader(res, status) {
   if (!status) {

@@ -65,6 +65,25 @@ const SUB_CLASSIFICATION_CODE_RULES = Object.freeze({
   HS011100: '근대 문화유산', // 근대건축물
 });
 
+// AI 후보 resolver와 문화 장소 목록이 공식 코드로 upstream 후보를 먼저 좁힐 때 쓴다.
+// 하나의 코드로 의미가 충분히 명확한 문화만 등록한다.
+const CULTURE_OFFICIAL_QUERY_CODES = Object.freeze({
+  '커피·카페': Object.freeze({ lclsSystm1: 'FD', lclsSystm2: 'FD05' }),
+  '공예·공방': Object.freeze({ lclsSystm1: 'EX', lclsSystm2: 'EX02' }),
+  '미술·갤러리': Object.freeze({
+    lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: 'VE070600',
+  }),
+  음악: Object.freeze({
+    lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060100',
+  }),
+  '영화·애니메이션': Object.freeze({
+    lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060200',
+  }),
+  '근대 문화유산': Object.freeze({
+    lclsSystm1: 'HS', lclsSystm2: 'HS01', lclsSystm3: 'HS011100',
+  }),
+});
+
 const KEYWORD_RULES = Object.freeze([
   ['독립서점·책방', /독립\s*서점|서점|책방|북스테이|헌책방|고서점/i],
   ['문학', /문학|문학관|작가|소설가|시인|박경리|유치환|청마/i],
@@ -177,6 +196,7 @@ function getCultureMatchStrength(item, culture, options = {}) {
 module.exports = {
   CONTENT_ID_OVERRIDES,
   CULTURE_CATEGORIES,
+  CULTURE_OFFICIAL_QUERY_CODES,
   CULTURE_MATCH_STRENGTH,
   CULTURE_SEARCH_KEYWORDS,
   DEFAULT_CULTURE_RESULTS,

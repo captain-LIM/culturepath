@@ -76,6 +76,10 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
   if (typeof parsed.description !== 'string' || parsed.description.length > 2000) {
     throw new Error('AI 코스 설명이 올바르지 않습니다.');
   }
+  if (parsed.title.trim() !== String(original.title || '').trim() ||
+      parsed.description !== String(original.description || '')) {
+    throw new Error('AI 코스 변경안은 제목과 설명을 바꿀 수 없습니다.');
+  }
   if (!Array.isArray(parsed.warnings) || parsed.warnings.length > 5 ||
       parsed.warnings.some(item => typeof item !== 'string' || !item.trim() || item.length > 300)) {
     throw new Error('AI 코스 경고가 올바르지 않습니다.');
@@ -89,6 +93,9 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
   }
 
   const usedContentIds = new Set();
+  const originalContentIds = new Set((original.tracks || []).flatMap(track =>
+    (track.places || []).map(place => String(place.contentId)),
+  ));
   let totalPlaces = 0;
   const tracks = parsed.tracks.map((track, index) => {
     if (!track || typeof track !== 'object' || Array.isArray(track)) {
@@ -105,7 +112,8 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
     }
     const places = track.contentIds.map(rawId => {
       if (typeof rawId !== 'string' || !/^\d+$/.test(rawId) ||
-          usedContentIds.has(rawId) || !trustedPlaces.has(rawId)) {
+          usedContentIds.has(rawId) || !originalContentIds.has(rawId) ||
+          !trustedPlaces.has(rawId)) {
         throw new Error('AI가 허용되지 않은 장소를 반환했습니다.');
       }
       usedContentIds.add(rawId);

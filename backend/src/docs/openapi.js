@@ -179,9 +179,9 @@ module.exports = Object.freeze({
     '/ai/transform': {
       post: {
         tags: ['AI'],
-        summary: '현재 코스를 자연어 조건으로 변형',
+        summary: '현재 코스의 기존 장소를 자연어로 편집',
         description:
-          '서버에서 다시 조회한 현재 코스와 사용자 요청을 바탕으로 검증된 변경안을 반환합니다. OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 하며 응답은 저장되지 않습니다. 검증할 수 없는 핵심 조건은 외부 AI 호출 없이 원본 코스와 warning으로 반환합니다.',
+          '서버에서 다시 조회한 현재 코스의 기존 장소만 사용해 삭제·Day 이동·명시적 순서 변경 미리보기를 반환합니다. 신규 장소 검색·추가와 거리 기반 최적화는 하지 않으며, OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 합니다. 응답은 사용자 확인 전 저장되지 않습니다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -242,24 +242,15 @@ module.exports = Object.freeze({
     '/ai/chat': {
       post: {
         tags: ['AI'],
-        summary: 'RAG 기반 문화여행 상담',
+        summary: 'MySQL·TourAPI 검증 후보 기반 AI 여행 상담',
+        description:
+          '짧은 수명의 사용자 세션에서 지역·문화·선호 문맥을 유지합니다. LLM은 strict 의도 해석과 검증 후보 설명만 담당하고, 장소 검색과 클릭 가능한 sources 구성은 Backend가 수행합니다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: {
-                type: 'object',
-                required: ['messages'],
-                properties: {
-                  messages: {
-                    type: 'array',
-                    minItems: 1,
-                    maxItems: 20,
-                    items: { $ref: '#/components/schemas/AiChatMessage' },
-                  },
-                },
-              },
+              schema: { $ref: '#/components/schemas/AiChatRequest' },
             },
           },
         },
@@ -272,9 +263,90 @@ module.exports = Object.freeze({
           401: { description: '인증 필요' },
           429: { description: '사용자별 AI 호출 제한 초과' },
           500: { description: '서버 오류' },
-          502: { description: 'OpenRouter 또는 Qdrant 응답 오류' },
-          503: { description: 'AI/RAG 설정 누락' },
-          504: { description: 'AI/RAG 응답 시간 초과' },
+          502: { description: 'OpenRouter 또는 TourAPI 응답 오류' },
+          503: { description: 'AI 또는 관광정보 설정 누락·일시 장애' },
+          504: { description: 'AI 또는 관광정보 응답 시간 초과' },
+        },
+      },
+    },
+    '/ai/chat/sessions/{sessionId}': {
+      delete: {
+        tags: ['AI'],
+        summary: 'AI 여행 대화 세션 종료',
+        security: [{ bearerAuth: [] }],
+        parameters: [{
+          name: 'sessionId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        }],
+        responses: {
+          204: { description: '세션 종료 성공' },
+          400: { description: '세션 ID 형식 오류' },
+          401: { description: '인증 필요' },
+          403: { description: '다른 사용자의 세션' },
+          404: { description: '세션 없음 또는 만료' },
+        },
+      },
+    },
+    '/ai/chat/sessions': {
+      delete: {
+        tags: ['AI'],
+        summary: '현재 사용자의 AI 대화 세션 전체 종료',
+        description: '로그아웃 직전에 현재 사용자가 보유한 짧은 수명의 AI 세션을 모두 제거합니다.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: { description: '사용자 AI 세션 전체 종료 성공' },
+          401: { description: '인증 필요' },
+        },
+      },
+    },
+    '/ai/chat/sessions/{sessionId}/course-saved': {
+      post: {
+        tags: ['AI'],
+        summary: '저장된 코스를 대화 문맥에 반영',
+        description:
+          '코스 저장 후 대화 세션을 종료하지 않고 최신 코스 문맥으로 갱신합니다. 적용이 끝난 초안과 편집 미리보기만 제거합니다.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{
+          name: 'sessionId',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['courseId'],
+                properties: { courseId: { type: 'integer', minimum: 1 } },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: '세션 코스 문맥 갱신 성공',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['sessionId', 'courseId'],
+                  properties: {
+                    sessionId: { type: 'string', format: 'uuid' },
+                    courseId: { type: 'integer', minimum: 1 },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: '세션 ID 또는 코스 ID 형식 오류' },
+          401: { description: '인증 필요' },
+          403: { description: '세션 또는 코스 권한 없음' },
+          404: { description: '세션 또는 코스 없음' },
         },
       },
     },
@@ -675,15 +747,70 @@ module.exports = Object.freeze({
           content: { type: 'string', minLength: 1, maxLength: 2000 },
         },
       },
+      AiChatEntryContext: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type'],
+        properties: {
+          type: { type: 'string', enum: ['general', 'course'] },
+          courseId: { type: 'integer', minimum: 1, nullable: true },
+        },
+      },
+      AiChatRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['messages'],
+        properties: {
+          sessionId: { type: 'string', format: 'uuid', nullable: true },
+          entryContext: { $ref: '#/components/schemas/AiChatEntryContext' },
+          messages: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 20,
+            items: { $ref: '#/components/schemas/AiChatMessage' },
+          },
+        },
+      },
       AiChatResponse: {
         type: 'object',
-        required: ['content', 'mock', 'retrievedDocs', 'routeInfo', 'suggestedCourse'],
+        required: ['sessionId', 'action', 'content', 'mock', 'sources', 'suggestedCourse'],
         properties: {
+          sessionId: { type: 'string', format: 'uuid' },
+          action: {
+            type: 'string',
+            enum: [
+              'clarify',
+              'discover_regions',
+              'discover_cultures',
+              'discover_places',
+              'create_course_draft',
+              'edit_course',
+              'explain_place',
+              'unsupported',
+            ],
+          },
           content: { type: 'string' },
           mock: { type: 'boolean' },
-          retrievedDocs: { type: 'array', items: { type: 'object' } },
-          routeInfo: { type: 'object' },
-          suggestedCourse: { nullable: true },
+          sources: {
+            type: 'array',
+            maxItems: 10,
+            description: 'MySQL 원본으로 재검증된 TourAPI 근거 장소',
+            items: {
+              type: 'object',
+              required: ['contentId', 'title', 'address', 'category', 'region'],
+              properties: {
+                contentId: { type: 'string', pattern: '^[0-9]+$' },
+                title: { type: 'string', minLength: 1, maxLength: 200 },
+                address: { type: 'string', maxLength: 500 },
+                category: { type: 'string', maxLength: 100 },
+                region: { type: 'string', maxLength: 100 },
+              },
+            },
+          },
+          suggestedCourse: {
+            allOf: [{ $ref: '#/components/schemas/CourseDraft' }],
+            nullable: true,
+          },
           usage: { type: 'object' },
         },
       },
