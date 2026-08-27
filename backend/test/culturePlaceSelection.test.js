@@ -185,6 +185,39 @@ test('keeps earlier culture pages stable when later upstream pages have stronger
   assert.equal(second.hasMore, false);
 });
 
+test('tops up below-floor culture pages using relaxed classification without reintroducing franchise noise', async () => {
+  const placesService = {
+    getAreaBasedPlaces: async () => ({
+      items: [
+        place('1', '독립서점 하나'),
+        place('2', '헌책방 둘'),
+        // FD(음식) top-level로 분류돼 엄격 기준에서는 빠지지만, 부족할 때
+        // relaxed로 다시 채워질 후보.
+        place('3', '책방카페 셋', ['FD', 'FD05']),
+        // 프랜차이즈 지점명은 relaxed에서도 절대 채워지면 안 된다.
+        place('4', '이마트 넷점'),
+      ],
+      pagination: { pageNo: 1, numOfRows: 5, totalCount: 4 },
+      cacheStatus: 'HIT',
+    }),
+    searchPlacesByKeyword: async () => ({
+      items: [],
+      pagination: { pageNo: 1, numOfRows: 5, totalCount: 0 },
+      cacheStatus: 'HIT',
+    }),
+  };
+
+  const result = await collectCulturePlacePage({
+    placesService,
+    culture: '독립서점·책방',
+    request: { pageNo: 1, numOfRows: 5 },
+    limit: 5,
+    logger: null,
+  });
+
+  assert.deepEqual(result.items.map(item => item.contentId), ['1', '2', '3']);
+});
+
 test('returns partial culture candidates but throws when every source fails', async () => {
   const timeout = new Error('timeout');
   const partial = await collectCulturePlacePage({

@@ -15,12 +15,15 @@ const CACHE_STATUS_PRIORITY = Object.freeze({
   STALE: 4,
 });
 
+// 지역·문화 조합의 결과가 이보다 적으면 relaxed 재선별로 채운다.
+const CULTURE_RESULT_FLOOR = 5;
+
 function isSupportedCulture(culture) {
   return CULTURE_CATEGORIES.includes(culture);
 }
 
-function reclassifyPlace(place) {
-  const cultures = classifyTourPlace(place);
+function reclassifyPlace(place, options = {}) {
+  const cultures = classifyTourPlace(place, options);
   return {
     ...place,
     cultures,
@@ -45,8 +48,8 @@ function selectPlacesForCulture(placeGroups, culture, options = {}) {
 
   for (const group of placeGroups) {
     for (const originalPlace of Array.isArray(group) ? group : []) {
-      const place = reclassifyPlace(originalPlace);
-      const strength = getCultureMatchStrength(place, culture);
+      const place = reclassifyPlace(originalPlace, { relaxed: options.relaxed === true });
+      const strength = getCultureMatchStrength(place, culture, { relaxed: options.relaxed === true });
       const contentId = String(place.contentId || '').trim();
       const index = discoveryIndex;
       discoveryIndex += 1;
@@ -268,6 +271,32 @@ async function collectCulturePlacePage({
       }
     }
   }
+
+  // 지역·문화 조합에 엄격 기준 결과가 너무 적으면(예: 특정 지역에 정말
+  // 몇 곳밖에 없는 카테고리), 이미 받아온 같은 원본 후보들 안에서 공식
+  // 분류 top-level 게이트만 완화해 부족한 만큼만 채운다. 새 API 호출은
+  // 없고, 프랜차이즈 제외는 정규식 자체에 내장돼 있어 relaxed에서도
+  // 그대로 적용된다. 엄격 매칭이 이미 항상 먼저 채워지므로 관련도 순서는
+  // 유지된다.
+  if (selectedById.size < CULTURE_RESULT_FLOOR) {
+    outer:
+    for (const pageResults of pageSuccesses) {
+      const relaxedPage = selectPlacesForCulture(
+        pageResults.map(result => result.items),
+        culture,
+        { limit: selectionLimit, allowCumulative: true, relaxed: true },
+      );
+      for (const place of relaxedPage) {
+        if (selectedById.size >= CULTURE_RESULT_FLOOR) {
+          break outer;
+        }
+        if (!selectedById.has(place.contentId)) {
+          selectedById.set(place.contentId, place);
+        }
+      }
+    }
+  }
+
   const selected = [...selectedById.values()].slice(0, selectionLimit);
 
   if (successes.length === 0) {
@@ -286,6 +315,7 @@ async function collectCulturePlacePage({
 }
 
 module.exports = {
+  CULTURE_RESULT_FLOOR,
   collectAreaPlacePage,
   collectCulturePlacePage,
   combineCultureCacheStatus,

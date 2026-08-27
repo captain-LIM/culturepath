@@ -88,8 +88,9 @@ test('overrides the curated spotCount with the live matching count', async () =>
         items: [
           tourPlace({ contentId: '1', title: '독립서점 위트앤시니컬', lclsSystmCodes: [] }),
           tourPlace({ contentId: '2', title: '소수책방', lclsSystmCodes: [] }),
+          tourPlace({ contentId: '3', title: '대오서점', lclsSystmCodes: [] }),
         ],
-        pagination: { pageNo: 1, numOfRows: 50, totalCount: 2 },
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 3 },
         cacheStatus: 'HIT',
       }),
       searchPlacesByKeyword: async () => ({
@@ -103,8 +104,111 @@ test('overrides the curated spotCount with the live matching count', async () =>
 
   await controller.getRegionsByCulture({ params: { id: '1' } }, res);
 
-  assert.equal(res.body[0].spotCount, 2);
+  assert.equal(res.body[0].spotCount, 3);
   assert.notEqual(res.body[0].spotCount, item.spotCount);
+});
+
+test('drops regions whose live matching count falls below the relevance floor', async () => {
+  const popularEnough = {
+    areaCode: 'seoul',
+    name: '서울',
+    description: '홍대·연남·망원 동네 책방 밀집지',
+    spotCount: 12,
+    score: 80,
+  };
+  const tooSparse = {
+    areaCode: 'gangneung',
+    name: '강릉',
+    description: '안목해변 책방거리·북스테이 성지',
+    spotCount: 1,
+    score: 92,
+  };
+  const controller = createRegionsController({
+    regionScoreService: {
+      getRegionsByCulture: async () => ({
+        items: [popularEnough, tooSparse],
+        dataStatus: 'HIT',
+      }),
+    },
+    placesService: {
+      getAreaBasedPlaces: async options => ({
+        items: options.lDongRegnCd === '11'
+          ? [
+              tourPlace({ contentId: '1', title: '독립서점 위트앤시니컬', lclsSystmCodes: [] }),
+              tourPlace({ contentId: '2', title: '소수책방', lclsSystmCodes: [] }),
+              tourPlace({ contentId: '3', title: '대오서점', lclsSystmCodes: [] }),
+            ]
+          : [tourPlace({ contentId: '4', title: '고래책방', lclsSystmCodes: [] })],
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 3 },
+        cacheStatus: 'HIT',
+      }),
+      searchPlacesByKeyword: async () => ({
+        items: [],
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = response();
+
+  await controller.getRegionsByCulture({ params: { id: '1' } }, res);
+
+  assert.deepEqual(res.body.map(item => item.areaCode), ['seoul']);
+});
+
+test('expands beyond curated candidates to reach the minimum region count', async () => {
+  // 독립서점·책방 큐레이션 후보는 서울(관련도 충족) 하나뿐이라고 가정한다.
+  // 최소 3개 지역을 채우려면 큐레이션 안 된 지역들도 실시간 확인해야 한다.
+  const onlyCuratedRegion = {
+    areaCode: 'seoul',
+    name: '서울',
+    description: '홍대·연남·망원 동네 책방 밀집지',
+    spotCount: 12,
+    score: 80,
+  };
+  const controller = createRegionsController({
+    regionScoreService: {
+      getRegionsByCulture: async () => ({
+        items: [onlyCuratedRegion],
+        dataStatus: 'HIT',
+      }),
+    },
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        // 서울(관련도 충족), 강릉(관련도 충족, 큐레이션 밖), 그 외(전부 미달)
+        const items = options.lDongRegnCd === '11'
+          ? Array.from({ length: 5 }, (_, i) => tourPlace({
+              contentId: `seoul-${i}`,
+              title: `독립서점 ${i}`,
+              lclsSystmCodes: [],
+            }))
+          : options.lDongRegnCd === '51' && options.lDongSignguCd === '150'
+            ? Array.from({ length: 3 }, (_, i) => tourPlace({
+                contentId: `gangneung-${i}`,
+                title: `강릉책방 ${i}`,
+                lclsSystmCodes: [],
+              }))
+            : [];
+        return {
+          items,
+          pagination: { pageNo: 1, numOfRows: 50, totalCount: items.length },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async () => ({
+        items: [],
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = response();
+
+  await controller.getRegionsByCulture({ params: { id: '1' } }, res);
+
+  assert.deepEqual(res.body.map(item => item.areaCode), ['seoul', 'gangneung']);
+  assert.equal(res.body[1].spotCount, 3);
+  assert.equal(res.body[1].description, '독립서점·책방 명소');
 });
 
 test('sums the live spotCount across multiple pages when the first page is full', async () => {
@@ -448,17 +552,20 @@ test('returns structured external errors when every culture candidate source fai
 
 test('supports up to 50 region spots and publishes next-page headers', async () => {
   const received = [];
-  const items = Array.from({ length: 50 }, (_, index) => tourPlace({
-    contentId: String(index + 1),
-    title: `문학관 ${index + 1}`,
-  }));
   const controller = createRegionsController({
     placesService: {
       getAreaBasedPlaces: async options => {
         received.push(options);
+        // 80개의 실제 매칭이 원본 2페이지에 걸쳐 있다고 가정한다.
+        const start = (options.pageNo - 1) * 50;
+        const count = options.pageNo === 1 ? 50 : options.pageNo === 2 ? 30 : 0;
+        const items = Array.from({ length: count }, (_, index) => tourPlace({
+          contentId: String(start + index + 1),
+          title: `문학관 ${start + index + 1}`,
+        }));
         return {
           items,
-          pagination: { pageNo: 1, numOfRows: 50, totalCount: 80 },
+          pagination: { pageNo: options.pageNo, numOfRows: 50, totalCount: 80 },
           cacheStatus: 'HIT',
         };
       },
@@ -466,7 +573,7 @@ test('supports up to 50 region spots and publishes next-page headers', async () 
         received.push(options);
         return {
           items: [],
-          pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+          pagination: { pageNo: options.pageNo, numOfRows: 50, totalCount: 0 },
           cacheStatus: 'HIT',
         };
       },

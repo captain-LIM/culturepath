@@ -157,10 +157,22 @@ function getCultureMatchStrengths(item, options = {}) {
   const allowedCategories = TOP_LEVEL_CANDIDATES[topLevelCode];
   const matches = new Map();
 
+  // relaxed: 지역·문화 조합에 결과가 너무 적을 때만 쓰는 보조 통과 기준.
+  // top-level 코드가 우리가 아는 문화 인접 그룹(FD/VE/HS/SH/EX/AC)인데
+  // 그 그룹의 후보 목록에 이 카테고리만 빠져있는 경우에 한해 게이트를
+  // 건너뛴다 — 예를 들어 카페/찻집(top-level FD)으로 분류된 장소를
+  // 독립서점 후보로도 다시 볼 때. top-level 코드가 아예 우리 그룹에 없는
+  // 경우('NA' 등, 문화와 무관함이 이미 확인된 분류)는 relaxed에서도
+  // 절대 통과시키지 않는다. 프랜차이즈 제외(FRANCHISE_EXCLUSION_LOOKAHEAD)는
+  // 정규식 자체에 내장돼 있어 relaxed에서도 그대로 적용된다.
+  const skipTopLevelGate = options.relaxed === true;
+
   for (const [category, pattern] of KEYWORD_RULES) {
-    const categoryAllowed = hasClassificationCode
-      ? allowedCategories?.has(category) === true
-      : true;
+    const categoryAllowed = !hasClassificationCode
+      ? true
+      : allowedCategories
+        ? (allowedCategories.has(category) || skipTopLevelGate)
+        : false;
     if (categoryAllowed && pattern.test(title)) {
       matches.set(category, CULTURE_MATCH_STRENGTH.TITLE_KEYWORD);
     }
