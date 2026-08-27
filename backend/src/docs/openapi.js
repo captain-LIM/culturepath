@@ -158,6 +158,7 @@ module.exports = Object.freeze({
               'application/json': {
                 schema: {
                   type: 'array',
+                  maxItems: MAX_CULTURE_RESULTS,
                   items: { $ref: '#/components/schemas/RegionSpot' },
                 },
               },

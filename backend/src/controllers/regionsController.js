@@ -4,6 +4,7 @@ const coursePlaceUsageRepository = require('../repositories/coursePlaceUsageRepo
 const {
   DEFAULT_CULTURE_RESULTS,
   MAX_CULTURE_PAGE,
+  MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
 const {
   collectAreaPlacePage,
@@ -147,66 +148,35 @@ function toPublicSpot(place) {
   };
 }
 
-// culture 필터가 걸린 지역별 스팟 조회는 "이 문화에 해당하는 관광지를 전부
-// 보여달라"는 요청이므로 한 페이지(50건)만 보고 끝내지 않고, 더 볼 게
-// 남아있는 한 계속 다음 페이지를 가져온다. 페이지당 최대 6번(최대 300건)
-// 까지만 허용해 외부 API를 무한히 호출하지 않도록 안전장치를 둔다 — 실제
-// 지역 하나에 이보다 더 많은 후보가 나오는 경우는 없다.
-const CULTURE_FETCH_MAX_PAGES = 6;
+// 지역 카드의 "장소 N개"는 큐레이션 시점에 손으로 넣어둔 추정치라 실제
+// 문화 필터 결과와 어긋날 수 있다. getSpotsByRegion과 같은
+// collectCulturePlacePage로 더 볼 페이지가 없을 때까지(최대
+// MAX_CULTURE_PAGE) 훑어서 실제 매칭 개수를 센다.
+async function countLiveCulturePlaces(placesService, tourCodes, cultureName, logger) {
+  const baseRequests = Array.isArray(tourCodes) ? tourCodes : [tourCodes];
+  let total = 0;
 
-async function fetchAllCulturePages(fetchPage, baseParams) {
-  const items = [];
-  let cacheStatus;
-
-  for (let pageNo = 1; pageNo <= CULTURE_FETCH_MAX_PAGES; pageNo += 1) {
-    const result = await fetchPage({
-      ...baseParams,
+  for (let pageNo = 1; pageNo <= MAX_CULTURE_PAGE; pageNo += 1) {
+    const pageRequests = baseRequests.map(regionCodes => ({
+      ...regionCodes,
       pageNo,
-      numOfRows: CULTURE_CANDIDATE_FETCH_ROWS,
+      numOfRows: MAX_CULTURE_RESULTS,
+    }));
+    const result = await collectCulturePlacePage({
+      placesService,
+      culture: cultureName,
+      request: pageRequests[0],
+      requests: pageRequests,
+      limit: MAX_CULTURE_RESULTS,
+      logger,
     });
-    items.push(...result.items);
-    cacheStatus = combineCultureCacheStatus(cacheStatus, result.cacheStatus);
-
-    const totalCount = Number(result.pagination?.totalCount);
-    const hasMore = Number.isFinite(totalCount)
-      ? items.length < totalCount
-      : result.items.length === CULTURE_CANDIDATE_FETCH_ROWS;
-    if (!hasMore) {
+    total += result.items.length;
+    if (!result.hasMore) {
       break;
     }
   }
 
-  return { items, cacheStatus };
-}
-
-// 문화 필터로 실제 매칭되는 관광지 전부를 가져온다 (상한 없음).
-// getSpotsByRegion과 getRegionsByCulture의 실시간 장소 수 보정이 함께 쓴다.
-async function getCulturePlaces(placesService, tourCodes, cultureName) {
-  const keywords = CULTURE_SEARCH_KEYWORDS[cultureName] || [];
-  const [areaResult, ...keywordResults] = await Promise.all([
-    fetchAllCulturePages(
-      params => placesService.getAreaBasedPlaces(params),
-      tourCodes,
-    ),
-    ...keywords.map(keyword =>
-      fetchAllCulturePages(
-        params => placesService.searchPlacesByKeyword(params),
-        { ...tourCodes, keyword },
-      ),
-    ),
-  ]);
-  const items = selectPlacesForCulture(
-    [areaResult.items, ...keywordResults.map(result => result.items)],
-    cultureName,
-    { limit: Infinity },
-  );
-  const cacheStatus = [areaResult, ...keywordResults]
-    .map(result => result.cacheStatus)
-    .reduce(
-      (combined, status) => combineCultureCacheStatus(combined, status),
-      undefined,
-    );
-  return { items, cacheStatus };
+  return total;
 }
 
 function createRegionsController(options = {}) {
@@ -230,6 +200,31 @@ function createRegionsController(options = {}) {
       });
       return items.map(item => ({ ...item, publicCourseCount: null }));
     }
+  }
+
+  // 조회에 실패하면 가용성을 위해 기존 큐레이션 추정치를 그대로 둔다.
+  async function attachLiveSpotCounts(items, cultureName) {
+    return Promise.all(items.map(async item => {
+      const tourCodes = REGION_TOUR_CODES[item.areaCode];
+      if (!tourCodes) {
+        return item;
+      }
+      try {
+        const spotCount = await countLiveCulturePlaces(
+          placesService,
+          tourCodes,
+          cultureName,
+          logger,
+        );
+        return { ...item, spotCount };
+      } catch (error) {
+        logger?.warn?.('실시간 장소 수 계산에 실패해 큐레이션 수치를 유지합니다.', {
+          areaCode: item.areaCode,
+          errorName: error?.name || 'Error',
+        });
+        return item;
+      }
+    }));
   }
 
   async function getRegionsByCulture(req, res) {

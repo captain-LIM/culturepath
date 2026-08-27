@@ -17,12 +17,6 @@ const DEFAULT_CULTURE_RESULTS = 20;
 const MAX_CULTURE_PAGE = 5;
 const MAX_CULTURE_RESULTS = 50;
 
-// culture 필터가 걸린 검색에서 TourAPI로부터 끌어올 원본 후보 개수.
-// MAX_CULTURE_RESULTS(최종 응답 개수)보다 넉넉히 크게 잡아야 분류 필터를
-// 통과하는 실제 매칭 장소가 충분히 남는다. 공공데이터포털 페이지당 최대치인
-// 50으로 맞춘다.
-const CULTURE_CANDIDATE_FETCH_ROWS = 50;
-
 const CULTURE_MATCH_STRENGTH = Object.freeze({
   NONE: 0,
   TITLE_KEYWORD: 1,
@@ -199,7 +193,6 @@ function getCultureMatchStrength(item, culture, options = {}) {
 
 module.exports = {
   CONTENT_ID_OVERRIDES,
-  CULTURE_CANDIDATE_FETCH_ROWS,
   CULTURE_CATEGORIES,
   CULTURE_MATCH_STRENGTH,
   CULTURE_SEARCH_KEYWORDS,

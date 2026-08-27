@@ -107,6 +107,61 @@ test('overrides the curated spotCount with the live matching count', async () =>
   assert.notEqual(res.body[0].spotCount, item.spotCount);
 });
 
+test('sums the live spotCount across multiple pages when the first page is full', async () => {
+  const item = {
+    areaCode: 'seoul',
+    name: '서울',
+    description: '홍대·연남·망원 동네 책방 밀집지',
+    spotCount: 12,
+    score: 80,
+  };
+  const controller = createRegionsController({
+    regionScoreService: {
+      getRegionsByCulture: async () => ({ items: [item], dataStatus: 'HIT' }),
+    },
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        if (options.pageNo === 1) {
+          const items = Array.from({ length: 50 }, (_, index) =>
+            tourPlace({
+              contentId: String(index + 1),
+              title: `독립서점 ${index + 1}`,
+              lclsSystmCodes: [],
+            }),
+          );
+          return {
+            items,
+            pagination: { pageNo: 1, numOfRows: 50, totalCount: 60 },
+            cacheStatus: 'HIT',
+          };
+        }
+        const items = Array.from({ length: 10 }, (_, index) =>
+          tourPlace({
+            contentId: String(index + 51),
+            title: `독립서점 ${index + 51}`,
+            lclsSystmCodes: [],
+          }),
+        );
+        return {
+          items,
+          pagination: { pageNo: 2, numOfRows: 50, totalCount: 60 },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async () => ({
+        items: [],
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = response();
+
+  await controller.getRegionsByCulture({ params: { id: '1' } }, res);
+
+  assert.equal(res.body[0].spotCount, 60);
+});
+
 test('preserves region 404 and handles unexpected controller failures', async () => {
   let calls = 0;
   const controller = createRegionsController({
@@ -221,44 +276,6 @@ test('merges region and keyword candidates, removes false positives, and ranks e
   assert.equal(calls[0][1].lDongRegnCd, '48');
   assert.equal(calls[1][1].keyword, '문학관');
   assert.equal(calls[2][1].keyword, '문학');
-});
-
-test('does not cap culture results at 20 and follows pagination for more matches', async () => {
-  const areaCalls = [];
-  const controller = createRegionsController({
-    placesService: {
-      getAreaBasedPlaces: async options => {
-        areaCalls.push(options.pageNo);
-        const start = (options.pageNo - 1) * 50;
-        const count = options.pageNo === 1 ? 50 : 20;
-        const items = Array.from({ length: count }, (_, index) =>
-          tourPlace({
-            contentId: String(start + index + 1),
-            title: `문학관 ${start + index + 1}`,
-          }),
-        );
-        return {
-          items,
-          pagination: { pageNo: options.pageNo, numOfRows: 50, totalCount: 70 },
-          cacheStatus: 'HIT',
-        };
-      },
-      searchPlacesByKeyword: async () => ({
-        items: [],
-        pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
-        cacheStatus: 'HIT',
-      }),
-    },
-  });
-  const res = response();
-
-  await controller.getSpotsByRegion(
-    { params: { code: 'tongyeong' }, query: { culture: '문학' } },
-    res,
-  );
-
-  assert.deepEqual(areaCalls, [1, 2]);
-  assert.equal(res.body.length, 70);
 });
 
 test('adds distinct public-course usage counts without changing place order', async () => {
