@@ -15,6 +15,7 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 | [서비스 계획서](./문화여행_따라가방_서비스_계획서.md) | 제품 목적, 사용자 흐름, 핵심 기능과 기술 구조 |
 | [팀 역할 및 협업 기준](./TEAM_ROLES.md) | 임수민·황찬우 담당 범위와 연동 경계 |
 | [황찬우 현행 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md) | 현재 완료 상태, 다음 PR, 보류 항목과 새 세션 인수인계 |
+| [R18 운영 배포·실기기·Google Play 출시 준비 가이드](./R18_RELEASE_GOOGLE_PLAY_RUNBOOK.md) | 운영 Backend·DB, release AAB, 개인정보·실기기·Play 제출 실행 순서 |
 | [R17 AI 여행 도우미 최종 의사결정 기록](./R17_AI_ASSISTANT_DECISION_RECORD.md) | 통합 대화 UX, 세션, 의도 해석, 지역 태그, 추천·코스 편집의 최종 결정 |
 | [AI 기능 개편 계약](./AI_MYSQL_TOURAPI_LLM_TARGET_ARCHITECTURE.md) | MySQL→TourAPI 탐색, LLM 역할, 기존 장소 코스 편집의 최신 결정 |
 
