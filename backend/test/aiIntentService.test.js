@@ -183,6 +183,12 @@ test('uses the most specific title and asks compound edit operations to be split
   assert.equal(specific.action, 'edit_course');
   assert.deepEqual(specific.referencedCoursePlaceIds, ['200']);
 
+  const both = deterministicIntent([
+    { role: 'user', content: '박물관을 삭제하고 박물관 별관도 삭제해줘' },
+  ], state);
+  assert.equal(both.action, 'edit_course');
+  assert.deepEqual(both.referencedCoursePlaceIds, ['100', '200']);
+
   const compound = deterministicIntent([
     { role: 'user', content: '박물관은 빼고 음악당을 2일차로 옮겨줘' },
   ], state);

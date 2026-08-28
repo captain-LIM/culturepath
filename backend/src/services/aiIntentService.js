@@ -205,14 +205,44 @@ function mostSpecificCourseTargets(matches) {
   return maximal.map(item => String(item.place.contentId));
 }
 
+function explicitCourseTitleTargets(text, coursePlaces = []) {
+  const normalizedText = normalizeComparableText(text);
+  const byTitle = new Map();
+  for (const place of coursePlaces) {
+    const title = normalizeComparableText(place?.title);
+    if (title.length < 2) continue;
+    if (!byTitle.has(title)) byTitle.set(title, []);
+    byTitle.get(title).push(place);
+  }
+
+  const mentions = [];
+  for (const [title, places] of byTitle) {
+    let start = normalizedText.indexOf(title);
+    while (start >= 0) {
+      if (places.length > 1) return [];
+      mentions.push({
+        contentId: String(places[0].contentId),
+        start,
+        end: start + title.length,
+        length: title.length,
+      });
+      start = normalizedText.indexOf(title, start + 1);
+    }
+  }
+  mentions.sort((left, right) => left.start - right.start || right.length - left.length);
+
+  const selected = [];
+  for (const mention of mentions) {
+    if (selected.some(item => mention.start < item.end && item.start < mention.end)) continue;
+    selected.push(mention);
+  }
+  return selected.map(item => item.contentId);
+}
+
 function extractDeterministicCourseTargets(text, coursePlaces = []) {
   const places = Array.isArray(coursePlaces) ? coursePlaces : [];
-  const normalizedText = normalizeComparableText(text);
-  const direct = places.filter(place => {
-    const title = normalizeComparableText(place?.title);
-    return title.length >= 2 && normalizedText.includes(title);
-  });
-  if (direct.length > 0) return mostSpecificCourseTargets(direct);
+  const explicitTargets = explicitCourseTitleTargets(text, places);
+  if (explicitTargets.length > 0) return explicitTargets;
 
   const targetMatch = /([^,.!?]{2,60}?)(?:을|를|은|는)\s*(?:빼|삭제|제거|옮겨|이동|먼저|마지막)/
     .exec(String(text || ''));
