@@ -3,6 +3,7 @@ const cachedPlacesService = require('../services/cachedPlacesService');
 const coursePlaceUsageRepository = require('../repositories/coursePlaceUsageRepository');
 const { getRegionDefinition } = require('../config/regionCatalog');
 const {
+  CULTURE_OFFICIAL_QUERY_CODES,
   CULTURE_SEARCH_KEYWORDS,
   DEFAULT_CULTURE_RESULTS,
   MAX_CULTURE_PAGE,
@@ -164,12 +165,14 @@ async function fetchAllRawPages(fetchPage, baseParams, logger) {
   const items = [];
   let cacheStatus;
   let firstPageError = null;
+  let partialFailure = false;
 
   for (let pageNo = 1; pageNo <= MAX_CULTURE_PAGE; pageNo += 1) {
     let result;
     try {
       result = await fetchPage({ ...baseParams, pageNo, numOfRows: MAX_CULTURE_RESULTS });
     } catch (error) {
+      partialFailure = true;
       if (pageNo === 1) {
         firstPageError = error;
       }
@@ -188,7 +191,12 @@ async function fetchAllRawPages(fetchPage, baseParams, logger) {
   // 첫 페이지부터 실패해서 이 소스에서 아무것도 못 건진 경우에만
   // "이 소스는 완전히 실패했다"로 표시한다 (collectAllCulturePlaces가
   // 모든 소스가 이렇게 실패했을 때만 에러를 전파하도록 쓴다).
-  return { items, cacheStatus, error: items.length === 0 ? firstPageError : null };
+  return {
+    items,
+    cacheStatus,
+    error: items.length === 0 ? firstPageError : null,
+    partialFailure,
+  };
 }
 
 // 문화 필터로 실제 매칭되는 관광지를 전부(상한 없음) 모은다.
@@ -197,19 +205,64 @@ async function fetchAllRawPages(fetchPage, baseParams, logger) {
 async function collectAllCulturePlaces(placesService, tourCodes, cultureName, logger) {
   const baseRequests = Array.isArray(tourCodes) ? tourCodes : [tourCodes];
   const keywords = CULTURE_SEARCH_KEYWORDS[cultureName] || [];
+  const officialQuery = CULTURE_OFFICIAL_QUERY_CODES[cultureName];
 
-  const sourceResults = await Promise.all([
-    ...baseRequests.map(request =>
-      fetchAllRawPages(params => placesService.getAreaBasedPlaces(params), request, logger)),
-    ...baseRequests.flatMap(request =>
-      keywords.map(keyword =>
+  const [primaryAreaResults, keywordResults] = await Promise.all([
+    Promise.all(
+      baseRequests.map(request =>
         fetchAllRawPages(
-          params => placesService.searchPlacesByKeyword(params),
-          { ...request, keyword },
+          params => placesService.getAreaBasedPlaces(params),
+          officialQuery ? { ...request, ...officialQuery } : request,
           logger,
-        ))),
+        )),
+    ),
+    Promise.all(
+      baseRequests.flatMap(request =>
+        keywords.map(keyword =>
+          fetchAllRawPages(
+            params => placesService.searchPlacesByKeyword(params),
+            { ...request, keyword },
+            logger,
+          ))),
+    ),
   ]);
+  const sourceResults = [
+    ...primaryAreaResults,
+    ...keywordResults,
+  ];
 
+  // 하나의 TourAPI 신분류 코드와 정확히 대응되는 문화는 광범위한 지역
+  // 목록 대신 공식 코드 조회를 기본 후보 소스로 쓴다. 다만 분류 누락으로
+  // 실제 장소가 사라지거나 공식 조회 장애가 전체 목록 장애로 번지지 않도록,
+  // 엄격한 결과가 floor보다 적거나 공식 소스 하나라도 실패했을 때만 기존
+  // 지역 전체 목록을 추가 후보로 조회한다.
+  const primaryStrictItems = selectPlacesForCulture(
+    sourceResults.map(result => result.items),
+    cultureName,
+    { limit: Number.MAX_SAFE_INTEGER, allowCumulative: true },
+  );
+  const needsUnfilteredFallback = officialQuery && (
+    primaryStrictItems.length < CULTURE_RESULT_FLOOR ||
+    primaryAreaResults.some(result => result.partialFailure)
+  );
+
+  if (needsUnfilteredFallback) {
+    const fallbackResults = await Promise.all(
+      baseRequests.map(request =>
+        fetchAllRawPages(
+          params => placesService.getAreaBasedPlaces(params),
+          request,
+          logger,
+        )),
+    );
+    sourceResults.push(...fallbackResults);
+  }
+
+  /*
+   * 부분 성공 계약: 후보 source 하나라도 성공하면 검증된 부분 결과를 쓰고,
+   * 공식·키워드·조건부 fallback이 전부 첫 페이지부터 실패했을 때만 오류를
+   * 전파한다.
+   */
   if (sourceResults.every(result => result.error)) {
     throw sourceResults[0].error;
   }

@@ -80,6 +80,9 @@ test('documents strict culture filtering for region spots', () => {
   const success = spots.responses[200];
 
   assert.equal(culture.schema.enum.length, 10);
+  assert.match(spots.description, /TourAPI 신분류 코드/);
+  assert.match(spots.description, /엄격 검증 결과/);
+  assert.match(spots.description, /5개 미만/);
   assert.equal(
     success.content['application/json'].schema.items.$ref,
     '#/components/schemas/RegionSpot',

@@ -266,6 +266,55 @@ test('sums the live spotCount across multiple pages when the first page is full'
   assert.equal(res.body[0].spotCount, 60);
 });
 
+test('restores the live spotCount with an unfiltered fallback after a later official page fails', async () => {
+  const curatedRegions = [
+    { areaCode: 'seoul', name: '서울', description: '서울 음악', spotCount: 1, score: 90 },
+    { areaCode: 'tongyeong', name: '통영', description: '통영 음악', spotCount: 1, score: 80 },
+    { areaCode: 'gangneung', name: '강릉', description: '강릉 음악', spotCount: 1, score: 70 },
+  ];
+  const controller = createRegionsController({
+    regionScoreService: {
+      getRegionsByCulture: async () => ({ items: curatedRegions, dataStatus: 'HIT' }),
+    },
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        const isSeoul = options.lDongRegnCd === '11';
+        const isOfficial = options.lclsSystm3 === 'VE060100';
+        if (isSeoul && isOfficial && options.pageNo === 2) {
+          throw new ExternalApiError('official page timed out', {
+            code: 'TIMEOUT',
+            retryable: true,
+          });
+        }
+        const count = isSeoul && isOfficial ? 50 : isOfficial ? 5 : 1;
+        const prefix = isOfficial ? 'official' : 'fallback';
+        const items = Array.from({ length: count }, (_, index) => tourPlace({
+          contentId: `${options.lDongRegnCd}-${prefix}-${index + 1}`,
+          title: isOfficial ? `공식 공연장 ${index + 1}` : '서울 지역 음악당',
+          lclsSystmCodes: isOfficial ? ['VE', 'VE06', 'VE060100'] : ['VE'],
+          cultures: ['음악'],
+          category: '음악',
+        }));
+        return {
+          items,
+          pagination: { pageNo: options.pageNo, numOfRows: 50, totalCount: count },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+    logger: { warn() {}, error() {} },
+  });
+  const res = response();
+
+  await controller.getRegionsByCulture({ params: { id: '3' } }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.find(item => item.areaCode === 'seoul').spotCount, 51);
+  assert.equal(res.body.find(item => item.areaCode === 'tongyeong').spotCount, 5);
+  assert.equal(res.body.find(item => item.areaCode === 'gangneung').spotCount, 5);
+});
+
 test('preserves region 404 and handles unexpected controller failures', async () => {
   let calls = 0;
   const controller = createRegionsController({
@@ -321,6 +370,236 @@ function tourPlace(overrides = {}) {
     ...overrides,
   };
 }
+
+test('uses an exact official classification source without an unfiltered fallback when sufficient', async () => {
+  const areaCalls = [];
+  const keywordCalls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        areaCalls.push(options);
+        const items = Array.from({ length: 5 }, (_, index) => tourPlace({
+          contentId: `official-${index + 1}`,
+          title: `공식 공연장 ${index + 1}`,
+          lclsSystmCodes: ['VE', 'VE06', 'VE060100'],
+          cultures: ['음악'],
+          category: '음악',
+        }));
+        return {
+          items,
+          pagination: { pageNo: 1, numOfRows: 50, totalCount: items.length },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async options => {
+        keywordCalls.push(options);
+        return { items: [], cacheStatus: 'HIT' };
+      },
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '음악' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(
+    res.body.map(item => item.contentId),
+    ['official-1', 'official-2', 'official-3', 'official-4', 'official-5'],
+  );
+  assert.equal(areaCalls.length, 1);
+  assert.equal(areaCalls[0].lclsSystm1, 'VE');
+  assert.equal(areaCalls[0].lclsSystm2, 'VE06');
+  assert.equal(areaCalls[0].lclsSystm3, 'VE060100');
+  assert.deepEqual(
+    keywordCalls.map(options => options.keyword),
+    ['공연장', '음악당', '콘서트홀'],
+  );
+});
+
+test('adds an unfiltered area fallback when an exact official source has fewer than five matches', async () => {
+  const areaCalls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        areaCalls.push(options);
+        const official = Boolean(options.lclsSystm3);
+        const items = official
+          ? [tourPlace({
+              contentId: 'official-1',
+              title: '공식 공연장',
+              lclsSystmCodes: ['VE', 'VE06', 'VE060100'],
+              cultures: ['음악'],
+              category: '음악',
+            })]
+          : Array.from({ length: 4 }, (_, index) => tourPlace({
+              contentId: `fallback-${index + 1}`,
+              title: `지역 음악 공간 ${index + 1}`,
+              lclsSystmCodes: ['VE'],
+              cultures: ['음악'],
+              category: '음악',
+            }));
+        return { items, cacheStatus: 'HIT' };
+      },
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '음악' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(
+    res.body.map(item => item.contentId),
+    ['official-1', 'fallback-1', 'fallback-2', 'fallback-3', 'fallback-4'],
+  );
+  assert.equal(areaCalls.length, 2);
+  assert.equal(areaCalls[0].lclsSystm3, 'VE060100');
+  assert.equal(Object.hasOwn(areaCalls[1], 'lclsSystm1'), false);
+  assert.equal(Object.hasOwn(areaCalls[1], 'lclsSystm2'), false);
+  assert.equal(Object.hasOwn(areaCalls[1], 'lclsSystm3'), false);
+});
+
+test('uses the unfiltered fallback to recover pagination after a later official page fails', async () => {
+  const areaCalls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        areaCalls.push(options);
+        if (options.lclsSystm3 && options.pageNo === 2) {
+          throw new ExternalApiError('official page timed out', {
+            code: 'TIMEOUT',
+            retryable: true,
+          });
+        }
+        if (options.lclsSystm3) {
+          return {
+            items: Array.from({ length: 50 }, (_, index) => tourPlace({
+              contentId: `official-${index + 1}`,
+              title: `공식 공연장 ${index + 1}`,
+              lclsSystmCodes: ['VE', 'VE06', 'VE060100'],
+              cultures: ['음악'],
+              category: '음악',
+            })),
+            cacheStatus: 'HIT',
+          };
+        }
+        return {
+          items: [tourPlace({
+            contentId: 'fallback-51',
+            title: '지역 음악당 51',
+            lclsSystmCodes: ['VE'],
+            cultures: ['음악'],
+            category: '음악',
+          })],
+          cacheStatus: 'REFRESHED',
+        };
+      },
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+    logger: { warn() {}, error() {} },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion({
+    params: { code: 'tongyeong' },
+    query: { culture: '음악', pageNo: '2', numOfRows: '50' },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.map(item => item.contentId), ['fallback-51']);
+  assert.equal(res.headers['X-Cache-Status'], 'REFRESHED');
+  assert.equal(areaCalls.filter(options => options.lclsSystm3).length, 2);
+  assert.equal(
+    areaCalls.filter(options => !Object.hasOwn(options, 'lclsSystm1')).length,
+    1,
+  );
+});
+
+test('recovers an exact-code culture with the unfiltered fallback when official and keyword sources fail', async () => {
+  const areaCalls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        areaCalls.push(options);
+        if (options.lclsSystm3) {
+          throw new ExternalApiError('official query timed out', {
+            code: 'TIMEOUT',
+            retryable: true,
+          });
+        }
+        return {
+          items: Array.from({ length: 5 }, (_, index) => tourPlace({
+            contentId: `fallback-${index + 1}`,
+            title: `지역 음악당 ${index + 1}`,
+            lclsSystmCodes: ['VE'],
+            cultures: ['음악'],
+            category: '음악',
+          })),
+          cacheStatus: 'REFRESHED',
+        };
+      },
+      searchPlacesByKeyword: async () => {
+        throw new ExternalApiError('keyword query timed out', {
+          code: 'TIMEOUT',
+          retryable: true,
+        });
+      },
+    },
+    logger: { warn() {}, error() {} },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '음악' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.length, 5);
+  assert.equal(res.headers['X-Cache-Status'], 'REFRESHED');
+  assert.equal(areaCalls.length, 2);
+  assert.equal(areaCalls[0].lclsSystm3, 'VE060100');
+  assert.equal(Object.hasOwn(areaCalls[1], 'lclsSystm1'), false);
+});
+
+test('keeps ambiguous cultures on the unfiltered area source without approximate official codes', async () => {
+  const areaCalls = [];
+  const controller = createRegionsController({
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        areaCalls.push(options);
+        return {
+          items: Array.from({ length: 5 }, (_, index) => tourPlace({
+            contentId: `literature-${index + 1}`,
+            title: `지역 문학관 ${index + 1}`,
+            lclsSystmCodes: ['VE'],
+          })),
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async () => ({ items: [], cacheStatus: 'HIT' }),
+    },
+  });
+  const res = response();
+
+  await controller.getSpotsByRegion(
+    { params: { code: 'tongyeong' }, query: { culture: '문학' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.length, 5);
+  assert.equal(areaCalls.length, 1);
+  assert.equal(Object.hasOwn(areaCalls[0], 'lclsSystm1'), false);
+  assert.equal(Object.hasOwn(areaCalls[0], 'lclsSystm2'), false);
+  assert.equal(Object.hasOwn(areaCalls[0], 'lclsSystm3'), false);
+});
 
 test('merges region and keyword candidates, removes false positives, and ranks evidence', async () => {
   const calls = [];
