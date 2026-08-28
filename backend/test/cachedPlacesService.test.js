@@ -576,6 +576,291 @@ test('does not match a short, generic neighborhood-name substring to an unrelate
   assert.equal(overlaid.title, '북촌전통공예체험관');
 });
 
+test('re-translates when a detail view has fields a list-sourced cache never had', async () => {
+  // 실측 사례: 목록 화면은 PlaceSummary(overview·openTime·restDate가 항상
+  // null)만 갖고 있어, 지역 목록에서 먼저 열람된 장소는 title·address만
+  // 번역된 "얕은" 캐시가 저장된다. 그 뒤 상세 화면에서 실제 overview 등을
+  // 가진 korItem으로 다시 요청해도, 캐시가 "신선"하다는 이유로 그 얕은
+  // 번역을 계속 재사용해 About This Place 등이 번역되지 않았다.
+  const store = new Map();
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        const { place: input } = JSON.parse(messages[0].content);
+        return {
+          content: JSON.stringify({
+            title: input.title ? 'Gilsang Ceramics' : '',
+            address: input.address ? '15-9 Gangnam-daero 39-gil' : '',
+            openTime: input.openTime ? '10:00-22:00' : '',
+            overview: input.overview ? 'A pottery workshop in Seoul.' : '',
+            restDate: input.restDate ? 'Mondays' : '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  // 1) 지역 목록 화면: overview·openTime·restDate가 없는 얕은 요약만 있다.
+  const listItem = { contentId: '2946113', title: '길상도예', address: '서초구' };
+  const [fromList] = await service.attachTranslationOverlay([listItem], 'en');
+  assert.equal(fromList.title, 'Gilsang Ceramics');
+  assert.equal(fromList.overview, undefined);
+  assert.equal(generateCalls.length, 1);
+
+  // 2) 상세 화면: 같은 장소를 overview·openTime·restDate가 실제로 채워진
+  // korItem으로 다시 요청한다. 얕은 캐시가 있어도 다시 번역해야 한다.
+  const detailItem = {
+    contentId: '2946113',
+    title: '길상도예',
+    address: '서초구',
+    openTime: '10:00~22:00',
+    overview: '서울에 있는 도예 공방입니다.',
+    restDate: '매주 월요일',
+  };
+  const [fromDetail] = await service.attachTranslationOverlay([detailItem], 'en');
+
+  assert.equal(generateCalls.length, 2);
+  assert.equal(fromDetail.overview, 'A pottery workshop in Seoul.');
+  assert.equal(fromDetail.restDate, 'Mondays');
+  assert.equal(fromDetail.openTime, '10:00-22:00');
+
+  // 3) 이제 캐시가 완전해졌으니 목록 화면이 다시 물어도 재번역 없이
+  // 완전한 캐시를 그대로 재사용한다.
+  const [fromListAgain] = await service.attachTranslationOverlay([listItem], 'en');
+  assert.equal(generateCalls.length, 2);
+  assert.equal(fromListAgain.overview, 'A pottery workshop in Seoul.');
+});
+
+test('retries LLM translation when the cache has no title even though the source has one', async () => {
+  // 실측 사례: "갗"처럼 단어 하나짜리 낯선 고유명사는 LLM이 처음엔 자신
+  // 없어 title을 빈 값으로 남길 수 있다(다른 필드는 성공). 그 결과가
+  // 그대로 캐시되면 다음 조회도 계속 원문 그대로 나온다 — title이 없는
+  // 캐시는 완전하지 않다고 보고 다시 시도해야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let shouldTranslateTitle = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: shouldTranslateTitle ? 'Gat' : '',
+            address: 'Jongno-gu, Seoul',
+            openTime: '',
+            overview: '',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+  const korItem = {
+    contentId: '3486753',
+    title: '갗',
+    address: '종로구',
+    latitude: 37.5734,
+    longitude: 127.0215,
+  };
+
+  const [first] = await service.attachTranslationOverlay([korItem], 'en');
+  assert.equal(first.title, '갗');
+  assert.equal(first.address, 'Jongno-gu, Seoul');
+  assert.equal(generateCalls.length, 1);
+
+  shouldTranslateTitle = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'en');
+  assert.equal(second.title, 'Gat');
+  assert.equal(generateCalls.length, 2);
+
+  // 이제 title이 채워졌으니 더는 재시도하지 않는다.
+  const [third] = await service.attachTranslationOverlay([korItem], 'en');
+  assert.equal(third.title, 'Gat');
+  assert.equal(generateCalls.length, 2);
+});
+
+test('falls back to LLM translation when a TourAPI match has no usable title', async () => {
+  // 실측 사례: '가나아트센터'가 일본어 서비스에서 후보는 찾았지만(좌표·
+  // 부분 제목 일치) 그 레코드 자체의 title이 비어있었다 — item이 truthy라
+  // LLM 폴백 조건(!item)에 걸리지 않아 원문 그대로 나왔다. title 없는
+  // "매칭 성공"은 매칭 실패와 똑같이 취급해 LLM로 넘어가야 한다.
+  const korItem = {
+    contentId: '129854',
+    title: '가나아트센터',
+    address: '서울특별시 종로구 평창30길 28',
+    latitude: 37.6123,
+    longitude: 126.9751,
+  };
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [{
+          contentId: 'matched-but-titleless',
+          title: '가나아트센터',
+          latitude: 37.6123,
+          longitude: 126.9751,
+        }],
+      }),
+      getPlaceDetailTranslated: async () => ({ contentId: 'matched-but-titleless', title: '' }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: 'Gana Art Center', address: '', openTime: '', overview: '', restDate: '', parking: '', regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'ja');
+
+  assert.equal(overlaid.title, 'Gana Art Center');
+  assert.equal(generateCalls.length, 1);
+});
+
+test('falls back to LLM translation when the TourAPI translation service itself errors', async () => {
+  // 실측 사례: 공공데이터포털 tourEng 서비스가 일일 호출 한도 등으로
+  // HTTP_ERROR를 반환하기 시작하면 findTranslatedContentId가 예외를
+  // 던진다. 이 예외가 getTranslatedDetail의 바깥 catch까지 그대로
+  // 번져버리면, TourAPI 장애 하나 때문에 이미 검증된 국문 정보로 시도할
+  // 수 있는 LLM 번역 기회까지 통째로 사라진다 — 매칭 조회 실패는 매칭
+  // 없음으로만 취급하고 LLM 폴백은 계속 시도해야 한다.
+  const korItem = {
+    contentId: '2946113',
+    title: '길상도예',
+    address: '서초구',
+    latitude: 37.5,
+    longitude: 127.0,
+  };
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => {
+        throw new ExternalApiError('일일 호출 한도를 초과했습니다.', { code: 'HTTP_ERROR' });
+      },
+      getPlaceDetailTranslated: async () => {
+        throw new Error('should not be called when the candidate search itself failed');
+      },
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: 'Gilsang Ceramics', address: '', openTime: '', overview: '', restDate: '', parking: '', regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.title, 'Gilsang Ceramics');
+  assert.equal(overlaid.hasTranslatedInfo, true);
+  assert.equal(generateCalls.length, 1);
+});
+
+test('never caches a totally empty LLM result, so the very next request retries', async () => {
+  // 실측 사례: '고양이똥'처럼 특이한 상호명에서 LLM이 모든 필드를 빈
+  // 값으로 반환한 적이 있었다. 이 결과를 그대로 캐시하면 mock 모드나
+  // 정상적인 "TourAPI에 없음" 판정과 똑같이 취급돼 TTL이 끝날 때까지
+  // 원문만 나온다 — 실패는 캐시하지 않고 바로 다음 조회에서 다시
+  // 시도해야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let shouldSucceed = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: shouldSucceed ? 'Goyangidong' : '',
+            address: '', openTime: '', overview: '', restDate: '', parking: '', regionName: '',
+          }),
+        };
+      },
+    },
+  });
+  const korItem = { contentId: '2860975', title: '고양이똥', latitude: 37.552, longitude: 126.8646 };
+
+  const [first] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(first.hasTranslatedInfo, false);
+  assert.equal(generateCalls.length, 1);
+
+  shouldSucceed = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(second.title, 'Goyangidong');
+  assert.equal(generateCalls.length, 2);
+});
+
 test('falls back to LLM translation when no TourAPI candidate matches', async () => {
   const korItem = {
     contentId: '2764935',

@@ -161,6 +161,15 @@ const TRANSLATION_OVERLAY_FIELDS = Object.freeze([
   'parking',
 ]);
 
+// PlaceSummary(지역 목록 화면이 쓰는 요약 모델, models/placeSummary.js)는
+// overview·openTime·restDate·regionName을 항상 null로 둔다 — 지역/키워드
+// 목록 조회에는 애초에 이 상세 전용 필드들이 없기 때문이다. 상세 화면의
+// korItem에는 이 필드들이 실제 값으로 채워져 있으므로, 캐시가 "얕은"
+// 목록발(發) 번역인지 판단하는 기준으로 쓴다.
+const DETAIL_ONLY_TRANSLATION_FIELDS = Object.freeze([
+  'overview', 'openTime', 'restDate', 'parking', 'regionName',
+]);
+
 function applyTranslationOverlay(korItem, translatedItem) {
   if (!translatedItem) {
     return { ...korItem, hasTranslatedInfo: false };
@@ -187,9 +196,16 @@ function applyTranslationOverlay(korItem, translatedItem) {
 // 같은 "검증된 데이터만 다룬다" 원칙 안에 있다.
 const PLACE_TRANSLATION_SYSTEM_PROMPT = `당신은 여행 정보 번역기입니다.
 입력으로 주어진 한국어 관광지 정보(title, address, openTime, overview,
-restDate, parking, regionName)를 요청된 언어로 자연스럽게 번역하세요. 원문에
-없는 사실을 추가하거나 지어내지 말고 번역만 하세요. 값이 비어 있으면 빈
-문자열을 그대로 반환하세요.`;
+restDate, parking, regionName)를 요청된 언어로 자연스럽게 번역하세요. 이 값들은
+모두 실제 등록된 관광지의 공식 정보이며 번역 목적으로만 쓰입니다. 상호명이
+비속어처럼 들리거나 독특하더라도(예: 동물·음식 이름을 재치있게 쓴 카페
+이름) 정상적인 실제 상호이니 다른 상호와 동일하게 번역하거나 음역하세요 —
+민감하다고 판단해 응답을 비우거나 거부하지 마세요. 원문에 없는 사실을
+추가하거나 지어내지 말고 번역만 하세요. 입력값이 원래 비어 있는 필드만 빈
+문자열로 반환하고, 값이 있는 필드는 절대 빈 문자열로 반환하지 마세요.
+title처럼 뜻이 불분명한 고유명사·상호명이라 문자 그대로 번역하기 어려우면
+자연스럽게 로마자로 음역하세요 — 번역을 포기하고 빈 값이나 원문을 그대로
+반환하지 마세요.`;
 
 const PLACE_TRANSLATION_LANG_NAMES = Object.freeze({
   en: 'English',
@@ -228,9 +244,15 @@ function parseTranslationJson(content) {
   return value;
 }
 
+// item이 null이어도 두 가지 서로 다른 상황을 구분해야 한다: mock 모드처럼
+// "지금 이 환경에서는 애초에 시도하지 않는다"는 안정적인 상태는 캐시해도
+// 되지만, 실제로 LLM을 호출했는데 오류가 나거나(레이트리밋 등 일시적 문제)
+// 모든 필드를 빈 값으로 반환한 경우(실측: '고양이똥'처럼 특이한 상호명에서
+// 드물게 발생)는 캐시하면 TTL 동안 계속 원문만 나오게 된다 — 이런 건
+// cacheable:false로 표시해 다음 조회에서 바로 다시 시도하게 한다.
 async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
   if (!generator || generator.isMockMode(process.env)) {
-    return null;
+    return { item: null, cacheable: true };
   }
   try {
     // overview는 장문일 수 있어 다른 필드보다 넉넉한 출력 토큰이 필요하다.
@@ -271,14 +293,17 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
       }
     }
     if (Object.keys(fields).length === 0) {
-      return null;
+      logger?.warn?.('장소 기계번역이 모든 필드를 빈 값으로 반환해 다음 조회에서 다시 시도합니다.', {
+        contentId: korItem?.contentId,
+      });
+      return { item: null, cacheable: false };
     }
-    return fields;
+    return { item: fields, cacheable: true };
   } catch (error) {
-    logger?.warn?.('장소 기계번역에 실패해 국문 정보로 대체합니다.', {
+    logger?.warn?.('장소 기계번역에 실패해 국문 정보로 대체하고 다음 조회에서 다시 시도합니다.', {
       errorName: error?.name || 'Error',
     });
-    return null;
+    return { item: null, cacheable: false };
   }
 }
 
@@ -547,34 +572,68 @@ function createCachedPlacesService(options = {}) {
       }
       : null;
 
-    if (isFresh(cached, timestamp)) {
+    // 지역 목록 화면은 요약 정보(overview 등 상세 전용 필드가 항상 비어있는
+    // PlaceSummary)만 갖고 있어, 같은 장소를 목록에서 먼저 열람하면 그
+    // 얕은 국문 정보로만 번역한 캐시가 먼저 저장될 수 있다. 그 캐시가
+    // "신선"하다는 이유로 계속 재사용되면, 나중에 상세 화면이 overview 등
+    // 실제로 값이 있는 국문 정보를 갖고 다시 요청해도 번역이 채워지지
+    // 않는다. 지금 korItem에는 있는데 캐시된 번역에는 없는 필드가 있으면
+    // 얕은 캐시로 보고 다시 번역한다. title은 특히 중요하니 늘 함께 본다 —
+    // LLM이 특이한 상호명(예: 단어 하나짜리 고유명사)을 한 번은 자신 없어
+    // 빈 값으로 남겨도, 다음 조회에서 다시 시도할 기회를 준다.
+    const cacheIsThin = Boolean(cached?.item) && [...DETAIL_ONLY_TRANSLATION_FIELDS, 'title'].some(
+      field => korItem?.[field] && !cached.item[field],
+    );
+
+    if (isFresh(cached, timestamp) && !cacheIsThin) {
       return { item: cached.item, cacheStatus: CACHE_STATUS.HIT };
     }
 
     return runSingleFlight(`detail:${lang}:${contentId}`, async () => {
       try {
-        const matchedContentId = await findTranslatedContentId(korItem, lang);
-        let item = matchedContentId
-          ? await upstream.getPlaceDetailTranslated(lang, { contentId: matchedContentId })
-          : null;
-        // TourAPI 번역 서비스에 아예 등록되지 않은(매칭 후보가 없는) 장소는
-        // 검증된 국문 title·address·openTime을 LLM으로 번역해 채운다.
-        if (!item) {
-          item = await translatePlaceFieldsWithLlm(korItem, lang, llm, logger);
+        // TourAPI 번역 서비스 쪽 매칭 조회(findTranslatedContentId)나 상세
+        // 조회(getPlaceDetailTranslated) 자체가 실패(레이트리밋·일시 장애
+        // 등)해도, 그 이유만으로 LLM 폴백 기회까지 통째로 날리면 안 된다 —
+        // LLM 번역은 TourAPI 번역 서비스 없이도 이미 검증된 국문 정보만
+        // 있으면 되므로, 이 두 호출의 실패는 여기서만 흡수하고 "매칭 없음"
+        // 취급해 아래에서 LLM으로 계속 진행한다.
+        let item = null;
+        try {
+          const matchedContentId = await findTranslatedContentId(korItem, lang);
+          item = matchedContentId
+            ? await upstream.getPlaceDetailTranslated(lang, { contentId: matchedContentId })
+            : null;
+        } catch (matchError) {
+          logger?.warn?.('TourAPI 번역 후보 조회에 실패해 매칭 없음으로 처리하고 LLM으로 넘어갑니다.', {
+            errorName: matchError?.name || 'Error',
+          });
+          item = null;
+        }
+        // TourAPI 매칭 후보 자체가 없을 때뿐 아니라, 후보는 찾았는데 그
+        // 번역 레코드에 title이 비어있는(실측: 가나아트센터 일본어 레코드)
+        // 경우도 쓸모가 없기는 마찬가지다 — title 없는 "성공"을 그대로
+        // 쓰지 않고 LLM 번역으로 넘어간다.
+        let cacheable = true;
+        if (!item || !item.title) {
+          const llmResult = await translatePlaceFieldsWithLlm(korItem, lang, llm, logger);
+          item = llmResult.item;
+          cacheable = llmResult.cacheable;
         }
         const refreshedAt = now();
-        await writeCache(
-          'saveDetailTranslation',
-          {
-            contentId,
-            lang,
-            item,
-            cachedAt: new Date(refreshedAt),
-            expiresAt: new Date(refreshedAt + config.ttlMs),
-          },
-          cacheOperation,
-          refreshedAt,
-        );
+        if (cacheable) {
+          await writeCache(
+            'saveDetailTranslation',
+            {
+              contentId,
+              lang,
+              item,
+              cachedAt: new Date(refreshedAt),
+              expiresAt: new Date(refreshedAt + config.ttlMs),
+            },
+            cacheOperation,
+            refreshedAt,
+          );
+        }
         return {
           item,
           cacheStatus: item ? CACHE_STATUS.REFRESHED : CACHE_STATUS.BYPASS,
