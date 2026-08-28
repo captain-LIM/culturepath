@@ -257,17 +257,59 @@ const CJK_SCRIPT_PATTERN = /[぀-ヿ一-鿿]/;
 
 // OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 드물게 ja/zh
 // 요청인데도 응답 전체가 영어로 나오는 경우가 있다(실측: '대학천
-// 책방거리'). overview·address처럼 원문에 값이 있는 문장형 필드의 번역
-// 결과에 목표 언어(일본어/중국어) 문자가 하나도 없으면 통째로 다른
-// 언어(영어)로 답한 것으로 보고 재시도가 필요하다고 판단한다.
+// 책방거리'). overview처럼 원문에 값이 있는 문장형 필드의 번역 결과에
+// 목표 언어(일본어/중국어) 문자가 하나도 없으면 통째로 다른 언어(영어)로
+// 답한 것으로 보고 재시도가 필요하다고 판단한다. address는 일부러
+// 빼둔다 — 도로명 주소는 정상적인 번역에서도 로마자로만 표기되는 게
+// 흔해서(실측: 테라로사 본점의 일본어 주소가 '25, Hyeoncheon-gil,
+// Gujeong-myeon, Gangneung-si') 이 검사에 넣으면 정상 번역까지 계속
+// 재시도/미캐시 상태에 빠뜨린다.
 function needsCjkRetranslation(lang, korItem, fields) {
   if (lang !== 'ja' && lang !== 'zh') {
     return false;
   }
-  return ['overview', 'address'].some(field => {
+  const source = korItem?.overview;
+  const translated = fields.overview;
+  return Boolean(source) && Boolean(translated) && !CJK_SCRIPT_PATTERN.test(translated);
+}
+
+// 원문 필드가 한글을 포함하는데 번역 결과가 그 원문과 완전히 동일하면,
+// 그 필드만 번역/음역하지 못하고 그대로 되돌려보낸 것으로 본다(실측:
+// '소수책방'의 parking이 중국어 요청에서 title·overview는 번역됐는데
+// parking만 '가능'으로 그대로 남은 사례). openTime처럼 원래 한글이 없는
+// 필드는 번역해도 원문과 같을 수 있어(예: 숫자만 있는 시간) '원문에
+// 한글이 있었는가'까지 함께 확인해 오탐을 막는다. getTranslatedDetail의
+// 캐시 신선도 검사와 여기 재시도 판단이 같은 기준을 쓰도록 공유한다.
+function hasUntranslatedKoreanField(korItem, fields) {
+  return TRANSLATION_OVERLAY_FIELDS.some(field => {
     const source = korItem?.[field];
-    const translated = fields[field];
-    return Boolean(source) && Boolean(translated) && !CJK_SCRIPT_PATTERN.test(translated);
+    const translated = fields?.[field];
+    return Boolean(source) && translated === source && /[가-힣]/.test(source);
+  });
+}
+
+// 괄호로 감싼 한글 원어병기(예: '北村韓屋村（북촌한옥마을）')는 이 앱이
+// 이미 여러 곳에서 정상으로 취급하는 패턴이라 오탐을 막기 위해 지운다.
+const PAREN_GROUP_PATTERN = /[（(][^）)]*[）)]/g;
+const HANGUL_PATTERN = /[가-힣]/;
+
+function stripParenGroups(text) {
+  return String(text || '').replace(PAREN_GROUP_PATTERN, '');
+}
+
+// 괄호 밖에 한글이 남아 있으면 번역이 불완전한 것으로 본다. 실측 두
+// 가지: (1) '江陵船桥庄강릉 선교장'처럼 번역문과 한글 원문을 괄호 없이
+// 그냥 이어붙인 경우, (2) 아주 긴 overview 중간에 번역되지 않은 한글
+// 문장 한 토막이 그대로 섞여 나온 경우(안동 하회마을 중국어). 위
+// hasUntranslatedKoreanField는 "필드 전체가 원문과 동일"할 때만 잡아내
+// 이 두 사례를 놓치므로 별도로 검사한다.
+function hasUnwrappedKoreanText(lang, fields) {
+  if (lang === 'ko') {
+    return false;
+  }
+  return TRANSLATION_OVERLAY_FIELDS.some(field => {
+    const translated = fields?.[field];
+    return Boolean(translated) && HANGUL_PATTERN.test(stripParenGroups(translated));
   });
 }
 
@@ -310,6 +352,35 @@ async function requestPlaceTranslation(korItem, lang, generator, reminder) {
   return fields;
 }
 
+// 지금까지 실측한 번역 실패 유형 세 가지를 한 번에 판단한다: (1) 문장형
+// 필드가 통째로 다른 언어(영어)로 나온 경우, (2) 특정 필드가 한글
+// 원문과 완전히 동일하게 그대로 남은 경우(실측: '소수책방' parking이
+// 중국어에서만 미번역), (3) 번역문에 괄호로 감싸지 않은 한글이 섞여
+// 나온 경우(실측: '강릉 선교장' 중국어 title이 번역문+원문을 괄호 없이
+// 이어붙임, '안동 하회마을' 중국어 overview 중간에 번역 안 된 한글
+// 문장이 그대로 섞임).
+// LLM이 방금 생성한 fields에 대해서만 쓴다 — needsCjkRetranslation은
+// "번역문에 목표 언어 문자가 하나도 없으면 통째로 다른 언어로 답한
+// 것"이라는 가정에 기대는데, TourAPI 자체 번역 서비스(getTranslatedDetail
+// 이 이 함수와 별개로 우선 시도하는 경로)가 내려주는 주소는 도로명을
+// 로마자로만 표기하는 경우가 흔해(예: '25, Hyeoncheon-gil, Gujeong-myeon,
+// Gangneung-si') 정상인데도 걸릴 수 있다. 그래서 이 판단은 방금 생성한
+// LLM 응답을 즉시 재시도할지 결정할 때만 쓰고, 캐시에 이미 저장된
+// 값(‑ TourAPI 매칭 결과일 수도 있는 값)의 신선도 판단에는 쓰지 않는다.
+function translationIsIncomplete(lang, korItem, fields) {
+  return needsCjkRetranslation(lang, korItem, fields) ||
+    hasUntranslatedKoreanField(korItem, fields) ||
+    hasUnwrappedKoreanText(lang, fields);
+}
+
+// 캐시된 번역의 신선도를 볼 때는 위 needsCjkRetranslation을 빼고, 한글이
+// 그대로 새어나온 두 가지 확실한 신호(필드 전체가 원문과 동일함 / 괄호
+// 밖에 한글이 남아 있음)만 본다.
+function cachedTranslationLooksStale(lang, korItem, cachedFields) {
+  return hasUntranslatedKoreanField(korItem, cachedFields) ||
+    hasUnwrappedKoreanText(lang, cachedFields);
+}
+
 // item이 null이어도 두 가지 서로 다른 상황을 구분해야 한다: mock 모드처럼
 // "지금 이 환경에서는 애초에 시도하지 않는다"는 안정적인 상태는 캐시해도
 // 되지만, 실제로 LLM을 호출했는데 오류가 나거나(레이트리밋 등 일시적 문제)
@@ -325,8 +396,12 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
     // OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 이 검사에
     // 걸리는 응답이 재시도에서도 다시 실패할 수 있다(실측: '대학천
     // 책방거리'가 3번 중 1번꼴로 영어로 나옴). 최대 두 번까지 재시도한다.
-    for (let attempt = 0; attempt < 2 && needsCjkRetranslation(lang, korItem, fields); attempt += 1) {
-      logger?.warn?.('장소 기계번역이 목표 언어가 아닌 영어로 응답해 재시도합니다.', {
+    for (
+      let attempt = 0;
+      attempt < 2 && translationIsIncomplete(lang, korItem, fields);
+      attempt += 1
+    ) {
+      logger?.warn?.('장소 기계번역 결과가 불완전해 재시도합니다.', {
         contentId: korItem?.contentId,
         lang,
         attempt: attempt + 1,
@@ -335,7 +410,7 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
         korItem,
         lang,
         generator,
-        '이전 응답이 목표 언어가 아닌 다른 언어(예: 영어)로 나왔습니다. title을 제외한 모든 필드를 반드시 목표 언어의 문장으로 다시 번역하세요.',
+        '이전 응답이 불완전했습니다. 응답 전체가 목표 언어가 아닌 다른 언어(예: 영어)로 나왔거나, 일부 필드가 한글 원문 그대로 남아 있었거나, 번역문에 괄호로 감싸지 않은 한글이 섞여 있었습니다. title을 제외한 모든 필드를 반드시 목표 언어로 다시 번역하고, 원문 한글을 남길 때는 반드시 괄호 안에만 넣으세요.',
       );
       if (Object.keys(retried).length > 0) {
         fields = retried;
@@ -347,12 +422,12 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
       });
       return { item: null, cacheable: false };
     }
-    // 재시도를 다 써도 여전히 목표 언어가 아니면, 이 결과를 캐시에
-    // 박제하지 않는다 — 이번 요청엔 아쉬운 대로 보여주되, 다음 조회에서
-    // 바로 다시 시도할 기회를 남겨 둔다.
-    const cacheable = !needsCjkRetranslation(lang, korItem, fields);
+    // 재시도를 다 써도 여전히 불완전하면, 이 결과를 캐시에 박제하지
+    // 않는다 — 이번 요청엔 아쉬운 대로 보여주되, 다음 조회에서 바로 다시
+    // 시도할 기회를 남겨 둔다.
+    const cacheable = !translationIsIncomplete(lang, korItem, fields);
     if (!cacheable) {
-      logger?.warn?.('재시도 후에도 목표 언어가 아니어서 이번 결과는 캐시하지 않습니다.', {
+      logger?.warn?.('재시도 후에도 번역이 불완전해 이번 결과는 캐시하지 않습니다.', {
         contentId: korItem?.contentId,
         lang,
       });
@@ -644,19 +719,19 @@ function createCachedPlacesService(options = {}) {
       field => korItem?.[field] && !cached.item[field],
     );
 
-    // title이 한글을 포함하는데 캐시된 번역 title이 국문 원문과 완전히
-    // 동일하면, LLM이 그 상호명을 번역/음역하지 못하고 그대로 되돌려보낸
-    // 것으로 본다(실측: '대학천 책방거리', '소수책방'). 이 상태를 "신선"
-    // 하다고 계속 재사용하면 해당 언어에서 영원히 원문 그대로 보이므로,
-    // 다음 조회에서 다시 번역을 시도하도록 얕은 캐시로 취급한다. 다른
-    // 필드(openTime 등)는 원래 한글이 없어 번역해도 원문과 같을 수 있어
-    // 이 검사에서 제외한다.
-    const titleLooksUntranslated = Boolean(cached?.item) &&
-      Boolean(korItem?.title) &&
-      cached.item.title === korItem.title &&
-      /[가-힣]/.test(korItem.title);
+    // 캐시된 번역에 한글이 그대로 새어나온 필드가 있으면(필드 전체가
+    // 원문과 동일하거나, 괄호 밖에 한글이 남아 있으면) LLM이 그 부분을
+    // 번역/음역하지 못하고 그대로 되돌려보낸 것으로 본다. 이 상태를
+    // "신선"하다고 계속 재사용하면 해당 언어에서 영원히 원문 그대로
+    // 보이므로, 다음 조회에서 다시 번역을 시도하도록 얕은 캐시로
+    // 취급한다. needsCjkRetranslation은 여기서 쓰지 않는다 — 캐시된
+    // 값은 TourAPI 자체 번역일 수도 있는데, 그쪽 주소는 도로명을
+    // 로마자로만 표기해 정상인데도 "목표 언어 문자가 없다"에 걸리기
+    // 때문이다(translationIsIncomplete 주석 참고).
+    const cachedTranslationIsStale = Boolean(cached?.item) &&
+      cachedTranslationLooksStale(lang, korItem, cached.item);
 
-    if (isFresh(cached, timestamp) && !cacheIsThin && !titleLooksUntranslated) {
+    if (isFresh(cached, timestamp) && !cacheIsThin && !cachedTranslationIsStale) {
       return { item: cached.item, cacheStatus: CACHE_STATUS.HIT };
     }
 

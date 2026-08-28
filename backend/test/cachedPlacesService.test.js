@@ -498,6 +498,65 @@ test('translation overlay matches the nearby candidate whose title overlaps, not
   assert.equal(overlaid.title, 'Ojukheon House');
 });
 
+test('keeps a cached TourAPI-sourced address romanized without treating it as stale', async () => {
+  // TourAPI 자체 번역 서비스는 도로명 주소를 한글도 목표 언어 문자도
+  // 아닌 순수 로마자로만 내려주는 경우가 흔하다(실측: 테라로사 본점의
+  // 일본어 주소가 '25, Hyeoncheon-gil, Gujeong-myeon, Gangneung-si'). 이건
+  // 정상 데이터인데, 캐시 신선도 검사가 "목표 언어 문자가 하나도
+  // 없다"는 기준(needsCjkRetranslation)까지 함께 쓰면 매번 다시 캐시
+  // 미스로 취급해 불필요한 LLM 재번역을 유발한다. 캐시 신선도는 한글이
+  // 새어나온 경우만 봐야 한다.
+  const store = new Map();
+  let matchCalls = 0;
+  const korItem = {
+    contentId: '1950195',
+    title: '테라로사 본점',
+    address: '강원 강릉시 구정면 현천길 25',
+    latitude: 37.6960944624,
+    longitude: 128.8918383262,
+  };
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => {
+        matchCalls += 1;
+        return {
+          items: [{
+            contentId: 'matched',
+            title: 'Terarosa Coffee Factory (테라로사 본점)',
+            latitude: korItem.latitude,
+            longitude: korItem.longitude,
+          }],
+        };
+      },
+      getPlaceDetailTranslated: async (lang, { contentId }) => ({
+        contentId,
+        title: 'Terarosa Coffee Factory',
+        address: '25, Hyeoncheon-gil, Gujeong-myeon, Gangneung-si',
+      }),
+    },
+  });
+
+  const [first] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(first.address, '25, Hyeoncheon-gil, Gujeong-myeon, Gangneung-si');
+  assert.equal(matchCalls, 1);
+
+  // 캐시가 "신선"하다고 정확히 판단되면 TourAPI 매칭을 다시 시도하지
+  // 않는다.
+  const [second] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(second.address, '25, Hyeoncheon-gil, Gujeong-myeon, Gangneung-si');
+  assert.equal(matchCalls, 1);
+});
+
 test('translation overlay keeps the Korean item when no nearby candidate title matches', async () => {
   const korItem = {
     contentId: '2764935',
@@ -759,19 +818,145 @@ test('retries LLM translation when the cached title was never actually translate
 
   const korItem = { contentId: '132202', title: '대학천 책방거리' };
 
+  // 첫 조회: title이 계속 원문 그대로라 요청 안에서 최대치(2번)까지
+  // 즉시 재시도하지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
   const [first] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(first.title, '대학천 책방거리');
-  assert.equal(generateCalls.length, 1);
+  assert.equal(generateCalls.length, 3);
 
   shouldTranslateTitle = true;
   const [second] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(second.title, 'Daehakcheon Bookstore Street');
-  assert.equal(generateCalls.length, 2);
+  assert.equal(generateCalls.length, 4);
 
-  // 이제 실제로 번역됐으니 더는 재시도하지 않는다.
+  // 이제 실제로 번역됐고 캐시됐으니 더는 재시도하지 않는다.
   const [third] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(third.title, 'Daehakcheon Bookstore Street');
-  assert.equal(generateCalls.length, 2);
+  assert.equal(generateCalls.length, 4);
+});
+
+test('retries when a non-title field (e.g. parking) was left untranslated, identical to Korean', async () => {
+  // 실측 사례: '소수책방'의 parking 필드가 중국어 요청에서 title·overview
+  // 등 다른 필드는 다 번역됐는데 parking만 '가능'(국문 원문)으로 그대로
+  // 남았다. title만 검사하던 기존 로직은 이 사례를 얕은 캐시로 보지
+  // 못해 영원히 캐시했다 — TRANSLATION_OVERLAY_FIELDS 전체로 검사
+  // 범위를 넓혀야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let shouldTranslateParking = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        const { place: input } = JSON.parse(messages[0].content);
+        return {
+          content: JSON.stringify({
+            title: 'Sosubookstore',
+            address: '',
+            openTime: '',
+            overview: '',
+            restDate: '',
+            parking: shouldTranslateParking ? '可能' : input.parking,
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = { contentId: '2989636', title: '소수책방', parking: '가능' };
+
+  // 첫 조회: parking이 계속 원문 그대로라 요청 안에서 최대치(2번)까지
+  // 즉시 재시도하지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
+  const [first] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(first.parking, '가능');
+  assert.equal(generateCalls.length, 3);
+
+  shouldTranslateParking = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(second.parking, '可能');
+  assert.equal(generateCalls.length, 4);
+
+  // 이제 실제로 번역됐고 캐시됐으니 더는 재시도하지 않는다.
+  const [third] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(third.parking, '可能');
+  assert.equal(generateCalls.length, 4);
+});
+
+test('retries when a translated field has unwrapped Korean text mixed in (no parens)', async () => {
+  // 실측 사례 두 가지: (1) '강릉 선교장'의 중국어 title이 번역문과 한글
+  // 원문을 괄호 없이 그냥 이어붙여 '江陵船桥庄강릉 선교장'으로 나옴,
+  // (2) '안동 하회마을'의 아주 긴 중국어 overview 중간에 번역되지 않은
+  // 한글 문장 한 토막이 그대로 섞여 나옴. 두 경우 모두 필드 전체가
+  // 원문과 동일하진 않아(hasUntranslatedKoreanField로는 못 잡음) 괄호
+  // 밖 한글 잔존 여부를 따로 봐야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let isFixed = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        return {
+          content: JSON.stringify({
+            title: isFixed ? '江陵船桥庄（강릉 선교장）' : '江陵船桥庄강릉 선교장',
+            address: '',
+            openTime: '',
+            overview: '',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = { contentId: '125800', title: '강릉 선교장' };
+
+  // 첫 조회: title에 괄호 없는 한글이 섞여 있어 요청 안에서 재시도까지
+  // 다 써보지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
+  const [first] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(first.title, '江陵船桥庄강릉 선교장');
+  assert.equal(generateCalls.length, 3);
+
+  isFixed = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(second.title, '江陵船桥庄（강릉 선교장）');
+  assert.equal(generateCalls.length, 4);
+
+  // 이제 괄호로 올바르게 감쌌으니 더는 재시도하지 않는다.
+  const [third] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(third.title, '江陵船桥庄（강릉 선교장）');
+  assert.equal(generateCalls.length, 4);
 });
 
 test('retries once when the LLM answers ja/zh requests entirely in English', async () => {
