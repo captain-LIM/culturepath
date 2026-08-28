@@ -432,6 +432,35 @@ test('returns related TourAPI place cards with cache status and a structured 404
   });
 });
 
+test('translates related TourAPI place cards for non-Korean locales', async () => {
+  const overlayCalls = [];
+  const controller = createPlacesController({
+    relatedPlacesService: {
+      getRelatedPlaces: async () => ({
+        items: [place({ contentId: '2', title: '연관 장소' })],
+        pagination: { pageNo: 1, numOfRows: 5, totalCount: 1 },
+        cacheStatus: 'HIT',
+      }),
+    },
+    placesService: {
+      async attachTranslationOverlay(items, lang) {
+        overlayCalls.push(lang);
+        return items.map(item => ({ ...item, title: 'Related Place' }));
+      },
+    },
+  });
+  const res = createResponse();
+
+  await controller.getRelatedPlaces(
+    { params: { id: '1' }, headers: { 'accept-language': 'en' } },
+    res,
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(overlayCalls, ['en']);
+  assert.equal(res.body[0].title, 'Related Place');
+});
+
 test('maps internal external-api failures to stable public errors', () => {
   const cases = [
     ['VALIDATION_ERROR', 400, 'VALIDATION_ERROR', false],

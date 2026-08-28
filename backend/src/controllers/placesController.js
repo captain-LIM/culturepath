@@ -208,6 +208,7 @@ function createPlacesController(options = {}) {
 
   async function getRelatedPlaces(req, res) {
     try {
+      const lang = resolveLang(req);
       const result = await relatedService.getRelatedPlaces({
         contentId: req.params?.id,
       });
@@ -219,7 +220,12 @@ function createPlacesController(options = {}) {
         });
       }
       setCacheStatusHeader(res, result.cacheStatus);
-      return res.json(result.items.map(toPublicPlace));
+      // 연관 장소 목록은 국문으로만 캐시되어 있어, 목록 화면/상세 화면과
+      // 같은 번역 오버레이를 요청 시점에 덧씌워야 다른 언어에서도 보인다.
+      const items = lang !== 'ko'
+        ? await service.attachTranslationOverlay(result.items, lang)
+        : result.items;
+      return res.json(items.map(toPublicPlace));
     } catch (error) {
       const response = publicError(error);
       if (response.status === 500) {
