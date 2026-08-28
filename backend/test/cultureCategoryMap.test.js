@@ -194,3 +194,38 @@ test('keeps one deterministic positive fixture for every supported culture', () 
     assert.ok(classifyTourPlace(item).includes(culture), culture);
   }
 });
+
+test('relaxed mode only reopens known-but-wrong-bucket top-level codes', () => {
+  // FD(음식) top-level은 우리가 아는 그룹이지만 그 후보 목록에
+  // 독립서점·책방은 없다 — relaxed에서만 다시 열어준다.
+  assert.deepEqual(
+    classifyTourPlace(
+      { title: '책방 카페', lclsSystmCodes: ['FD', 'FD05'] },
+      { relaxed: true },
+    ),
+    ['독립서점·책방', '커피·카페'],
+  );
+  assert.deepEqual(
+    classifyTourPlace({ title: '책방 카페', lclsSystmCodes: ['FD', 'FD05'] }),
+    ['커피·카페'],
+  );
+});
+
+test('relaxed mode never reopens a top-level code outside every known group', () => {
+  // 'NA'처럼 우리가 아예 추적하지 않는 top-level 코드는 문화와 무관함이
+  // 이미 공식분류로 확인된 것이므로 relaxed에서도 절대 통과시키지 않는다.
+  assert.deepEqual(
+    classifyTourPlace({ title: '음악분수', lclsSystm1: 'NA' }, { relaxed: true }),
+    [],
+  );
+});
+
+test('relaxed mode still excludes franchise branch names for 독립서점·책방', () => {
+  for (const title of ['이마트 수서점', '올리브영 연신내범서점', '교보문고 이화여대 교내서점']) {
+    assert.deepEqual(
+      classifyTourPlace({ title }, { relaxed: true }).includes('독립서점·책방'),
+      false,
+      title,
+    );
+  }
+});

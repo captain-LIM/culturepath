@@ -34,8 +34,10 @@ const CONTENT_ID_OVERRIDES = Object.freeze({
 });
 
 // culture만 지정되고 q가 없는 검색에서 searchKeyword2를 직접 호출할 때 쓰는
-// 대표 검색어. KEYWORD_RULES·TourAPI 공식 소분류 명칭과 겹치는 안전한
-// 단어만 사용한다.
+// 대표 검색어들. 문화 카테고리 하나당 검색어 하나만 쓰면 그 단어가 제목에
+// 없는 실제 장소들이 후보에서 통째로 빠져 결과가 지나치게 적어진다. 문화별로
+// 서로 다른 관점의 대표어 2개를 병렬 검색해 후보 폭을 넓힌다. KEYWORD_RULES·
+// TourAPI 공식 소분류 명칭과 겹치는 안전한 단어만 사용한다.
 const CULTURE_SEARCH_KEYWORDS = Object.freeze({
   '독립서점·책방': Object.freeze(['서점', '책방']),
   '문학': Object.freeze(['문학관', '문학']),
@@ -84,8 +86,23 @@ const CULTURE_OFFICIAL_QUERY_CODES = Object.freeze({
   }),
 });
 
+// 대형마트·올리브영·백화점 같은 프랜차이즈 지점명이 지명+'점'으로 끝날 때
+// (예: '이마트 수서점', '올리브영 연신내범서점', 'NC백화점 강서점') 그
+// 지명의 마지막 음절이 우연히 '서'로 끝나면 '서점'이라는 부분 문자열과
+// 그대로 일치해 버려 실사용에서 다수의 오탐이 확인됐다. '독립'서점이라는
+// 카테고리 취지상 체인점은 애초에 대상이 아니므로, 잘 알려진 프랜차이즈
+// 표기가 제목에 포함되면 서점·책방 키워드가 있어도 매칭에서 제외한다.
+const FRANCHISE_EXCLUSION_LOOKAHEAD =
+  '(?!.*(?:이마트|홈플러스|롯데마트|다이소|올리브영|ABC\\s*마트|GS25|CU|세븐일레븐|스타벅스|투썸플레이스|백화점|아울렛|편의점|교보문고|영풍문고))';
+
 const KEYWORD_RULES = Object.freeze([
-  ['독립서점·책방', /독립\s*서점|서점|책방|북스테이|헌책방|고서점/i],
+  [
+    '독립서점·책방',
+    new RegExp(
+      `^${FRANCHISE_EXCLUSION_LOOKAHEAD}.*(?:독립\\s*서점|서점|책방|북스테이|헌책방|고서점)`,
+      'i',
+    ),
+  ],
   ['문학', /문학|문학관|작가|소설가|시인|박경리|유치환|청마/i],
   ['음악', /음악|공연장|콘서트|국악|오페라|재즈|뮤직/i],
   ['전통주·양조장', /전통주|막걸리|소주|양조장|브루어리|주조장|와이너리|술도가/i],
@@ -159,10 +176,22 @@ function getCultureMatchStrengths(item, options = {}) {
   const allowedCategories = TOP_LEVEL_CANDIDATES[topLevelCode];
   const matches = new Map();
 
+  // relaxed: 지역·문화 조합에 결과가 너무 적을 때만 쓰는 보조 통과 기준.
+  // top-level 코드가 우리가 아는 문화 인접 그룹(FD/VE/HS/SH/EX/AC)인데
+  // 그 그룹의 후보 목록에 이 카테고리만 빠져있는 경우에 한해 게이트를
+  // 건너뛴다 — 예를 들어 카페/찻집(top-level FD)으로 분류된 장소를
+  // 독립서점 후보로도 다시 볼 때. top-level 코드가 아예 우리 그룹에 없는
+  // 경우('NA' 등, 문화와 무관함이 이미 확인된 분류)는 relaxed에서도
+  // 절대 통과시키지 않는다. 프랜차이즈 제외(FRANCHISE_EXCLUSION_LOOKAHEAD)는
+  // 정규식 자체에 내장돼 있어 relaxed에서도 그대로 적용된다.
+  const skipTopLevelGate = options.relaxed === true;
+
   for (const [category, pattern] of KEYWORD_RULES) {
-    const categoryAllowed = hasClassificationCode
-      ? allowedCategories?.has(category) === true
-      : true;
+    const categoryAllowed = !hasClassificationCode
+      ? true
+      : allowedCategories
+        ? (allowedCategories.has(category) || skipTopLevelGate)
+        : false;
     if (categoryAllowed && pattern.test(title)) {
       matches.set(category, CULTURE_MATCH_STRENGTH.TITLE_KEYWORD);
     }

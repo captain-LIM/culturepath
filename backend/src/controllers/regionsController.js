@@ -1,14 +1,19 @@
 const regionScoreService = require('../services/regionScoreService');
 const cachedPlacesService = require('../services/cachedPlacesService');
 const coursePlaceUsageRepository = require('../repositories/coursePlaceUsageRepository');
+const { getRegionDefinition } = require('../config/regionCatalog');
 const {
+  CULTURE_SEARCH_KEYWORDS,
   DEFAULT_CULTURE_RESULTS,
   MAX_CULTURE_PAGE,
+  MAX_CULTURE_RESULTS,
 } = require('../config/cultureCategoryMap');
 const {
+  CULTURE_RESULT_FLOOR,
   collectAreaPlacePage,
-  collectCulturePlacePage,
+  combineCultureCacheStatus,
   isSupportedCulture,
+  selectPlacesForCulture,
 } = require('../services/culturePlaceSelection');
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { resolveLang } = require('../utils/resolveLang');
@@ -112,6 +117,13 @@ function setSpotPaginationHeaders(res, pagination, hasMore) {
   }
 }
 
+function localizedRegionName(definition, lang) {
+  if (lang === 'en' && definition?.nameEn) return definition.nameEn;
+  if (lang === 'ja' && definition?.nameJa) return definition.nameJa;
+  if (lang === 'zh' && definition?.nameZh) return definition.nameZh;
+  return definition?.name || '';
+}
+
 function toPublicSpot(place) {
   return {
     contentId: place.contentId,
@@ -126,6 +138,116 @@ function toPublicSpot(place) {
     thumbnailUrl: place.thumbnailUrl ?? null,
     publicCourseCount: place.publicCourseCount ?? null,
   };
+}
+
+// "문화별 유명한 지역" 목록은 관련도 높은 관광지가 이 개수 미만인
+// 지역은 아예 보여주지 않는다 — 큐레이션 문구만 그럴듯하고 실제로는
+// 매칭되는 장소가 거의 없는 지역이 추천 목록에 끼는 걸 막는다.
+const MIN_RELEVANT_REGION_SPOT_COUNT = 3;
+
+// 문화 하나당 지역이 이 개수보다 적게 남으면, 손으로 큐레이션해둔
+// 후보만으로는 부족하다는 뜻이다 — 나머지 등록 지역도 실시간으로
+// 확인해서 채운다.
+const MIN_REGIONS_PER_CULTURE = 3;
+
+// collectCulturePlacePage는 "요청한 pageNo 하나당 새 매칭이 pageSize개씩
+// 나온다"고 가정하고 오프셋을 (pageNo-1)*pageSize로 계산한다. 문학·음악처럼
+// 실제 매칭이 희귀한 카테고리는 이 가정이 깨져서, 뒤쪽 원본 페이지에서
+// 분명히 찾아낸 매칭인데도 그 오프셋 밖으로 밀려나 어떤 페이지 응답에도
+// 나타나지 않고 사라져 버린다 (예: 통영의 '박경리 기념관'이 문학 필터에서
+// 이렇게 누락되는 걸 실제로 확인했다 — 3번째 원본 페이지에서 발견은 되지만
+// 오프셋 100~149 구간에는 아무것도 없어 빈 배열로만 응답됨). 원본 후보를
+// 최대 MAX_CULTURE_PAGE 페이지까지 전부 모아 한 번에 분류·선별하면 이
+// 오프셋 불일치가 생기지 않는다 — 이후 페이지네이션은 이 완전한 목록을
+// 그대로 잘라서 쓰면 되므로 항상 정확하다.
+async function fetchAllRawPages(fetchPage, baseParams, logger) {
+  const items = [];
+  let cacheStatus;
+  let firstPageError = null;
+
+  for (let pageNo = 1; pageNo <= MAX_CULTURE_PAGE; pageNo += 1) {
+    let result;
+    try {
+      result = await fetchPage({ ...baseParams, pageNo, numOfRows: MAX_CULTURE_RESULTS });
+    } catch (error) {
+      if (pageNo === 1) {
+        firstPageError = error;
+      }
+      logger?.warn?.('원본 장소 후보 일부를 불러오지 못했습니다.', {
+        errorName: error?.name || 'Error',
+      });
+      break;
+    }
+    items.push(...result.items);
+    cacheStatus = combineCultureCacheStatus(cacheStatus, result.cacheStatus);
+    if (result.items.length < MAX_CULTURE_RESULTS) {
+      break;
+    }
+  }
+
+  // 첫 페이지부터 실패해서 이 소스에서 아무것도 못 건진 경우에만
+  // "이 소스는 완전히 실패했다"로 표시한다 (collectAllCulturePlaces가
+  // 모든 소스가 이렇게 실패했을 때만 에러를 전파하도록 쓴다).
+  return { items, cacheStatus, error: items.length === 0 ? firstPageError : null };
+}
+
+// 문화 필터로 실제 매칭되는 관광지를 전부(상한 없음) 모은다.
+// getSpotsByRegion의 목록과 countLiveCulturePlaces의 배지 개수가
+// 이 함수 하나로 항상 일치한다.
+async function collectAllCulturePlaces(placesService, tourCodes, cultureName, logger) {
+  const baseRequests = Array.isArray(tourCodes) ? tourCodes : [tourCodes];
+  const keywords = CULTURE_SEARCH_KEYWORDS[cultureName] || [];
+
+  const sourceResults = await Promise.all([
+    ...baseRequests.map(request =>
+      fetchAllRawPages(params => placesService.getAreaBasedPlaces(params), request, logger)),
+    ...baseRequests.flatMap(request =>
+      keywords.map(keyword =>
+        fetchAllRawPages(
+          params => placesService.searchPlacesByKeyword(params),
+          { ...request, keyword },
+          logger,
+        ))),
+  ]);
+
+  if (sourceResults.every(result => result.error)) {
+    throw sourceResults[0].error;
+  }
+
+  const rawGroups = sourceResults.map(result => result.items);
+  const cacheStatus = sourceResults
+    .map(result => result.cacheStatus)
+    .reduce((combined, status) => combineCultureCacheStatus(combined, status), undefined);
+
+  const items = selectPlacesForCulture(rawGroups, cultureName, {
+    limit: Number.MAX_SAFE_INTEGER,
+    allowCumulative: true,
+  });
+
+  if (items.length < CULTURE_RESULT_FLOOR) {
+    const relaxed = selectPlacesForCulture(rawGroups, cultureName, {
+      limit: Number.MAX_SAFE_INTEGER,
+      allowCumulative: true,
+      relaxed: true,
+    });
+    const seen = new Set(items.map(place => place.contentId));
+    for (const place of relaxed) {
+      if (items.length >= CULTURE_RESULT_FLOOR) {
+        break;
+      }
+      if (!seen.has(place.contentId)) {
+        items.push(place);
+        seen.add(place.contentId);
+      }
+    }
+  }
+
+  return { items, cacheStatus };
+}
+
+async function countLiveCulturePlaces(placesService, tourCodes, cultureName, logger) {
+  const result = await collectAllCulturePlaces(placesService, tourCodes, cultureName, logger);
+  return result.items.length;
 }
 
 function createRegionsController(options = {}) {
@@ -151,6 +273,73 @@ function createRegionsController(options = {}) {
     }
   }
 
+  // 조회에 실패하면 가용성을 위해 기존 큐레이션 추정치를 그대로 둔다.
+  async function attachLiveSpotCounts(items, cultureName) {
+    return Promise.all(items.map(async item => {
+      const tourCodes = REGION_TOUR_CODES[item.areaCode];
+      if (!tourCodes) {
+        return item;
+      }
+      try {
+        const spotCount = await countLiveCulturePlaces(
+          placesService,
+          tourCodes,
+          cultureName,
+          logger,
+        );
+        return { ...item, spotCount };
+      } catch (error) {
+        logger?.warn?.('실시간 장소 수 계산에 실패해 큐레이션 수치를 유지합니다.', {
+          areaCode: item.areaCode,
+          errorName: error?.name || 'Error',
+        });
+        return item;
+      }
+    }));
+  }
+
+  // 손으로 큐레이션해둔 후보만으로 MIN_REGIONS_PER_CULTURE를 못 채우면,
+  // 아직 안 써본 등록 지역들도 실시간으로 확인해서 관련도 기준을 넘는
+  // 만큼만 채운다. 이 지역들은 문화별 큐레이션 설명이 없으므로 일반
+  // 문구를 쓴다.
+  async function collectFallbackRegions(cultureName, excludeAreaCodes, needed, lang) {
+    if (needed <= 0) {
+      return [];
+    }
+
+    const candidateAreaCodes = Object.keys(REGION_TOUR_CODES)
+      .filter(areaCode => !excludeAreaCodes.has(areaCode));
+    const scored = await Promise.all(candidateAreaCodes.map(async areaCode => {
+      try {
+        const spotCount = await countLiveCulturePlaces(
+          placesService,
+          REGION_TOUR_CODES[areaCode],
+          cultureName,
+          logger,
+        );
+        return { areaCode, spotCount };
+      } catch (error) {
+        logger?.warn?.('지역 후보 확장 중 실시간 장소 수 계산에 실패했습니다.', {
+          areaCode,
+          errorName: error?.name || 'Error',
+        });
+        return { areaCode, spotCount: 0 };
+      }
+    }));
+
+    return scored
+      .filter(entry => entry.spotCount >= MIN_RELEVANT_REGION_SPOT_COUNT)
+      .sort((left, right) => right.spotCount - left.spotCount)
+      .slice(0, needed)
+      .map(({ areaCode, spotCount }) => ({
+        areaCode,
+        name: localizedRegionName(getRegionDefinition(areaCode), lang),
+        description: `${cultureName} 명소`,
+        spotCount,
+        score: Math.min(100, 40 + spotCount * 2),
+      }));
+  }
+
   async function getRegionsByCulture(req, res) {
     const rawCultureId = String(req.params?.id || '').trim();
     if (!/^\d+$/.test(rawCultureId)) {
@@ -169,8 +358,29 @@ function createRegionsController(options = {}) {
           message: '해당 문화 카테고리를 찾을 수 없습니다.',
         });
       }
+      const cultureName = CULTURE_ID_TO_NAME[Number(rawCultureId)];
+      let items = result.items;
+      if (cultureName) {
+        const withLiveCounts = await attachLiveSpotCounts(result.items, cultureName);
+        items = withLiveCounts.filter(
+          item => (item.spotCount ?? 0) >= MIN_RELEVANT_REGION_SPOT_COUNT,
+        );
+
+        if (items.length < MIN_REGIONS_PER_CULTURE) {
+          const alreadyChecked = new Set(withLiveCounts.map(item => item.areaCode));
+          const extras = await collectFallbackRegions(
+            cultureName,
+            alreadyChecked,
+            MIN_REGIONS_PER_CULTURE - items.length,
+            resolveLang(req),
+          );
+          items = [...items, ...extras];
+        }
+
+        items = [...items].sort((left, right) => (right.spotCount ?? 0) - (left.spotCount ?? 0));
+      }
       setRegionDataStatusHeader(res, result.dataStatus);
-      return res.json(result.items);
+      return res.json(items);
     } catch (error) {
       logger?.error?.('문화별 지역점수 처리에 실패했습니다.', {
         errorName: error?.name || 'Error',
@@ -224,17 +434,11 @@ function createRegionsController(options = {}) {
         .map(regionCodes => ({ ...regionCodes, ...pagination }));
 
       if (cultureFilter) {
-        const result = await collectCulturePlacePage({
-          placesService,
-          culture: cultureFilter,
-          request: regionRequests[0],
-          requests: regionRequests,
-          limit: pagination.numOfRows,
-          logger,
-        });
-        items = result.items;
+        const result = await collectAllCulturePlaces(placesService, tourCodes, cultureFilter, logger);
+        const offset = (pagination.pageNo - 1) * pagination.numOfRows;
+        items = result.items.slice(offset, offset + pagination.numOfRows);
         cacheStatus = result.cacheStatus;
-        hasMore = result.hasMore;
+        hasMore = result.items.length > offset + pagination.numOfRows;
       } else {
         const result = await collectAreaPlacePage({
           placesService,
