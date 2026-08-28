@@ -166,3 +166,40 @@ test('extracts an explicit course edit plan and clarifies an ambiguous target', 
   assert.equal(ambiguous.action, 'clarify');
   assert.equal(ambiguous.needsClarification, true);
 });
+
+test('uses the most specific title and asks compound edit operations to be split', async () => {
+  const state = {
+    courseId: 42,
+    coursePlaceIds: ['100', '200', '300'],
+    coursePlaces: [
+      { contentId: '100', title: '박물관', trackNumber: 1 },
+      { contentId: '200', title: '박물관 별관', trackNumber: 1 },
+      { contentId: '300', title: '음악당', trackNumber: 1 },
+    ],
+  };
+  const specific = deterministicIntent([
+    { role: 'user', content: '박물관 별관을 삭제해줘' },
+  ], state);
+  assert.equal(specific.action, 'edit_course');
+  assert.deepEqual(specific.referencedCoursePlaceIds, ['200']);
+
+  const compound = deterministicIntent([
+    { role: 'user', content: '박물관은 빼고 음악당을 2일차로 옮겨줘' },
+  ], state);
+  assert.equal(compound.action, 'clarify');
+  assert.equal(compound.needsClarification, true);
+  assert.match(compound.clarificationQuestion, /한 가지씩/);
+
+  let modelCalled = false;
+  const liveService = createAiIntentService({
+    llmService: {
+      isMockMode: () => false,
+      async generate() { modelCalled = true; throw new Error('호출하면 안 됩니다.'); },
+    },
+  });
+  const liveSpecific = await liveService.parse([
+    { role: 'user', content: '박물관 별관을 삭제해줘' },
+  ], state, { env: { USE_MOCK_AI: 'false' } });
+  assert.equal(modelCalled, false);
+  assert.deepEqual(liveSpecific.referencedCoursePlaceIds, ['200']);
+});

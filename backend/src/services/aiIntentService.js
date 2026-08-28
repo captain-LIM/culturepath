@@ -187,6 +187,24 @@ function normalizeComparableText(value) {
   return String(value || '').toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
 }
 
+function mostSpecificCourseTargets(matches) {
+  if (matches.length === 0) return [];
+  const normalized = matches.map(place => ({
+    place,
+    title: normalizeComparableText(place?.title),
+  })).filter(item => item.title.length >= 2);
+  const maximal = normalized.filter(item => !normalized.some(other =>
+    other.title.length > item.title.length && other.title.includes(item.title),
+  ));
+  const byTitle = new Map();
+  for (const item of maximal) {
+    if (!byTitle.has(item.title)) byTitle.set(item.title, []);
+    byTitle.get(item.title).push(item.place);
+  }
+  if ([...byTitle.values()].some(items => items.length > 1)) return [];
+  return maximal.map(item => String(item.place.contentId));
+}
+
 function extractDeterministicCourseTargets(text, coursePlaces = []) {
   const places = Array.isArray(coursePlaces) ? coursePlaces : [];
   const normalizedText = normalizeComparableText(text);
@@ -194,7 +212,7 @@ function extractDeterministicCourseTargets(text, coursePlaces = []) {
     const title = normalizeComparableText(place?.title);
     return title.length >= 2 && normalizedText.includes(title);
   });
-  if (direct.length > 0) return direct.map(place => String(place.contentId));
+  if (direct.length > 0) return mostSpecificCourseTargets(direct);
 
   const targetMatch = /([^,.!?]{2,60}?)(?:을|를|은|는)\s*(?:빼|삭제|제거|옮겨|이동|먼저|마지막)/
     .exec(String(text || ''));
@@ -204,7 +222,7 @@ function extractDeterministicCourseTargets(text, coursePlaces = []) {
       const title = normalizeComparableText(place?.title);
       return phrase.length >= 2 && (title.includes(phrase) || phrase.includes(title));
     });
-    if (matched.length === 1) return [String(matched[0].contentId)];
+    if (matched.length > 0) return mostSpecificCourseTargets(matched);
   }
 
   const ordinalMatch = /(첫\s*번째|첫째|두\s*번째|둘째|세\s*번째|셋째)\s*(?:장소)?/
@@ -225,11 +243,16 @@ function extractDeterministicCourseEdit(text, state = {}) {
   const destinationPosition = /(?:첫\s*번째|맨\s*앞|먼저)/.test(request)
     ? 'first'
     : /(?:마지막|맨\s*뒤)/.test(request) ? 'last' : 'none';
-  const operation = /빼|삭제|제거/.test(request)
-    ? 'remove'
-    : destinationPosition !== 'none' || /순서/.test(request)
-      ? 'reorder'
-      : /옮겨|이동/.test(request) ? 'move_day' : 'none';
+  const hasRemove = /빼|삭제|제거/.test(request);
+  const hasReorder = destinationPosition !== 'none' || /순서/.test(request);
+  const hasMoveDay = /옮겨|이동/.test(request) && destinationDay != null;
+  const requestedOperations = [
+    hasRemove && 'remove',
+    hasMoveDay && 'move_day',
+    hasReorder && 'reorder',
+  ].filter(Boolean);
+  const hasMultipleOperations = requestedOperations.length > 1;
+  const operation = requestedOperations.length === 1 ? requestedOperations[0] : 'none';
   return {
     courseEditOperation: operation,
     courseEditDestinationDay: destinationDay,
@@ -238,6 +261,8 @@ function extractDeterministicCourseEdit(text, state = {}) {
       request,
       state.coursePlaces,
     ),
+    hasEditSignal: requestedOperations.length > 0,
+    hasMultipleOperations,
   };
 }
 
@@ -281,7 +306,9 @@ function deterministicIntent(messages, state = {}) {
     needsClarification,
     clarificationQuestion: needsClarification
       ? action === 'edit_course'
-        ? '바꿀 장소와 삭제·이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.'
+        ? courseEdit.hasMultipleOperations
+          ? '안전한 확인을 위해 삭제·Day 이동·순서 변경 중 한 가지씩 요청해 주세요.'
+          : '바꿀 장소와 삭제·이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.'
         : '원하는 지역이나 문화 주제를 조금 더 알려주세요.'
       : null,
   };
@@ -370,6 +397,10 @@ function createAiIntentService(options = {}) {
 
   async function parse(messages, state = {}, requestOptions = {}) {
     const fallback = deterministicIntent(messages, state);
+    const lastUser = [...messages].reverse()
+      .find(message => message.role === 'user')?.content || '';
+    const courseEdit = extractDeterministicCourseEdit(lastUser, state);
+    if (state.courseId && courseEdit.hasEditSignal) return fallback;
     const env = requestOptions.env || process.env;
     if (generator.isMockMode(env)) return fallback;
 

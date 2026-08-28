@@ -6,7 +6,7 @@
 >
 > 목표 시점: 2026-08-29 토요일까지 핵심 흐름 대부분 구현
 >
-> 상태: **R17 구현 반영 완료 — Backend 315개 테스트 통과, Flutter CI·OpenRouter live smoke 대기**
+> 상태: **R17 구현 반영 완료 — Backend 316개 테스트 통과, Flutter CI·OpenRouter live smoke 대기**
 >
 > 적용 범위: AI 여행 대화, 장소 추천, 코스 초안, 기존 코스 다듬기,
 > MySQL·TourAPI 후보 수집, OpenRouter 사용 경계, 세션 문맥
@@ -347,7 +347,10 @@ TourAPI가 공통 별점을 제공한다고 가정하지 않는다. LLM이 인�
 - `/ai/transform`은 DB에서 다시 읽은 현재 코스의 장소만 대상으로 한다.
 - 허용 연산은 삭제, Day 이동, 대상이 명확한 순서 변경, 유지다.
 - 첫 의도 해석은 연산·대상 `contentId`·목적 Day 또는 첫/마지막 위치를 구조화 계획으로
-  확정한다. 모호한 요청은 임의 실행하지 않고 재질문한다.
+  확정한다. 명시적 장소명·순번은 Backend가 가장 구체적인 단일 대상으로 확인하며,
+  모호한 요청은 임의 실행하지 않고 재질문한다.
+- 제출 전에는 한 메시지에 한 종류의 편집 연산만 허용한다. 삭제와 Day 이동처럼 서로
+  다른 연산을 섞으면 한 가지씩 요청하도록 안내한다.
 - 두 번째 생성 결과는 Backend가 구조화 계획과 diff를 비교해, 다른 장소 삭제·추가 이동·
   요청하지 않은 재정렬을 차단한다. 성공 설명도 LLM 문구가 아닌 검증 diff에서 만든다.
 - 신규 후보 검색, 신규 `contentId` 추가, 장소 교체는 transform 연산에 넣지 않는다.
@@ -460,6 +463,7 @@ Flutter 단위로 나누고, 검증 결과와 남은 live 항목은 문서 커�
 - [x] 코스 초안은 사용자 승인 전 저장되지 않는다.
 - [x] transform은 현재 코스의 기존 `contentId`만 사용한다.
 - [x] transform의 구조화 편집 계획과 최종 diff가 같은 대상·연산인지 재검증한다.
+- [x] 겹치는 장소명은 가장 구체적인 대상을 고르고 복합 연산은 분리 요청을 안내한다.
 - [x] 공개 비소유 코스는 명시적 Fork 전 transform할 수 없다.
 - [x] 오래된 코스 revision으로 저장하면 `409`로 차단한다.
 - [x] 저장 후 pending 상태만 지우고 대화 문맥은 유지한다.
@@ -484,7 +488,7 @@ Flutter 단위로 나누고, 검증 결과와 남은 live 항목은 문서 커�
 - [x] OpenAPI와 Flutter 모델이 같은 응답 계약을 사용한다.
 - [ ] 리뷰 수정 후 별도 `gpt-5.6-sol high` 재리뷰에서 critical/high가 없다.
 
-2026-08-28 로컬 검증 결과: Backend `npm test` 315/315 통과. 현재 PC에는 Flutter SDK가
+2026-08-28 로컬 검증 결과: Backend `npm test` 316/316 통과. 현재 PC에는 Flutter SDK가
 없어 `flutter analyze`, Flutter 테스트, Android 빌드와 실기기 검수는 CI/Flutter 설치
 환경에서 수행해야 한다. OpenRouter·TourAPI live smoke는 비밀값과 호출 비용 보호를 위해
 이 구현 단계에서 자동 실행하지 않았다.
