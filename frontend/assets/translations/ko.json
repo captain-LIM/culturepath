@@ -102,6 +102,16 @@
   "banner_recommend": "추천",
   "banner_desc": "책방 골목에서 시작하는\n나만의 문화 코스",
   "banner_cta": "코스 보기",
+
+  "recommended_course_spring_title": "봄 문화 기행 — 전통·공예·책방",
+  "recommended_course_spring_desc": "전주 한옥마을의 전통주와 공예, 서울 골목 독립서점, 안동의 유교 문화를 잇는 봄 코스",
+  "recommended_course_summer_title": "여름 문화 기행 — 바다·카페·미식",
+  "recommended_course_summer_desc": "강릉의 커피향과 통영의 남해 미식, 목포의 근대 골목을 따라가는 여름 문화 코스",
+  "recommended_course_autumn_title": "가을 문화 기행 — 문학·미술·갤러리",
+  "recommended_course_autumn_desc": "서울 미술관 순례부터 강릉 문학 기행, 하동 차밭 공방까지 이어지는 가을 코스",
+  "recommended_course_winter_title": "겨울 문화 기행 — 영화·근대·카페",
+  "recommended_course_winter_desc": "춘천 영화도시의 감성, 군산 근대 골목의 역사, 강릉 커피 향으로 마무리하는 겨울 코스",
+
   "culture_load_error": "카테고리를 불러올 수 없습니다.",
 
   "culture_1_name": "독립서점·책방",

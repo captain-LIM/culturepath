@@ -1,12 +1,37 @@
+import 'package:easy_localization/easy_localization.dart';
+
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/place_item.dart';
 
+// 이 파일의 title·description은 계절별로 고정된 큐레이션 카피라 화면에
+// 보여줄 때 easy_localization 키로 다시 옮겨 담는다(recommended_course_*
+// 키, assets/translations/*.json). 장소 카드의 title·address·region은
+// PlaceItem 상수 그대로 두고, 실제 contentId가 있는 항목은 CourseTrackView가
+// 상세 화면과 같은 번역 파이프라인으로 화면에 표시할 때 덮어쓴다.
 CourseItem getSeasonalRecommendedCourse() {
   final month = DateTime.now().month;
-  if (month >= 3 && month <= 5) return _springCourse;
-  if (month >= 6 && month <= 8) return _summerCourse;
-  if (month >= 9 && month <= 11) return _autumnCourse;
-  return _winterCourse;
+  if (month >= 3 && month <= 5) {
+    return _springCourse.copyWith(
+      title: 'recommended_course_spring_title'.tr(),
+      description: 'recommended_course_spring_desc'.tr(),
+    );
+  }
+  if (month >= 6 && month <= 8) {
+    return _summerCourse.copyWith(
+      title: 'recommended_course_summer_title'.tr(),
+      description: 'recommended_course_summer_desc'.tr(),
+    );
+  }
+  if (month >= 9 && month <= 11) {
+    return _autumnCourse.copyWith(
+      title: 'recommended_course_autumn_title'.tr(),
+      description: 'recommended_course_autumn_desc'.tr(),
+    );
+  }
+  return _winterCourse.copyWith(
+    title: 'recommended_course_winter_title'.tr(),
+    description: 'recommended_course_winter_desc'.tr(),
+  );
 }
 
 // ── 여름 ──────────────────────────────────────────────────────────────────────

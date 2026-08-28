@@ -102,6 +102,16 @@
   "banner_recommend": "Picks",
   "banner_desc": "Start in a bookstore alley,\ncreate your own culture course",
   "banner_cta": "View Courses",
+
+  "recommended_course_spring_title": "Spring Culture Trip — Tradition, Crafts & Bookstores",
+  "recommended_course_spring_desc": "A spring course connecting Jeonju Hanok Village's traditional liquor and crafts, Seoul's back-alley indie bookstores, and Andong's Confucian culture",
+  "recommended_course_summer_title": "Summer Culture Trip — Sea, Cafés & Food",
+  "recommended_course_summer_desc": "A summer culture course tracing Gangneung's coffee aroma, Tongyeong's southern coast cuisine, and Mokpo's modern alleyways",
+  "recommended_course_autumn_title": "Autumn Culture Trip — Literature, Art & Galleries",
+  "recommended_course_autumn_desc": "An autumn course running from a Seoul art museum pilgrimage through a Gangneung literary journey to Hadong's tea-field workshops",
+  "recommended_course_winter_title": "Winter Culture Trip — Film, Modern Heritage & Cafés",
+  "recommended_course_winter_desc": "A winter course wrapping up with the mood of Chuncheon's film city, the history of Gunsan's modern alleyways, and Gangneung's coffee aroma",
+
   "culture_load_error": "Failed to load categories.",
 
   "culture_1_name": "Indie Bookstores",

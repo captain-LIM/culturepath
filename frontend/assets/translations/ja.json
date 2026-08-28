@@ -102,6 +102,16 @@
   "banner_recommend": "おすすめ",
   "banner_desc": "本屋の路地から始まる\n自分だけの文化コース",
   "banner_cta": "コースを見る",
+
+  "recommended_course_spring_title": "春の文化紀行 — 伝統・工芸・書店",
+  "recommended_course_spring_desc": "全州韓屋村の伝統酒と工芸、ソウルの路地の独立書店、安東の儒教文化をつなぐ春のコース",
+  "recommended_course_summer_title": "夏の文化紀行 — 海・カフェ・グルメ",
+  "recommended_course_summer_desc": "江陵のコーヒーの香りと統営の南海グルメ、木浦の近代路地をたどる夏の文化コース",
+  "recommended_course_autumn_title": "秋の文化紀行 — 文学・美術・ギャラリー",
+  "recommended_course_autumn_desc": "ソウルの美術館巡りから江陵の文学紀行、河東の茶畑工房まで続く秋のコース",
+  "recommended_course_winter_title": "冬の文化紀行 — 映画・近代遺産・カフェ",
+  "recommended_course_winter_desc": "春川の映画都市の情緒、群山の近代路地の歴史、江陵のコーヒーの香りで締めくくる冬のコース",
+
   "culture_load_error": "カテゴリを読み込めません。",
 
   "culture_1_name": "独立書店",

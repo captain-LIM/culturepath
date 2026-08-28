@@ -102,6 +102,16 @@
   "banner_recommend": "推荐",
   "banner_desc": "从书店小巷出发\n打造专属文化路线",
   "banner_cta": "查看路线",
+
+  "recommended_course_spring_title": "春日文化之旅 — 传统·工艺·书店",
+  "recommended_course_spring_desc": "串联全州韩屋村的传统酒与工艺、首尔小巷独立书店、安东儒教文化的春日路线",
+  "recommended_course_summer_title": "夏日文化之旅 — 海边·咖啡·美食",
+  "recommended_course_summer_desc": "沿着江陵的咖啡香、统营的南海美食、木浦的近代小巷展开的夏日文化路线",
+  "recommended_course_autumn_title": "秋日文化之旅 — 文学·美术·画廊",
+  "recommended_course_autumn_desc": "从首尔美术馆巡礼到江陵文学之旅，再到河东茶田工坊的秋日路线",
+  "recommended_course_winter_title": "冬日文化之旅 — 电影·近代遗产·咖啡",
+  "recommended_course_winter_desc": "以春川电影之都的氛围、群山近代小巷的历史、江陵咖啡香收尾的冬日路线",
+
   "culture_load_error": "无法加载分类。",
 
   "culture_1_name": "独立书店",
