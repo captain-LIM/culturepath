@@ -50,7 +50,7 @@ function validateLiveConfiguration(env, live) {
   if (!live) return;
   const required = [
     'DB_HOST', 'DB_USER', 'DB_NAME',
-    'OPENROUTER_API_KEY', 'QDRANT_URL', 'QDRANT_API_KEY',
+    'OPENROUTER_API_KEY', 'QDRANT_URL',
   ];
   const missing = required.filter(name => !String(env[name] || '').trim());
   if (missing.length) {

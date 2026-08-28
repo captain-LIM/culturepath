@@ -42,6 +42,20 @@ test('requires provider, vector store, and source DB settings only in live mode'
     DB_NAME: 'configured',
     OPENROUTER_API_KEY: 'configured',
     QDRANT_URL: 'configured',
+  }, true));
+});
+
+test('allows an authenticated or local Qdrant deployment in live mode', () => {
+  const required = {
+    DB_HOST: 'configured',
+    DB_USER: 'configured',
+    DB_NAME: 'configured',
+    OPENROUTER_API_KEY: 'configured',
+    QDRANT_URL: 'http://127.0.0.1:6333',
+  };
+  assert.doesNotThrow(() => validateLiveConfiguration(required, true));
+  assert.doesNotThrow(() => validateLiveConfiguration({
+    ...required,
     QDRANT_API_KEY: 'configured',
   }, true));
 });

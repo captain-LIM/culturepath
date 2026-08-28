@@ -184,6 +184,24 @@
 
 현재 `culturesController.js` 시드의 `lcls_codes`는 기존 임시 값이므로 이 매핑의 근거로 사용하지 않는다. 실제 신분류 코드와 검증된 override는 `cultureCategoryMap.js`에서 관리한다.
 
+### AI 여행 챗봇 후보 수집
+
+AI 여행 챗봇도 별도의 벡터 인덱스를 사용하지 않고 이 문서의 장소 검색·문화 분류 계약을
+재사용한다.
+
+1. LLM이 strict Schema로 해석하고 Backend가 allowlist·세션 문맥으로 검증한 지역·문화
+   조건으로 MySQL의 `places_cache`와 `place_query_cache`를 먼저 조회한다.
+2. 캐시 후보가 부족하거나 갱신이 필요할 때만 TourAPI를 호출한다.
+3. 공식 신분류 코드로 정확히 대응되는 문화는 `lclsSystm1~3` 조건을 우선한다.
+4. 공식 코드 하나로 구분하기 어려운 문화는 기존의 검토된 복수 검색어로 후보를 넓힌다.
+5. 어느 방식으로 얻은 후보든 이 절의 결정론적 문화 분류와 지역 경계를 다시 통과해야 한다.
+6. LLM은 후보를 검색·추가·재분류하지 않고 Backend가 확정한 후보만 설명한다.
+
+위 흐름은 [AI 기능 개편 계약](./AI_MYSQL_TOURAPI_LLM_TARGET_ARCHITECTURE.md)에 따라 R17
+작업 브랜치에 반영됐다. 후보 resolver는 최대 10개를 요청하고, 캐시 서비스의 최신성·
+stale·fail-open 계약을 그대로 재사용한다. 지원하지 않는 지역, 모호한 다중 지역과 후보
+밖 장소 참조는 외부 호출 전에 거부하거나 재질문한다.
+
 ## 2026-07-22 Node.js smoke test
 
 - `lclsSystmCode2`: 성공, 10개, 한글 보존

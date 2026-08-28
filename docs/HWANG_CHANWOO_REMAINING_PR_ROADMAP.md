@@ -1,9 +1,15 @@
 # [황찬우 전용] 현행 잔여 작업과 PR 로드맵
 
-> **기준 시점:** 2026-08-25
-> **현재 기준 브랜치:** `main`
-> **최신 반영:** PR #21 R16.1 문화 장소 검색 재현율·페이지 계약
+> **기준 시점:** 2026-08-27
+>
+> **현재 작업 브랜치:** `feat/r17-live-rag-chatbot`
+>
+> **최신 결정:** R17을 Qdrant 기반 live RAG에서 MySQL·TourAPI 기반 AI 구조로 전환
 > **용도:** 새 세션이 가장 먼저 읽는 황찬우 담당 현행 문서
+
+R17의 통합 대화 화면, 구조화 세션, LLM 의도 해석, 지역 특성 태그, 코스 초안과
+기존 장소 편집의 상세 결정은
+[R17 AI 여행 도우미 최종 의사결정 기록](./R17_AI_ASSISTANT_DECISION_RECORD.md)을 따른다.
 
 ## 1. 현재 완료 상태
 
@@ -13,72 +19,96 @@
 - R15 승인 디자인의 Flutter 반영과 CI 검증 완료
 - R16 Mock/live RAG 평가 계약 분리와 MySQL fixture 감사 완료
 - R16.1 문화별 복수 검색어, 안전한 교차 분류, 지역 경계와 Backend 페이지 계약 완료
+- R16.2 Flutter 장소 목록의 다음 50개 추가 로딩·중복 제거·재시도 완료
 - R16.3 공개 코스 장소 사용 횟수 집계와 Backend 응답 계약 완료
-- 로컬 MySQL 8.4.11 및 Qdrant 연결 검증 완료
-- OpenRouter 실연결·실임베딩·실생성은 아직 하지 않음
-- PR #21 기준 Backend 자동 테스트 `270/270` 통과, 독립 `gpt-5.6-sol high` 리뷰 `APPROVE`
+- 로컬 MySQL 8.4.11 연결·migration·실데이터 캐시 검증 완료
+- Qdrant 연결과 OpenRouter BGE-M3 1건·1024차원 응답 확인은 과거 기술 검증으로 완료
 
-TourAPI 제한 표본은 기존 14개 문화×지역 조합 중 비어 있지 않은 결과가 `7개 → 12개`로 개선됐다. 강릉·전주 책방은 검색 로직 문제가 아니라 현재 확인된 TourAPI 원천 데이터 공백으로 남아 있다.
+TourAPI 제한 표본은 14개 문화×지역 조합 중 비어 있지 않은 결과가 `7개 → 12개`로
+개선됐다. 강릉·전주 책방은 검색 로직만으로 채울 수 없는 TourAPI 원천 데이터 공백이
+확인됐다.
+
+2026-08-26 제품 결정으로 Qdrant·BGE-M3는 제출 전 운영 경로에서 제외한다. 따라서 과거
+벡터 검색 구현과 검증 결과는 이력으로만 남으며, 실제 Qdrant 인덱싱·Hit@K·MRR 평가는
+더 이상 R17 완료 조건이 아니다.
 
 ## 2. 황찬우의 남은 PR 순서
 
 | 우선순위 | PR | 상태 | 핵심 결과 |
 | --- | --- | --- | --- |
-| 1 | R16.2 Flutter 장소 추가 로딩 | 다음 작업 후보 | 첫 50개 뒤 다음 50개를 안전하게 이어 붙이는 모바일 UX |
-| 2 | 장소 사용 횟수 UI | R16.2 이후 결정 | `공개 코스 N개에 담김` 표시, 정렬 변경은 별도 판단 |
-| 3 | R17 OpenRouter live RAG·AI 검증 | 키·예산 준비 후 진행 | 실제 임베딩, Qdrant 검색 평가, AI 코스 변경안 smoke |
-| 4 | R18 배포·실기기·Google Play 준비 | 마지막 통합 단계 | 운영 Backend/DB/비밀값, Android release, 장애·비용 검증 |
+| 1 | R17 AI 구조 전환·여행 챗봇 | 구현 완료, CI·live smoke 대기 | MySQL→TourAPI 후보 resolver, 검증 장소 설명, Qdrant 활성 의존 제거 |
+| 2 | R17 코스 다듬기 축소 | 구현 완료, CI·live smoke 대기 | 현재 코스 장소의 삭제·Day 이동·명시적 순서 변경만 허용 |
+| 3 | 장소 사용 횟수 UI | 별도 결정 | `공개 코스 N개에 담김` 표시, 정렬 변경은 별도 판단 |
+| 4 | R18 배포·실기기·Google Play 준비 | 마지막 통합 | 운영 Backend/DB/비밀값, Android release, 장애·비용 검증 |
 
-한 번에 하나의 코드 PR만 진행한다. 카카오·네이버 상업시설 보완과 추가 디자인 손질은 현재 우선순위에서 보류한다.
+시간이 촉박해 R17은 한 PR로 진행할 수 있지만, 변경 목적별 커밋은 분리한다. 카카오·네이버
+상업시설 보완과 추가 디자인 손질은 현재 우선순위에서 보류한다.
 
-## 3. R16.2 — Flutter 장소 추가 로딩
+## 3. R17 — AI 구조 전환과 여행 챗봇
 
-### 원인
+### 목표 흐름
 
-Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Next-Page`를 제공하지만 Flutter `SpotsRepository`는 아직 첫 배열만 받아 화면에 표시한다. 따라서 사용자는 Backend의 다음 페이지 기능을 사용할 수 없다.
+```text
+사용자 질문
+→ Backend 지역·문화 추출
+→ MySQL 캐시 조회
+→ 후보 부족·갱신 필요 시 TourAPI 조회
+→ 공식 코드 우선 + 모호 문화 복수 검색어
+→ 엄격한 지역·문화 재검증
+→ 검증된 후보만 LLM에 전달
+→ 자연어 답변 + Backend 생성 장소 카드
+```
 
-### 권장 범위
+### 구현 범위
 
-- 첫 요청과 추가 요청에 `pageNo`, `numOfRows=50` 전달
-- Dio 응답 헤더에서 다음 페이지 상태 해석
-- `contentId` 기준 중복 제거 후 기존 목록 뒤에 append
-- 첫 로딩·추가 로딩·추가 로딩 실패·마지막 페이지 상태 분리
-- 스크롤 끝 근처에서 한 번만 요청하고 중복 요청 방지
-- 새로고침 시 page 1부터 다시 시작
-- Backend 최대 5페이지 계약 준수
-- 360·390·430dp와 긴 목록에서 스크롤·메모리 회귀 테스트
-
-### 제외 범위
-
-- Backend 검색·분류 규칙 변경
-- 장소 인기도 또는 코스 사용 횟수 정렬
-- 카카오·네이버 장소 검색
-- 임수민 담당 다국어·지도 구조 변경
-
-### 구현 전 확인
-
-- 팀원이 같은 화면을 수정했는지 최신 `main` diff 확인
-- API 응답 헤더를 Flutter Web과 Android에서 동일하게 읽을 수 있는지 확인
-- 자동 추가 로딩과 명시적 `더 보기` fallback 중 현재 화면에 맞는 UX 결정
-
-## 4. R17 — OpenRouter live RAG·AI 품질·비용 검증
-
-### 최소비용 실행 순서
-
-1. OpenRouter 키·결제 한도·현재 모델과 가격 확인
-2. 실제 장소 1건 BGE-M3 임베딩 및 1024차원 검증
-3. 소수 `--limit` 인덱싱과 document hash skip 확인
-4. 승인 후 전체 장소 인덱싱과 live fixture 평가
-5. Hit@K·MRR·hard filter·MySQL 원본 재검증 비율·latency 기록
-6. `/ai/transform` 최소 smoke로 JSON Schema, 실제 `contentId`, 토큰 상한 확인
-7. 기준 미달일 때만 threshold·프롬프트·모델 조정
+1. LLM strict Schema와 Backend allowlist 검증을 결합한 다중 턴 의도 해석
+2. 짧은 수명의 구조화 세션과 일반·코스 진입 문맥
+3. 황찬우가 관리하는 검토된 지역 특성 태그
+4. `places_cache`·`place_query_cache`를 우선 사용하는 후보 resolver
+5. 부족하거나 갱신이 필요한 경우에만 TourAPI 보완 호출
+6. 공식 `lclsSystm1~3`로 정확히 찾을 수 있는 문화는 코드 기반 우선
+7. 공식 코드가 모호한 문화는 복수 검색어로 넓힌 뒤 엄격한 분류로 재검증
+8. LLM에는 검증된 후보만 전달하고 `sources`는 Backend가 직접 구성
+9. 검증 후보 기반 코스 초안·사용자 확인·저장 후 세션 지속
+10. Flutter 통합 AI 화면, 장소 카드, 미리보기, 로딩·빈 결과·오류·재시도
+11. Qdrant·embedding의 활성 경로·환경변수·스크립트·평가 의존 정리
 
 ### 완료 조건
 
-- Qdrant 후보가 MySQL의 신뢰된 장소로 다시 검증됨
-- Mock 35개와 live `contentId` 평가가 서로 오염되지 않음
-- AI가 후보에 없는 장소를 만들지 않음
-- 호출 비용, rate limit, timeout, fallback이 문서화됨
+- 캐시 hit에서는 TourAPI를 호출하지 않는다.
+- 캐시 부족 때만 제한된 TourAPI 호출로 후보를 보완한다.
+- 후보가 없으면 가짜 장소로 채우지 않는다.
+- AI 본문이 후보 밖 장소를 언급해도 클릭·저장 가능한 카드가 되지 않는다.
+- `sources`의 모든 장소가 숫자형 TourAPI `contentId`와 MySQL/TourAPI 원본을 가진다.
+- Qdrant·BGE-M3 없이 챗봇의 탐색 흐름이 동작한다.
+- 긴 대화도 서버의 20개·8,000자 제한 안에서 최신 이력만 전송한다.
+- OpenRouter rate limit, timeout, 비용 상한과 장애 상태가 문서·테스트에 반영된다.
+- 기존 DB에는 `20260827_add_course_revision.sql`을 적용하고 재실행까지 검증한다.
+
+## 4. R17 — 기존 장소 전용 코스 다듬기
+
+### 지원
+
+- 현재 코스의 기존 장소 삭제
+- 기존 장소의 Day 이동
+- 사용자가 대상을 명시한 순서 변경
+- 변경 전/후 미리보기, 취소, 원본 복구
+- Backend의 소유권·허용 `contentId`·Day·순서·중복·개수 검증
+- 자연어를 구조화 편집 계획으로 먼저 확정하고 최종 diff가 지정 대상·연산과 정확히
+  일치하는지 재검증; 성공 설명은 검증된 diff에서 Backend가 생성
+- 장소명·순번은 Backend가 가장 구체적인 단일 대상을 확정하며, 서로 다른 연산을 한
+  메시지에 섞으면 한 가지씩 요청하도록 재질문
+
+### 제외
+
+- 신규 장소 자동 검색·추가·교체
+- Qdrant·embedding·TourAPI 후보 검색
+- 거리·이동시간 없이 수행하는 `알아서 최적 동선` 요청
+- 검증 데이터가 없는 날씨·식이·접근성 조건 추측
+- 사용자 승인 전 DB 변경
+
+장소가 더 필요한 사용자는 AI 여행 챗봇에서 추천 카드를 보고 직접 코스에 담는다.
+제목·설명은 장소 편집 범위에서 자동 변경하지 않고 원본을 유지한다.
 
 ## 5. R18 — 배포·실기기·Google Play 준비
 
@@ -87,8 +117,8 @@ Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Nex
 - 로컬과 분리된 staging/production MySQL 및 최소권한 계정
 - `schema.sql`과 모든 migration의 신규 구축·기존 DB 재실행·복구 runbook
 - HTTPS Backend, CORS, 환경변수와 비밀값 관리
-- Qdrant 인덱스 생성·재색인·복구 절차
-- OpenRouter 예산 한도, rate limit, 장애 시 fallback
+- TourAPI 캐시 TTL·stale·fail-open과 신규 후보 resolver 운영 점검
+- OpenRouter 예산 한도, rate limit, timeout과 장애 안내
 - release 환경에서 의도하지 않은 mock 모드 차단
 
 ### Android와 통합 검증
@@ -96,26 +126,40 @@ Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Nex
 - API base URL과 Google Maps 키의 release 제한
 - Android application ID, 서명, 권한, release APK/AAB
 - 실제 기기 safe area, IME, 위치 권한, TalkBack, 이미지 메모리·스크롤
-- Backend·TourAPI·MySQL·Qdrant·OpenRouter 장애 시 사용자 상태
+- Backend·TourAPI·MySQL·OpenRouter 각각의 장애 시 사용자 상태
 - 개인정보, 키, 인증 URL, 민감 로그 최종 점검
 - 공모전 데모와 Google Play 설명·스크린샷·개인정보처리방침 준비
 
-## 6. 완료 계약 — R16.3 Backend 장소 사용 횟수
+## 6. 완료 계약 — R16.2·R16.3
 
-같은 장소가 한 코스에 여러 번 들어가도 한 번만 세고, 공개 코스만 집계한다. 좋아요·완주·최신성 신호와 섞지 않고 `공개 코스 사용 횟수`를 독립 지표로 유지한다. 이번 PR은 `GET /regions/:code/spots`의 nullable `publicCourseCount` 응답과 집계 인덱스까지만 포함한다. Flutter 표시와 사용 횟수 기반 정렬은 제외하며, 기존 문화 관련도 순서를 유지한다. 세부 계약은 [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md)을 따른다.
+### 장소 목록 추가 로딩
+
+Flutter는 첫 50개 뒤에 Backend가 제공하는 다음 페이지를 이어 붙이며 `contentId` 중복
+제거·추가 로딩 실패 재시도·마지막 페이지 상태를 분리한다. Backend 최대 5페이지 계약을
+유지한다.
+
+### 공개 코스 장소 사용 횟수
+
+같은 장소가 한 코스에 여러 번 있어도 한 번만 세고 공개 코스만 집계한다.
+`publicCourseCount`는 정상 미사용 `0`, 집계 장애 `null`이다. 현재 Backend 응답까지만
+구현했으며 Flutter 표시와 이 값에 의한 정렬은 별도 결정이다. 세부 계약은
+[공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md)을 따른다.
 
 ## 7. 보류·담당 제외
 
 | 항목 | 상태와 이유 |
 | --- | --- |
-| 카카오·네이버 상업시설 보완 | 이용약관, 영구 저장, Google Map 교차 표시 정책을 확인한 뒤 별도 검토 |
+| 카카오·네이버 상업시설 보완 | 이용약관, 영구 저장, 지도 교차 표시 정책 확인 후 별도 검토 |
 | 추가 FE 디자인 손질 | 황찬우 요청으로 R17·R18보다 뒤로 보류 |
-| 다국어 관광 데이터 | 임수민 담당; 황찬우는 RAG·디자인 호환성만 확인 |
+| 다국어 관광 데이터 | 임수민 담당; 황찬우는 AI의 canonical `contentId` 호환성만 확인 |
 | 지도 고도화·GPS UX | 임수민 담당; 황찬우는 머지 후 통합 회귀만 확인 |
+| 의미 검색 재도입 | 구조화 필터로 해결되지 않는 실제 사용 사례가 확인된 뒤 제출 후 검토 |
 
 ## 8. 작업 시작 규칙
 
-새 세션은 이 문서와 작업 관련 계약 문서만 먼저 읽는다. 완료된 PR의 판단 근거가 필요할 때만 [`archive`](./archive/README.md)를 연다.
+새 세션은 이 문서와 작업 관련 현행 계약만 먼저 읽는다. 완료 이력은
+[`archive`](./archive/README.md), 폐기된 설계는 [`decay`](./decay/README.md)를 필요할 때만
+연다.
 
 코드 PR은 다음 순서를 지킨다.
 
@@ -133,10 +177,11 @@ Backend는 `/regions/:code/spots`에 `pageNo`, `numOfRows`, `X-Has-More`, `X-Nex
 
 - [서비스 계획서](./문화여행_따라가방_서비스_계획서.md)
 - [팀 역할 및 협업 기준](./TEAM_ROLES.md)
+- [AI 기능 개편 계약](./AI_MYSQL_TOURAPI_LLM_TARGET_ARCHITECTURE.md)
+- [R17 AI 여행 도우미 최종 의사결정 기록](./R17_AI_ASSISTANT_DECISION_RECORD.md)
+- [AI 여행 챗봇 계약](./AI_CHAT_CONTRACT.md)
+- [AI 코스 다듬기 계약](./AI_TRANSFORM_CONTRACT.md)
 - [TourAPI 장소 계약](./TOUR_PLACE_CONTRACT.md)
 - [장소 캐시 계약](./PLACE_CACHE_CONTRACT.md)
 - [관광지 이미지 UI 계약](./PLACE_MEDIA_UI_CONTRACT.md)
 - [공개 코스 장소 사용 횟수 계약](./PLACE_USAGE_CONTRACT.md)
-- [Qdrant 장소 인덱싱 계약](./QDRANT_PLACE_INDEXING_CONTRACT.md)
-- [RAG 검색·필터·평가 계약](./RAG_SEARCH_EVALUATION_CONTRACT.md)
-- [AI 코스 변형 계약](./AI_TRANSFORM_CONTRACT.md)

@@ -253,7 +253,7 @@ DB_USER=...
 DB_NAME=...
 OPENROUTER_API_KEY=...
 QDRANT_URL=...
-QDRANT_API_KEY=...
+QDRANT_API_KEY=... # Qdrant Cloud 등 인증이 필요한 배포에서만 사용
 QDRANT_COLLECTION=culturepath_places_v1
 ```
 
@@ -265,8 +265,12 @@ QDRANT_COLLECTION=culturepath_places_v1
 - 35개 고정 case의 Mock 회귀는 외부 호출 없이 통과하도록 구현했다.
 - Qdrant client의 지역·문화·콘텐츠 유형 AND 필터와 Top-K 상한을 자동 테스트한다.
 - 중복·잘못된 ID·MySQL 누락·원본 필터 불일치를 제거하는 경로를 자동 테스트한다.
-- 로컬 MySQL과 Qdrant 환경·연결 검증은 완료됐다. OpenRouter는 아직 연결하지 않았다.
-- OpenRouter BGE-M3 실임베딩, 실제 장소 전체 인덱싱과 live 의미 검색 평가는 실행하지 않았다.
+- 로컬 MySQL과 Qdrant 환경·연결 검증은 완료됐다. Qdrant 로컬 배포는
+  `QDRANT_API_KEY` 없이 `QDRANT_URL`만으로 live 평가할 수 있다.
+- 2026-08-26 OpenRouter 실임베딩 1건은 키나 벡터를 출력하지 않고 성공했으며,
+  응답 모델 `parasail-bge-m3`, 1024차원, 입력 12토큰을 확인했다.
+- 실제 장소 Qdrant 인덱싱과 live 의미 검색 평가는 아직 실행하지 않았다. 현재 로컬
+  `.env`에는 Backend가 읽는 `QDRANT_URL`이 없어 이를 설정한 뒤 제한 인덱싱부터 진행한다.
 - 기존 fixture를 그대로 사용했던 과거 live 결과는 실제 MySQL 데이터의 title·culture 차이 때문에 품질과 무관한 실패가 섞일 수 있으므로 공식 live 합격/실패로 해석하지 않는다.
 - R16은 Mock과 live fixture 로딩·검증·판정을 분리했고 live title은 정답 판정에 사용하지 않는다.
 - Live baseline은 15개 case와 13개 고유 TourAPI `contentId`를 갖는다. 실제 감사 결과 12개는 relevance, 3개는 명시적인 `UNCLASSIFIED_CULTURE` 공백이다.

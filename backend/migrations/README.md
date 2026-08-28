@@ -15,6 +15,7 @@ mysql --host=<host> --user=<user> --password --database=<database> --execute="so
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260823_add_places_cache_chinese_detail.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260824_add_course_tracks_place_images.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260825_add_course_place_usage_index.sql"
+mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260827_add_course_revision.sql"
 ```
 
 The place translation migrations must stay in `en` → `ja` → `zh` order because
@@ -31,3 +32,8 @@ production rollout. The place-usage migration must also be checked with
 `EXPLAIN` against representative public/private and duplicate course rows so the
 `idx_course_tracks_content_course` index is selected and `COUNT(DISTINCT
 course_id)` returns one count per course.
+
+The course-revision migration enables optimistic concurrency for course edits.
+After applying it, clients that send `expectedRevision` receive HTTP `409`
+instead of overwriting a newer edit. Older clients remain compatible but do not
+gain stale-write protection until they send the revision returned by the API.

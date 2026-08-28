@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/ai_assistant/presentation/ai_assistant_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/data/culture_model.dart';
 import '../../features/culture_detail/data/region_model.dart';
@@ -29,6 +30,12 @@ final appRouter = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/ai-assistant',
+      builder: (context, state) => AiAssistantScreen(
+        courseId: int.tryParse(state.uri.queryParameters['courseId'] ?? ''),
+      ),
+    ),
     GoRoute(
       path: '/cultures/:id',
       builder: (context, state) {
@@ -76,6 +83,9 @@ final appRouter = GoRouter(
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/create', builder: (context, state) => const CourseBuilderScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/ai', builder: (context, state) => const AiAssistantScreen()),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),

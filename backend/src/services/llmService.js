@@ -10,6 +10,9 @@ const MOCK_RESPONSES = {
 };
 
 function isMockMode(env = process.env) {
+  if (env.USE_MOCK_AI !== undefined) {
+    return env.USE_MOCK_AI !== 'false';
+  }
   return env.USE_MOCK_RAG !== 'false';
 }
 

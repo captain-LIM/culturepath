@@ -43,6 +43,11 @@ class MainShell extends StatelessWidget {
             label: 'nav_create'.tr(),
           ),
           NavigationDestination(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            selectedIcon: const Icon(Icons.auto_awesome, color: AppColors.primary),
+            label: 'nav_ai'.tr(),
+          ),
+          NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person, color: AppColors.primary),
             label: 'nav_profile'.tr(),

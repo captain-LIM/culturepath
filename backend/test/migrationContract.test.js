@@ -40,3 +40,14 @@ test('defines a repeatable contentId index for public-course place usage', () =>
   );
   assert.match(migration, /RELEASE_LOCK\(/);
 });
+
+test('defines a repeatable course revision for optimistic concurrency', () => {
+  const schema = read('schema.sql');
+  const migration = read('migrations/20260827_add_course_revision.sql');
+
+  assert.match(schema, /revision\s+BIGINT UNSIGNED NOT NULL DEFAULT 1/);
+  assert.match(migration, /GET_LOCK\(/);
+  assert.match(migration, /information_schema\.COLUMNS/);
+  assert.match(migration, /ADD COLUMN revision BIGINT UNSIGNED NOT NULL DEFAULT 1/);
+  assert.match(migration, /RELEASE_LOCK\(/);
+});

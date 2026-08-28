@@ -9,9 +9,7 @@ import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
 import '../../course_builder/data/my_courses_provider.dart';
 import '../../course_builder/presentation/course_builder_screen.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../completion/presentation/completion_sheet.dart';
-import 'course_ai_edit_screen.dart';
 import 'widgets/fork_badge.dart';
 import 'widgets/course_track_map_preview.dart';
 import 'widgets/course_track_view.dart';
@@ -207,26 +205,54 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       return;
     }
     if (!mounted) return;
-    final saved = await showCourseAiEditScreen(
-      context,
-      _course,
-      isOwner: widget.isOwner || _course.isOwner,
-      onUnauthorized: () async {
-        await AuthRepository().clearExpiredSession();
-        ref.invalidate(authStateProvider);
-        if (mounted) context.go('/login');
-      },
-      onCourseUnavailable: () {
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ai_edit_course_unavailable'.tr())),
-        );
-      },
-    );
-    if (saved != null && mounted) {
+    var aiCourse = _course;
+    if (!(widget.isOwner || _course.isOwner)) {
+      final shouldFork = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('ai_fork_before_edit_title'.tr()),
+          content: Text('ai_fork_before_edit_message'.tr()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text('cancel'.tr()),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text('fork_course'.tr()),
+            ),
+          ],
+        ),
+      );
+      if (shouldFork != true || !mounted) return;
+      setState(() => _forking = true);
+      try {
+        aiCourse = await CourseRepository().forkCourse(_course.id!);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('fork_failed_simple'.tr())),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _forking = false);
+      }
+    }
+    if (!mounted) return;
+    await context.push('/ai-assistant?courseId=${aiCourse.id}');
+    if (!mounted) return;
+    if (aiCourse.id != _course.id) {
       ref.invalidate(myCoursesProvider);
-      Navigator.of(context).pop();
+      return;
+    }
+    try {
+      final refreshed = await CourseRepository().getCourse(_course.id!);
+      if (!mounted) return;
+      setState(() => _course = refreshed);
+      ref.invalidate(myCoursesProvider);
+    } catch (_) {
+      // 대화 중 저장하지 않았거나 코스가 삭제된 경우 현재 상세를 그대로 유지한다.
     }
   }
 

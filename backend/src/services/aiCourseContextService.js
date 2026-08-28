@@ -21,7 +21,7 @@ function createAiCourseContextService(options = {}) {
 
   async function loadCourseForTransform(courseId, userId) {
   const [[course]] = await database.query(
-    `SELECT id, user_id, title, description, is_public,
+    `SELECT id, user_id, title, description, is_public, revision,
             forked_from_course_id, forked_from_title, forked_from_author_id
      FROM courses
      WHERE id = ?`,
@@ -30,8 +30,8 @@ function createAiCourseContextService(options = {}) {
   if (!course) throw new CourseAccessError('코스를 찾을 수 없습니다.', 404);
 
   const isOwner = String(course.user_id) === String(userId);
-  if (!course.is_public && !isOwner) {
-    throw new CourseAccessError('코스에 접근할 권한이 없습니다.', 403);
+  if (!isOwner) {
+    throw new CourseAccessError('AI로 다듬으려면 먼저 내 코스로 Fork해야 합니다.', 403);
   }
 
   const [rows] = await database.query(
@@ -98,6 +98,7 @@ function createAiCourseContextService(options = {}) {
     description: String(course.description || ''),
     isPublic: Boolean(course.is_public),
     isOwner,
+    revision: Number(course.revision || 1),
     forkedFrom: course.forked_from_course_id ? {
       courseId: Number(course.forked_from_course_id),
       title: String(course.forked_from_title || ''),

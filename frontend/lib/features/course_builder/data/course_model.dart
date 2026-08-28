@@ -48,6 +48,7 @@ class ForkedFromInfo {
 
 class CourseItem {
   final int? id;
+  final int? revision;
   final String title;
   final String description;
   final List<CourseTrack> tracks;
@@ -62,6 +63,7 @@ class CourseItem {
 
   const CourseItem({
     this.id,
+    this.revision,
     required this.title,
     required this.description,
     required this.tracks,
@@ -96,6 +98,7 @@ class CourseItem {
   }) =>
       CourseItem(
         id: id,
+        revision: revision,
         title: title ?? this.title,
         description: description ?? this.description,
         tracks: tracks ?? this.tracks,
@@ -111,6 +114,7 @@ class CourseItem {
 
   Map<String, dynamic> toJson() => {
         if (id != null) 'id': id,
+        if (revision != null) 'revision': revision,
         'title': title,
         'description': description,
         'isPublic': isPublic,
@@ -120,6 +124,7 @@ class CourseItem {
 
   factory CourseItem.fromJson(Map<String, dynamic> json) => CourseItem(
         id: json['id'] as int?,
+        revision: (json['revision'] as num?)?.toInt(),
         title: json['title'] as String,
         description: (json['description'] as String?) ?? '',
         isPublic: (json['isPublic'] as bool?) ?? false,

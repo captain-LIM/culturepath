@@ -8,6 +8,7 @@ const {
   getCourse,
   getMyLikedCourses,
   toggleLike,
+  updateCourse,
 } = require('../src/controllers/coursesController');
 
 function responseRecorder() {
@@ -45,6 +46,7 @@ function courseRow(overrides = {}) {
     is_public: 1,
     like_count: 0,
     fork_count: 0,
+    revision: 1,
     ...overrides,
   };
 }
@@ -62,10 +64,50 @@ test('allows guests to read a public course and filters private courses in SQL',
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.id, 7);
     assert.equal(res.body.isOwner, false);
+    assert.equal(res.body.revision, 1);
   });
 
   assert.match(queries[0].sql, /c\.is_public = TRUE/);
   assert.deepEqual(queries[0].params, [7]);
+});
+
+test('rejects a stale course revision before replacing any tracks', async () => {
+  const originalGetConnection = pool.getConnection;
+  let rolledBack = false;
+  let committed = false;
+  const queries = [];
+  pool.getConnection = async () => ({
+    async beginTransaction() {},
+    async query(sql, params) {
+      queries.push({ sql, params });
+      if (sql.includes('SELECT user_id, revision')) {
+        return [[{ user_id: 12, revision: 4 }]];
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    },
+    async rollback() { rolledBack = true; },
+    async commit() { committed = true; },
+    release() {},
+  });
+  try {
+    const res = responseRecorder();
+    await updateCourse({
+      params: { id: '7' },
+      user: { id: 12 },
+      body: {
+        expectedRevision: 3,
+        tracks: [{ trackNumber: 1, places: [] }],
+      },
+    }, res);
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.body.currentRevision, 4);
+    assert.equal(rolledBack, true);
+    assert.equal(committed, false);
+    assert.equal(queries.length, 1);
+    assert.match(queries[0].sql, /FOR UPDATE/);
+  } finally {
+    pool.getConnection = originalGetConnection;
+  }
 });
 
 test('maps stored place coordinates into the course response', async () => {

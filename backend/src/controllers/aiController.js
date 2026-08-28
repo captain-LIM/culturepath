@@ -1,8 +1,12 @@
 'use strict';
 
 const ragPipeline = require('../services/ragPipeline');
+const { defaultService: aiChatService } = require('../services/aiChatService');
+const { defaultStore: aiSessionStore } = require('../services/aiSessionStore');
+const { createAiIntentService } = require('../services/aiIntentService');
 const { loadCourseForTransform } = require('../services/aiCourseContextService');
 const { normalizedCourseShape } = require('../services/courseTransformContract');
+const { publicPlaceError } = require('../utils/publicPlaceError');
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 2000;
@@ -11,6 +15,7 @@ const MAX_REQUEST_LENGTH = 500;
 const MAX_TRACKS = 3;
 const MAX_PLACES_PER_TRACK = 20;
 const MAX_TOTAL_PLACES = 50;
+const aiIntentService = createAiIntentService();
 
 function validateMessages(messages) {
   if (!Array.isArray(messages) || messages.length < 1 || messages.length > MAX_MESSAGES) {
@@ -87,12 +92,37 @@ function normalizeConstraints(value) {
 }
 
 function providerStatus(error) {
-  if (error?.name === 'CourseAccessError') return error.status;
+  if (error?.name === 'CourseAccessError' || error?.name === 'AiSessionError') return error.status;
+  if (error?.name === 'ExternalApiError') return publicPlaceError(error).status;
+  if (error instanceof RangeError) return 400;
   if (error?.code?.includes('NOT_CONFIGURED')) return 503;
   if (error?.code?.includes('TIMEOUT')) return 504;
   if (error?.name === 'AiProviderError' || error?.name === 'VectorStoreError') return 502;
   if (error instanceof SyntaxError || String(error?.message || '').startsWith('AI ')) return 502;
   return 500;
+}
+
+function normalizeEntryContext(value) {
+  if (value == null) return { type: 'general', courseId: null };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const keys = Object.keys(value);
+  if (keys.some(key => !['type', 'courseId'].includes(key))) return null;
+  if (!['general', 'course'].includes(value.type)) return null;
+  if (value.type === 'course') {
+    if (!Number.isSafeInteger(value.courseId) || value.courseId <= 0) return null;
+    return { type: 'course', courseId: value.courseId };
+  }
+  if (value.courseId != null) return null;
+  return { type: 'general', courseId: null };
+}
+
+function normalizeSessionId(value) {
+  if (value == null || value === '') return null;
+  const normalized = String(value).trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(normalized)
+    ? normalized
+    : undefined;
 }
 
 async function transformCourse(req, res) {
@@ -117,7 +147,34 @@ async function transformCourse(req, res) {
   const startedAt = Date.now();
   try {
     const course = await loadCourseForTransform(courseId, req.user.id);
-    const result = await ragPipeline.editCourse(course, request.trim(), constraints);
+    const coursePlaces = course.tracks.flatMap(track => track.places.map(place => ({
+      contentId: String(place.contentId),
+      title: place.title,
+      trackNumber: track.trackNumber,
+    })));
+    const intent = await aiIntentService.parse(
+      [{ role: 'user', content: request.trim() }],
+      {
+        courseId,
+        coursePlaceIds: coursePlaces.map(place => place.contentId),
+        coursePlaces,
+      },
+    );
+    if (intent.action !== 'edit_course' || intent.needsClarification) {
+      return res.status(400).json({
+        message: intent.clarificationQuestion ||
+          '바꿀 장소와 삭제·Day 이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.',
+      });
+    }
+    const result = await ragPipeline.editCourse(course, request.trim(), {
+      ...constraints,
+      editPlan: {
+        operation: intent.courseEditOperation,
+        targetContentIds: intent.referencedCoursePlaceIds,
+        destinationDay: intent.courseEditDestinationDay,
+        destinationPosition: intent.courseEditDestinationPosition,
+      },
+    });
     const changed = JSON.stringify(normalizedCourseShape(result.course)) !==
       JSON.stringify(normalizedCourseShape(course));
     console.info('AI 코스 변형 완료:', {
@@ -145,9 +202,30 @@ async function chat(req, res) {
   const messages = req.body?.messages;
   const validationError = validateMessages(messages);
   if (validationError) return res.status(400).json({ message: validationError });
+  const sessionId = normalizeSessionId(req.body?.sessionId);
+  if (sessionId === undefined) {
+    return res.status(400).json({ message: 'sessionId 형식이 올바르지 않습니다.' });
+  }
+  const entryContext = normalizeEntryContext(req.body?.entryContext);
+  if (!entryContext) {
+    return res.status(400).json({ message: 'entryContext 형식이 올바르지 않습니다.' });
+  }
 
+  const startedAt = Date.now();
   try {
-    const result = await ragPipeline.chat(messages);
+    const result = await aiChatService.chat({
+      userId: req.user.id,
+      messages,
+      sessionId,
+      entryContext,
+    });
+    console.info('AI 여행 대화 완료:', {
+      action: result.action,
+      sourceCount: result.sources?.length || 0,
+      hasDraft: Boolean(result.suggestedCourse),
+      durationMs: Date.now() - startedAt,
+      mock: Boolean(result.mock),
+    });
     return res.json(result);
   } catch (error) {
     console.error('AI 응답 실패:', { errorName: error?.name || 'Error', code: error?.code || null });
@@ -155,9 +233,56 @@ async function chat(req, res) {
   }
 }
 
+function deleteChatSession(req, res) {
+  const sessionId = normalizeSessionId(req.params?.sessionId);
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId 형식이 올바르지 않습니다.' });
+  }
+  try {
+    aiSessionStore.remove(sessionId, req.user.id);
+    return res.status(204).send();
+  } catch (error) {
+    const status = providerStatus(error);
+    return res.status(status).json({ message: error.message });
+  }
+}
+
+function deleteUserChatSessions(req, res) {
+  aiSessionStore.removeAllForUser(req.user.id);
+  return res.status(204).send();
+}
+
+async function markChatCourseSaved(req, res) {
+  const sessionId = normalizeSessionId(req.params?.sessionId);
+  const courseId = req.body?.courseId;
+  if (!sessionId || !Number.isSafeInteger(courseId) || courseId <= 0) {
+    return res.status(400).json({ message: '유효한 sessionId와 courseId가 필요합니다.' });
+  }
+  try {
+    const result = await aiChatService.markCourseSaved({
+      userId: req.user.id,
+      sessionId,
+      courseId,
+    });
+    return res.json(result);
+  } catch (error) {
+    const status = providerStatus(error);
+    const message = ['CourseAccessError', 'AiSessionError'].includes(error?.name)
+      ? error.message
+      : '저장된 코스를 AI 대화에 반영하지 못했습니다.';
+    return res.status(status).json({ message });
+  }
+}
+
 module.exports = {
   chat,
+  deleteChatSession,
+  deleteUserChatSessions,
+  markChatCourseSaved,
+  normalizeEntryContext,
+  normalizeSessionId,
   normalizeConstraints,
+  providerStatus,
   transformCourse,
   validateCourse,
   validateMessages,

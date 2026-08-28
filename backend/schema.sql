@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS courses (
     area_code              VARCHAR(50) DEFAULT NULL,
   created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  revision               BIGINT UNSIGNED NOT NULL DEFAULT 1,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (forked_from_course_id) REFERENCES courses(id) ON DELETE SET NULL,
     UNIQUE KEY uk_course_idempotency (user_id, idempotency_key)

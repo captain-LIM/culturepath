@@ -14,6 +14,7 @@ function courseRow(overrides = {}) {
     title: '서버 제목',
     description: '',
     is_public: 0,
+    revision: 2,
     ...overrides,
   };
 }
@@ -74,6 +75,7 @@ test('rehydrates an owner course from trusted TourAPI cache metadata', async () 
   assert.equal(course.tracks[0].places[0].title, 'TourAPI 캐시 장소');
   assert.equal(course.tracks[0].places[0].address, '통영시');
   assert.equal(course.isOwner, true);
+  assert.equal(course.revision, 2);
   assert.deepEqual(course.tracks.slice(1), [
     { trackNumber: 2, places: [] },
     { trackNumber: 3, places: [] },
@@ -85,6 +87,15 @@ test('rejects access to another user private course before loading tracks', asyn
   await assert.rejects(
     service.loadCourseForTransform(7, 99),
     error => error instanceof CourseAccessError && error.status === 403,
+  );
+});
+
+test('requires an explicit Fork before another user can transform a public course', async () => {
+  const service = createService(courseRow({ is_public: 1 }), [], []);
+  await assert.rejects(
+    service.loadCourseForTransform(7, 99),
+    error => error instanceof CourseAccessError &&
+      error.status === 403 && /Fork/.test(error.message),
   );
 });
 
