@@ -21,7 +21,7 @@ class SpotsRepository {
       final res = await _client.get(
         '/regions/$areaCode/spots',
         params: {
-          if (culture != null) 'culture': culture,
+          'culture': ?culture,
           'pageNo': pageNo,
           'numOfRows': _numOfRows,
         },
