@@ -136,6 +136,11 @@ test('documents the authenticated structured AI transform contract', () => {
   assert.ok(transform.responses[502]);
   assert.ok(transform.responses[503]);
   assert.ok(transform.responses[504]);
+  assert.doesNotMatch(JSON.stringify(transform.responses), /Qdrant|AI\/RAG/);
+  assert.doesNotMatch(
+    JSON.stringify(openApiDocument.paths['/ai/edit-course'].post.responses),
+    /Qdrant|AI\/RAG/,
+  );
   const transformResponse = openApiDocument.components.schemas.CourseTransformResponse;
   assert.equal(openApiDocument.components.schemas.CourseDraft.properties.tracks.maxItems, 3);
   assert.equal(openApiDocument.components.schemas.CourseTrack.properties.trackNumber.maximum, 3);

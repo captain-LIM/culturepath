@@ -27,7 +27,10 @@ function intent(action, overrides = {}) {
     companions: [],
     dayCount: null,
     referencedSourceIds: [],
-    referencedCoursePlaceIds: [],
+    referencedCoursePlaceIds: action === 'edit_course' ? ['200'] : [],
+    courseEditOperation: action === 'edit_course' ? 'remove' : 'none',
+    courseEditDestinationDay: null,
+    courseEditDestinationPosition: 'none',
     needsClarification: false,
     clarificationQuestion: null,
     ...overrides,
@@ -102,8 +105,15 @@ test('routes a course-context edit to the existing-place editor without candidat
       assert.equal(userId, 7);
       return course;
     },
-    courseEditor: async current => {
+    courseEditor: async (current, request, constraints) => {
       editedCourse = current;
+      assert.equal(request, '음악당을 빼줘');
+      assert.deepEqual(constraints.editPlan, {
+        operation: 'remove',
+        targetContentIds: ['200'],
+        destinationDay: null,
+        destinationPosition: 'none',
+      });
       return {
         course: { ...current, tracks: [{ trackNumber: 1, places: [current.tracks[0].places[0]] }] },
         summary: '장소 한 곳을 제외했습니다.',
@@ -143,6 +153,34 @@ test('does not fabricate candidates when the resolver returns an empty result', 
   });
   assert.deepEqual(response.sources, []);
   assert.match(response.content, /찾지 못했어요/);
+});
+
+test('asks the user to narrow more than two culture filters before candidate lookup', async () => {
+  let resolverCalled = false;
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: {
+      async parse() {
+        return intent('discover_places', {
+          cultures: ['문학', '음악', '공예·공방'],
+        });
+      },
+    },
+    candidateResolver: {
+      async resolve() { resolverCalled = true; return { items: [] }; },
+    },
+    llmService: { isMockMode: () => true },
+  });
+
+  const response = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: '통영 문화 장소를 폭넓게 보여줘' }],
+    env: { USE_MOCK_AI: 'true' },
+  });
+
+  assert.equal(response.action, 'clarify');
+  assert.equal(resolverCalled, false);
+  assert.match(response.content, /두 개까지/);
 });
 
 test('refuses a rating-based recommendation because TourAPI has no trusted rating', async () => {

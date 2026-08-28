@@ -3,6 +3,7 @@
 const ragPipeline = require('../services/ragPipeline');
 const { defaultService: aiChatService } = require('../services/aiChatService');
 const { defaultStore: aiSessionStore } = require('../services/aiSessionStore');
+const { createAiIntentService } = require('../services/aiIntentService');
 const { loadCourseForTransform } = require('../services/aiCourseContextService');
 const { normalizedCourseShape } = require('../services/courseTransformContract');
 const { publicPlaceError } = require('../utils/publicPlaceError');
@@ -14,6 +15,7 @@ const MAX_REQUEST_LENGTH = 500;
 const MAX_TRACKS = 3;
 const MAX_PLACES_PER_TRACK = 20;
 const MAX_TOTAL_PLACES = 50;
+const aiIntentService = createAiIntentService();
 
 function validateMessages(messages) {
   if (!Array.isArray(messages) || messages.length < 1 || messages.length > MAX_MESSAGES) {
@@ -145,7 +147,34 @@ async function transformCourse(req, res) {
   const startedAt = Date.now();
   try {
     const course = await loadCourseForTransform(courseId, req.user.id);
-    const result = await ragPipeline.editCourse(course, request.trim(), constraints);
+    const coursePlaces = course.tracks.flatMap(track => track.places.map(place => ({
+      contentId: String(place.contentId),
+      title: place.title,
+      trackNumber: track.trackNumber,
+    })));
+    const intent = await aiIntentService.parse(
+      [{ role: 'user', content: request.trim() }],
+      {
+        courseId,
+        coursePlaceIds: coursePlaces.map(place => place.contentId),
+        coursePlaces,
+      },
+    );
+    if (intent.action !== 'edit_course' || intent.needsClarification) {
+      return res.status(400).json({
+        message: intent.clarificationQuestion ||
+          '바꿀 장소와 삭제·Day 이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.',
+      });
+    }
+    const result = await ragPipeline.editCourse(course, request.trim(), {
+      ...constraints,
+      editPlan: {
+        operation: intent.courseEditOperation,
+        targetContentIds: intent.referencedCoursePlaceIds,
+        destinationDay: intent.courseEditDestinationDay,
+        destinationPosition: intent.courseEditDestinationPosition,
+      },
+    });
     const changed = JSON.stringify(normalizedCourseShape(result.course)) !==
       JSON.stringify(normalizedCourseShape(course));
     console.info('AI 코스 변형 완료:', {

@@ -2,7 +2,10 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createAiCandidateResolver } = require('../src/services/aiCandidateResolver');
+const {
+  MAX_CANDIDATE_SERVICE_CALLS,
+  createAiCandidateResolver,
+} = require('../src/services/aiCandidateResolver');
 
 function place(contentId, title, codes) {
   return {
@@ -142,4 +145,74 @@ test('loads bounded trusted detail through the cache service for an explanation'
   assert.equal(result.item.overview, '문학 전시 공간');
   assert.equal(result.item.openTime, '09:00~18:00');
   await assert.rejects(resolver.getDetail({ contentId: 'not-tour' }), /contentId/);
+});
+
+test('bounds a cold multi-district search and rejects more than two cultures', async () => {
+  let calls = 0;
+  const empty = () => ({
+    items: [],
+    pagination: { pageNo: 1, numOfRows: 5, totalCount: 0 },
+    cacheStatus: 'REFRESHED',
+  });
+  const resolver = createAiCandidateResolver({
+    logger: { warn() {} },
+    placesService: {
+      async getAreaBasedPlaces() { calls += 1; return empty(); },
+      async searchPlacesByKeyword() { calls += 1; return empty(); },
+    },
+  });
+
+  const result = await resolver.resolve({
+    region: 'jeonju',
+    cultures: ['문학', '전통주·양조장'],
+    limit: 10,
+  });
+  assert.ok(calls <= MAX_CANDIDATE_SERVICE_CALLS);
+  assert.deepEqual(result.items, []);
+  await assert.rejects(
+    resolver.resolve({
+      region: 'jeonju',
+      cultures: ['문학', '음악', '공예·공방'],
+      limit: 10,
+    }),
+    /최대 2개/,
+  );
+});
+
+test('splits the cold-search budget fairly and preserves official candidates for both cultures', async () => {
+  let calls = 0;
+  const resolver = createAiCandidateResolver({
+    logger: { warn() {} },
+    placesService: {
+      async getAreaBasedPlaces(input) {
+        calls += 1;
+        const isCoffee = input.lclsSystm2 === 'FD05';
+        return {
+          items: [isCoffee
+            ? place('200', '전주 로스터리 카페', ['FD', 'FD05'])
+            : place('100', '전주 음악 공연장', ['VE', 'VE06', 'VE060100'])],
+          pagination: { pageNo: 1, numOfRows: 5, totalCount: 100 },
+          cacheStatus: 'REFRESHED',
+        };
+      },
+      async searchPlacesByKeyword() {
+        calls += 1;
+        return {
+          items: [],
+          pagination: { pageNo: 1, numOfRows: 5, totalCount: 100 },
+          cacheStatus: 'REFRESHED',
+        };
+      },
+    },
+  });
+
+  const result = await resolver.resolve({
+    region: 'jeonju',
+    cultures: ['음악', '커피·카페'],
+    limit: 10,
+  });
+
+  assert.ok(calls <= MAX_CANDIDATE_SERVICE_CALLS);
+  assert.deepEqual(result.items.map(item => item.contentId), ['100', '200']);
+  assert.equal(result.partial, true);
 });

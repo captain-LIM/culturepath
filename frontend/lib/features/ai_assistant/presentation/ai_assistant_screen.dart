@@ -319,7 +319,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.grey),
             tooltip: 'ai_reset'.tr(),
-            onPressed: notifier.clear,
+            onPressed: loading ? null : notifier.clear,
           ),
         ],
       ),

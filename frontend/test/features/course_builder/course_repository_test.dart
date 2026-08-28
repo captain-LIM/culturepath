@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _CourseApiClient extends ApiClient {
   bool fail = false;
+  Map<String, dynamic>? lastPutData;
 
   _CourseApiClient()
       : super(
@@ -32,6 +33,23 @@ class _CourseApiClient extends ApiClient {
     }
     return Response<dynamic>(
       data: [_course('서버 코스').toJson()],
+      statusCode: 200,
+      requestOptions: RequestOptions(path: path),
+    );
+  }
+
+  @override
+  Future<Response<dynamic>> put(
+    String path,
+    Map<String, dynamic> data,
+  ) async {
+    lastPutData = data;
+    return Response<dynamic>(
+      data: {
+        ...data,
+        'id': 7,
+        'revision': 5,
+      }..remove('expectedRevision'),
       statusCode: 200,
       requestOptions: RequestOptions(path: path),
     );
@@ -75,6 +93,38 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test('preserves the server revision as the next update precondition', () {
+    final course = CourseItem.fromJson({
+      'id': 7,
+      'revision': 4,
+      'title': '동시성 코스',
+      'description': '',
+      'isPublic': false,
+      'tracks': <dynamic>[],
+    });
+
+    expect(course.revision, 4);
+    expect(course.toJson()['revision'], 4);
+  });
+
+  test('sends the current revision as the update precondition', () async {
+    final client = _CourseApiClient();
+    final repository = CourseRepository(client: client);
+    final course = CourseItem(
+      id: 7,
+      revision: 4,
+      title: '동시성 코스',
+      description: '',
+      tracks: const [CourseTrack(trackNumber: 1, places: [])],
+    );
+
+    final saved = await repository.updateCourse(course);
+
+    expect(client.lastPutData!['expectedRevision'], 4);
+    expect(client.lastPutData!.containsKey('revision'), isFalse);
+    expect(saved.revision, 5);
+  });
 
   test('guest course edit replaces the existing item instead of duplicating it', () async {
     final repository = CourseRepository(client: _CourseApiClient());

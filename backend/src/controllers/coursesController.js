@@ -72,6 +72,7 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
     isOwner: userId != null && String(row.user_id) === String(userId),
     score: likeCount * 2 + forkCount,
     totalPlaces,
+    revision: Number(row.revision || 1),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -309,12 +310,19 @@ async function getCourse(req, res) {
 
 async function updateCourse(req, res) {
   const courseId = parseInt(req.params.id);
-  const { title, description, tracks, isPublic } = req.body;
+  const { title, description, tracks, isPublic, expectedRevision } = req.body;
+  if (expectedRevision !== undefined &&
+      (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1)) {
+    return res.status(400).json({ message: 'expectedRevision이 올바르지 않습니다.' });
+  }
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[existing]] = await conn.query('SELECT user_id FROM courses WHERE id = ?', [courseId]);
+    const [[existing]] = await conn.query(
+      'SELECT user_id, revision FROM courses WHERE id = ? FOR UPDATE',
+      [courseId],
+    );
     if (!existing) {
       await conn.rollback();
       return res.status(404).json({ message: '코스를 찾을 수 없습니다.' });
@@ -323,8 +331,15 @@ async function updateCourse(req, res) {
       await conn.rollback();
       return res.status(403).json({ message: '권한이 없습니다.' });
     }
+    if (expectedRevision !== undefined && Number(existing.revision) !== expectedRevision) {
+      await conn.rollback();
+      return res.status(409).json({
+        message: '코스가 다른 곳에서 변경되었습니다. 최신 코스를 다시 불러와 주세요.',
+        currentRevision: Number(existing.revision),
+      });
+    }
 
-    const updates = ['updated_at = NOW()'];
+    const updates = ['updated_at = NOW()', 'revision = revision + 1'];
     const values = [];
     if (title !== undefined)       { updates.push('title = ?');       values.push(title); }
     if (description !== undefined) { updates.push('description = ?'); values.push(description); }

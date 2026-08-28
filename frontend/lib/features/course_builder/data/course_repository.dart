@@ -115,7 +115,10 @@ class CourseRepository {
   }
 
   Future<CourseItem> updateCourse(CourseItem course) async {
-    final res = await _apiClient.put('/courses/${course.id}', course.toJson());
+    final payload = course.toJson();
+    payload.remove('revision');
+    if (course.revision != null) payload['expectedRevision'] = course.revision;
+    final res = await _apiClient.put('/courses/${course.id}', payload);
     await _invalidateCourseLists();
     return CourseItem.fromJson(res.data as Map<String, dynamic>);
   }

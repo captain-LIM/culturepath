@@ -209,7 +209,7 @@ module.exports = Object.freeze({
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           403: {
-            description: '비공개 코스 접근 권한 없음',
+            description: '소유하지 않은 코스 — 먼저 Fork 필요',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           404: {
@@ -221,15 +221,15 @@ module.exports = Object.freeze({
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           502: {
-            description: 'OpenRouter 또는 Qdrant 응답 오류',
+            description: 'OpenRouter 응답 또는 AI 출력 검증 오류',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           503: {
-            description: 'AI/RAG 설정 누락',
+            description: 'OpenRouter 설정 누락',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           504: {
-            description: 'AI/RAG 응답 시간 초과',
+            description: 'OpenRouter 응답 시간 초과',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
           },
           500: {
@@ -381,9 +381,9 @@ module.exports = Object.freeze({
           404: { description: '코스를 찾을 수 없음' },
           429: { description: '호출 제한 초과' },
           500: { description: '서버 오류' },
-          502: { description: 'AI/RAG 응답 오류' },
-          503: { description: 'AI/RAG 설정 누락' },
-          504: { description: 'AI/RAG 응답 시간 초과' },
+          502: { description: 'OpenRouter 또는 AI 검증 응답 오류' },
+          503: { description: 'OpenRouter 설정 누락' },
+          504: { description: 'OpenRouter 응답 시간 초과' },
         },
       },
     },
@@ -688,6 +688,7 @@ module.exports = Object.freeze({
         required: ['title', 'description', 'tracks'],
         properties: {
           id: { type: 'integer', nullable: true },
+          revision: { type: 'integer', minimum: 1, nullable: true },
           title: { type: 'string', minLength: 1, maxLength: 120 },
           description: { type: 'string', maxLength: 2000 },
           isPublic: { type: 'boolean' },

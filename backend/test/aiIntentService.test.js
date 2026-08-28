@@ -69,6 +69,9 @@ test('validates model references against session allowlists', () => {
     dayCount: null,
     referencedSourceIds: ['100', '999'],
     referencedCoursePlaceIds: ['200', '888'],
+    courseEditOperation: 'remove',
+    courseEditDestinationDay: null,
+    courseEditDestinationPosition: 'none',
     needsClarification: false,
     clarificationQuestion: null,
   }, {
@@ -92,6 +95,9 @@ test('allows only curated preference tags and clarifies a multi-region place req
     dayCount: null,
     referencedSourceIds: [],
     referencedCoursePlaceIds: [],
+    courseEditOperation: 'none',
+    courseEditDestinationDay: null,
+    courseEditDestinationPosition: 'none',
     needsClarification: false,
     clarificationQuestion: null,
   }, {}, {});
@@ -120,6 +126,9 @@ test('uses strict structured generation in live mode', async () => {
             dayCount: null,
             referencedSourceIds: [],
             referencedCoursePlaceIds: [],
+            courseEditOperation: 'none',
+            courseEditDestinationDay: null,
+            courseEditDestinationPosition: 'none',
             needsClarification: false,
             clarificationQuestion: null,
           }),
@@ -133,4 +142,27 @@ test('uses strict structured generation in live mode', async () => {
   assert.equal(receivedOptions.jsonSchema.name, 'culturepath_intent');
   assert.equal(receivedOptions.temperature, 0);
   assert.equal(intent.action, 'discover_places');
+});
+
+test('extracts an explicit course edit plan and clarifies an ambiguous target', () => {
+  const state = {
+    courseId: 42,
+    coursePlaceIds: ['100', '200'],
+    coursePlaces: [
+      { contentId: '100', title: '박경리기념관', trackNumber: 1 },
+      { contentId: '200', title: '통영국제음악당', trackNumber: 1 },
+    ],
+  };
+  const removal = deterministicIntent([
+    { role: 'user', content: '음악당을 빼줘' },
+  ], state);
+  assert.equal(removal.action, 'edit_course');
+  assert.equal(removal.courseEditOperation, 'remove');
+  assert.deepEqual(removal.referencedCoursePlaceIds, ['200']);
+
+  const ambiguous = deterministicIntent([
+    { role: 'user', content: '장소 하나를 빼줘' },
+  ], state);
+  assert.equal(ambiguous.action, 'clarify');
+  assert.equal(ambiguous.needsClarification, true);
 });

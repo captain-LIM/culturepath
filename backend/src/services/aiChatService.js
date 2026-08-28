@@ -264,7 +264,14 @@ function createAiChatService(options = {}) {
         };
       }
       const request = [...messages].reverse().find(message => message.role === 'user')?.content || '';
-      const transform = await courseEditor(loaded.course, request, {}, { env });
+      const transform = await courseEditor(loaded.course, request, {
+        editPlan: {
+          operation: intent.courseEditOperation,
+          targetContentIds: intent.referencedCoursePlaceIds,
+          destinationDay: intent.courseEditDestinationDay,
+          destinationPosition: intent.courseEditDestinationPosition,
+        },
+      }, { env });
       state.pendingTransform = {
         course: clone(transform.course),
         createdAt: Date.now(),
@@ -279,6 +286,20 @@ function createAiChatService(options = {}) {
         transform,
         mock: Boolean(transform.mock),
         ...(transform.usage && { usage: transform.usage }),
+      };
+    }
+
+    if (['discover_places', 'create_course_draft'].includes(intent.action) &&
+        (state.cultures || []).length > 2) {
+      state.lastAction = 'clarify';
+      session = sessionStore.update(session.id, userId, () => state);
+      return {
+        sessionId: session.id,
+        action: 'clarify',
+        content: '한 번에 문화 주제는 두 개까지 찾을 수 있어요. 먼저 살펴볼 두 가지를 골라 주세요.',
+        sources: [],
+        suggestedCourse: null,
+        mock: generator.isMockMode(env || process.env),
       };
     }
 

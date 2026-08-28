@@ -117,6 +117,9 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           error.type == DioExceptionType.sendTimeout ||
           error.type == DioExceptionType.receiveTimeout);
 
+  bool _isSaveConflict(Object error) =>
+      error is DioException && error.response?.statusCode == 409;
+
   void _openAddPlaceSheet() {
     showModalBottomSheet(
       context: context,
@@ -214,9 +217,11 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
       if (mounted) {
         final messageKey = _canSaveOffline(error)
             ? 'course_saved_offline'
-            : _isSaveOutcomeUncertain(error)
-                ? 'course_save_uncertain'
-                : 'course_save_failed';
+            : _isSaveConflict(error)
+                ? 'course_save_conflict'
+                : _isSaveOutcomeUncertain(error)
+                    ? 'course_save_uncertain'
+                    : 'course_save_failed';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(messageKey.tr()),

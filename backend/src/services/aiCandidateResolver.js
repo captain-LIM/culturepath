@@ -17,6 +17,16 @@ const {
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 20;
+const MAX_CULTURES_PER_RESOLUTION = 2;
+const MAX_CANDIDATE_SERVICE_CALLS = 12;
+
+class CandidateBudgetError extends Error {
+  constructor() {
+    super('AI 관광지 후보 조회 호출 한도를 초과했습니다.');
+    this.name = 'CandidateBudgetError';
+    this.code = 'AI_CANDIDATE_BUDGET_EXHAUSTED';
+  }
+}
 
 function normalizeLimit(value) {
   const parsed = Number(value);
@@ -60,12 +70,26 @@ function createAiCandidateResolver(options = {}) {
   const cacheRepository = options.cacheRepository || placeCacheRepository;
   const logger = options.logger || console;
 
-  async function collectOfficialCandidates(regionRequests, culture, limit) {
+  function createBudgetedPlacesService(maxCalls = MAX_CANDIDATE_SERVICE_CALLS) {
+    let used = 0;
+    async function call(method, input) {
+      if (used >= maxCalls) throw new CandidateBudgetError();
+      used += 1;
+      return placesService[method](input);
+    }
+    return Object.freeze({
+      getAreaBasedPlaces: input => call('getAreaBasedPlaces', input),
+      searchPlacesByKeyword: input => call('searchPlacesByKeyword', input),
+      used: () => used,
+    });
+  }
+
+  async function collectOfficialCandidates(regionRequests, culture, limit, scopedPlacesService) {
     const officialQuery = CULTURE_OFFICIAL_QUERY_CODES[culture];
     if (!officialQuery) return { items: [], cacheStatus: null, partial: false };
 
     const settled = await Promise.allSettled(regionRequests.map(request =>
-      placesService.getAreaBasedPlaces({
+      scopedPlacesService.getAreaBasedPlaces({
         ...request,
         ...officialQuery,
         pageNo: 1,
@@ -95,7 +119,7 @@ function createAiCandidateResolver(options = {}) {
     };
   }
 
-  async function collectCulture(region, culture, limit) {
+  async function collectCulture(region, culture, limit, scopedPlacesService) {
     if (!CULTURE_CATEGORIES.includes(culture)) {
       throw new RangeError('지원하지 않는 문화 카테고리입니다.');
     }
@@ -107,9 +131,10 @@ function createAiCandidateResolver(options = {}) {
       numOfRows: Math.min(limit, MAX_CULTURE_RESULTS),
     }));
 
+    const candidateService = scopedPlacesService || createBudgetedPlacesService();
     let official = { items: [], cacheStatus: null, partial: false };
     try {
-      official = await collectOfficialCandidates(requests, culture, limit);
+      official = await collectOfficialCandidates(requests, culture, limit, candidateService);
     } catch (error) {
       logger?.warn?.('AI 공식 문화 코드 조회 실패 후 일반 후보로 보완합니다.', {
         errorName: error?.name || 'Error',
@@ -119,14 +144,25 @@ function createAiCandidateResolver(options = {}) {
 
     if (official.items.length >= limit) return official;
 
-    const expanded = await collectCulturePlacePage({
-      placesService,
-      culture,
-      request: requests[0],
-      requests,
-      limit,
-      logger,
-    });
+    let expanded;
+    try {
+      expanded = await collectCulturePlacePage({
+        placesService: candidateService,
+        culture,
+        request: requests[0],
+        requests,
+        limit,
+        logger,
+      });
+    } catch (error) {
+      if (error?.code !== 'AI_CANDIDATE_BUDGET_EXHAUSTED' || official.items.length === 0) {
+        throw error;
+      }
+      return {
+        ...official,
+        partial: true,
+      };
+    }
     const byId = new Map();
     for (const item of [...official.items, ...expanded.items]) {
       const contentId = String(item?.contentId || '').trim();
@@ -154,17 +190,30 @@ function createAiCandidateResolver(options = {}) {
         region: normalizedRegion,
       });
     }
+    if (normalizedCultures.length > MAX_CULTURES_PER_RESOLUTION) {
+      throw new RangeError(`한 번에 문화 카테고리는 최대 ${MAX_CULTURES_PER_RESOLUTION}개까지 조회할 수 있습니다.`);
+    }
 
     const maxItems = normalizeLimit(limit);
     const perCultureLimit = Math.max(3, Math.ceil(maxItems / normalizedCultures.length));
-    const settled = await Promise.allSettled(normalizedCultures.map(culture =>
-      collectCulture(normalizedRegion, culture, perCultureLimit)
-        .then(result => ({ ...result, culture })),
-    ));
-    const successes = settled
-      .filter(result => result.status === 'fulfilled')
-      .map(result => result.value);
-    const failures = settled.filter(result => result.status === 'rejected');
+    const callsPerCulture = Math.floor(
+      MAX_CANDIDATE_SERVICE_CALLS / normalizedCultures.length,
+    );
+    const successes = [];
+    const failures = [];
+    for (const culture of normalizedCultures) {
+      try {
+        const result = await collectCulture(
+          normalizedRegion,
+          culture,
+          perCultureLimit,
+          createBudgetedPlacesService(callsPerCulture),
+        );
+        successes.push({ ...result, culture });
+      } catch (error) {
+        failures.push({ status: 'rejected', reason: error });
+      }
+    }
     if (successes.length === 0 && failures.length > 0) throw failures[0].reason;
 
     const byId = new Map();
@@ -264,7 +313,10 @@ function createAiCandidateResolver(options = {}) {
 }
 
 module.exports = {
+  CandidateBudgetError,
   DEFAULT_LIMIT,
+  MAX_CANDIDATE_SERVICE_CALLS,
+  MAX_CULTURES_PER_RESOLUTION,
   MAX_LIMIT,
   createAiCandidateResolver,
   normalizeLimit,
