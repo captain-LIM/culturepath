@@ -713,6 +713,182 @@ test('retries LLM translation when the cache has no title even though the source
   assert.equal(generateCalls.length, 2);
 });
 
+test('retries LLM translation when the cached title was never actually translated (identical to Korean)', async () => {
+  // 실측 사례: '대학천 책방거리', '소수책방'처럼 한글 고유명사가 낀 짧은
+  // 지명·상호명을 LLM이 로마자 음역 없이 원문 그대로 반환하는 경우가
+  // 있었다. 그 결과가 그대로 캐시되면 title 필드 자체는 "채워져 있어"
+  // 얕은 캐시 감지(비어있는 필드 검사)를 통과해 버려, 다음 조회에서도
+  // 계속 한글 그대로 나왔다. 캐시된 title이 한글을 포함한 원문과 완전히
+  // 같으면 "번역 실패"로 보고 다시 시도해야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let shouldTranslateTitle = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        const { place: input } = JSON.parse(messages[0].content);
+        return {
+          content: JSON.stringify({
+            title: shouldTranslateTitle ? 'Daehakcheon Bookstore Street' : input.title,
+            address: '',
+            openTime: '',
+            overview: '',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = { contentId: '132202', title: '대학천 책방거리' };
+
+  const [first] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(first.title, '대학천 책방거리');
+  assert.equal(generateCalls.length, 1);
+
+  shouldTranslateTitle = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(second.title, 'Daehakcheon Bookstore Street');
+  assert.equal(generateCalls.length, 2);
+
+  // 이제 실제로 번역됐으니 더는 재시도하지 않는다.
+  const [third] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(third.title, 'Daehakcheon Bookstore Street');
+  assert.equal(generateCalls.length, 2);
+});
+
+test('retries once when the LLM answers ja/zh requests entirely in English', async () => {
+  // 실측 사례: OpenRouter는 temperature:0이어도 완전히 결정적이지 않아,
+  // 일본어 요청인데도 응답 전체(overview 포함)가 영어로 나오는 경우가
+  // 드물게 있었다(실측: '대학천 책방거리'). overview에 목표 언어(일본어/
+  // 중국어) 문자가 하나도 없으면 재시도해야 한다.
+  const store = new Map();
+  const generateCalls = [];
+  let attempt = 0;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        attempt += 1;
+        return {
+          content: JSON.stringify({
+            title: 'Daehakcheon Bookstore Street',
+            address: '',
+            openTime: '',
+            overview: attempt === 1
+              ? 'Daehakcheon Bookstore Street is an old alley.'
+              : '大学川書店通りは、古本を安く購入できる古い通りです。',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = {
+    contentId: '132202',
+    title: '대학천 책방거리',
+    overview: '대학천 책방거리는 헌책을 저렴하게 구입할 수 있는 오래된 거리이다.',
+  };
+
+  const [result] = await service.attachTranslationOverlay([korItem], 'ja');
+
+  assert.equal(generateCalls.length, 2);
+  assert.match(messagesReminder(generateCalls[1]), /목표 언어가 아닌/);
+  assert.equal(result.overview, '大学川書店通りは、古本を安く購入できる古い通りです。');
+});
+
+function messagesReminder(messages) {
+  return JSON.parse(messages[0].content).reminder || '';
+}
+
+test('does not cache an ja/zh translation that stayed in English after two retries', async () => {
+  // 재시도 두 번을 다 써도 여전히 영어로만 나오는 최악의 경우, 이번
+  // 요청엔 그 결과를 그대로 보여주더라도 캐시에는 저장하지 않아야
+  // 다음 조회에서 바로 다시 시도할 수 있다.
+  const store = new Map();
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        return {
+          content: JSON.stringify({
+            title: 'Daehakcheon Bookstore Street',
+            address: '',
+            openTime: '',
+            overview: 'Daehakcheon Bookstore Street is an old alley.',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = {
+    contentId: '132202',
+    title: '대학천 책방거리',
+    overview: '대학천 책방거리는 헌책을 저렴하게 구입할 수 있는 오래된 거리이다.',
+  };
+
+  const [result] = await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(generateCalls.length, 3);
+  assert.equal(result.overview, 'Daehakcheon Bookstore Street is an old alley.');
+
+  // 캐시에 저장되지 않았으니, 다음 조회는 처음부터 다시 시도한다.
+  await service.attachTranslationOverlay([korItem], 'ja');
+  assert.equal(generateCalls.length, 6);
+});
+
 test('falls back to LLM translation when a TourAPI match has no usable title', async () => {
   // 실측 사례: '가나아트센터'가 일본어 서비스에서 후보는 찾았지만(좌표·
   // 부분 제목 일치) 그 레코드 자체의 title이 비어있었다 — item이 truthy라

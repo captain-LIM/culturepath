@@ -203,9 +203,18 @@ restDate, parking, regionName)를 요청된 언어로 자연스럽게 번역하�
 민감하다고 판단해 응답을 비우거나 거부하지 마세요. 원문에 없는 사실을
 추가하거나 지어내지 말고 번역만 하세요. 입력값이 원래 비어 있는 필드만 빈
 문자열로 반환하고, 값이 있는 필드는 절대 빈 문자열로 반환하지 마세요.
-title처럼 뜻이 불분명한 고유명사·상호명이라 문자 그대로 번역하기 어려우면
-자연스럽게 로마자로 음역하세요 — 번역을 포기하고 빈 값이나 원문을 그대로
-반환하지 마세요.`;
+overview·address 등 문장으로 된 필드는 반드시 목표 언어의 자연스러운
+문장으로 완전히 번역하세요 — 영어나 로마자로 대신 쓰지 마세요.
+
+title 필드에만 적용되는 규칙: title에는 한글 음절을 단 하나도 남기면 안
+됩니다. 한글 고유명사·지명·상호명이라도 절대로 원문 한글 그대로 반환하지
+말고, 모든 한글 음절을 목표 언어 문자나 로마자로 바꾸세요. 여러 단어로
+이뤄진 경우 뜻이 통하는 부분(예: '거리', '책방', '마을')은 의미로 번역하고,
+고유한 지명·이름 부분(예: '대학천', '망원', '소수')은 로마자로
+음역하세요(예: '대학천' → 'Daehakcheon', '망원' → 'Mangwon'). 예:
+'한강공원' → 'Hangang Park', '대학천 책방거리' → 'Daehakcheon Bookstore
+Street', '남산타워' → 'Namsan Tower'. 이 로마자 음역 규칙은 title에만
+적용되고, 다른 필드에는 적용되지 않습니다.`;
 
 const PLACE_TRANSLATION_LANG_NAMES = Object.freeze({
   en: 'English',
@@ -244,6 +253,63 @@ function parseTranslationJson(content) {
   return value;
 }
 
+const CJK_SCRIPT_PATTERN = /[぀-ヿ一-鿿]/;
+
+// OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 드물게 ja/zh
+// 요청인데도 응답 전체가 영어로 나오는 경우가 있다(실측: '대학천
+// 책방거리'). overview·address처럼 원문에 값이 있는 문장형 필드의 번역
+// 결과에 목표 언어(일본어/중국어) 문자가 하나도 없으면 통째로 다른
+// 언어(영어)로 답한 것으로 보고 재시도가 필요하다고 판단한다.
+function needsCjkRetranslation(lang, korItem, fields) {
+  if (lang !== 'ja' && lang !== 'zh') {
+    return false;
+  }
+  return ['overview', 'address'].some(field => {
+    const source = korItem?.[field];
+    const translated = fields[field];
+    return Boolean(source) && Boolean(translated) && !CJK_SCRIPT_PATTERN.test(translated);
+  });
+}
+
+async function requestPlaceTranslation(korItem, lang, generator, reminder) {
+  const overviewLength = String(korItem?.overview || '').length;
+  const configuredMaxTokens = Number(process.env.OPENROUTER_MAX_OUTPUT_TOKENS) || 1600;
+  const maxTokens = Math.min(configuredMaxTokens, 400 + overviewLength * 2);
+  const response = await generator.generate(
+    PLACE_TRANSLATION_SYSTEM_PROMPT,
+    [{
+      role: 'user',
+      content: JSON.stringify({
+        targetLanguage: PLACE_TRANSLATION_LANG_NAMES[lang] || lang,
+        ...(reminder ? { reminder } : {}),
+        place: {
+          title: korItem?.title || '',
+          address: korItem?.address || '',
+          openTime: korItem?.openTime || '',
+          overview: korItem?.overview || '',
+          restDate: korItem?.restDate || '',
+          parking: korItem?.parking || '',
+          regionName: korItem?.regionName || '',
+        },
+      }),
+    }],
+    {
+      jsonSchema: { name: 'culturepath_place_translation', schema: PLACE_TRANSLATION_SCHEMA },
+      maxTokens,
+      temperature: 0,
+    },
+  );
+  const parsed = parseTranslationJson(response.content);
+  const fields = {};
+  for (const field of PLACE_TRANSLATION_FIELDS) {
+    const value = typeof parsed[field] === 'string' ? parsed[field].trim() : '';
+    if (value) {
+      fields[field] = value;
+    }
+  }
+  return fields;
+}
+
 // item이 null이어도 두 가지 서로 다른 상황을 구분해야 한다: mock 모드처럼
 // "지금 이 환경에서는 애초에 시도하지 않는다"는 안정적인 상태는 캐시해도
 // 되지만, 실제로 LLM을 호출했는데 오류가 나거나(레이트리밋 등 일시적 문제)
@@ -255,41 +321,24 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
     return { item: null, cacheable: true };
   }
   try {
-    // overview는 장문일 수 있어 다른 필드보다 넉넉한 출력 토큰이 필요하다.
-    // OpenRouter 클라이언트가 OPENROUTER_MAX_OUTPUT_TOKENS를 넘는 값을 주면
-    // TypeError로 거부하므로 그 설정값을 상한으로 맞춘다.
-    const overviewLength = String(korItem?.overview || '').length;
-    const configuredMaxTokens = Number(process.env.OPENROUTER_MAX_OUTPUT_TOKENS) || 1600;
-    const maxTokens = Math.min(configuredMaxTokens, 400 + overviewLength * 2);
-    const response = await generator.generate(
-      PLACE_TRANSLATION_SYSTEM_PROMPT,
-      [{
-        role: 'user',
-        content: JSON.stringify({
-          targetLanguage: PLACE_TRANSLATION_LANG_NAMES[lang] || lang,
-          place: {
-            title: korItem?.title || '',
-            address: korItem?.address || '',
-            openTime: korItem?.openTime || '',
-            overview: korItem?.overview || '',
-            restDate: korItem?.restDate || '',
-            parking: korItem?.parking || '',
-            regionName: korItem?.regionName || '',
-          },
-        }),
-      }],
-      {
-        jsonSchema: { name: 'culturepath_place_translation', schema: PLACE_TRANSLATION_SCHEMA },
-        maxTokens,
-        temperature: 0,
-      },
-    );
-    const parsed = parseTranslationJson(response.content);
-    const fields = {};
-    for (const field of PLACE_TRANSLATION_FIELDS) {
-      const value = typeof parsed[field] === 'string' ? parsed[field].trim() : '';
-      if (value) {
-        fields[field] = value;
+    let fields = await requestPlaceTranslation(korItem, lang, generator);
+    // OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 이 검사에
+    // 걸리는 응답이 재시도에서도 다시 실패할 수 있다(실측: '대학천
+    // 책방거리'가 3번 중 1번꼴로 영어로 나옴). 최대 두 번까지 재시도한다.
+    for (let attempt = 0; attempt < 2 && needsCjkRetranslation(lang, korItem, fields); attempt += 1) {
+      logger?.warn?.('장소 기계번역이 목표 언어가 아닌 영어로 응답해 재시도합니다.', {
+        contentId: korItem?.contentId,
+        lang,
+        attempt: attempt + 1,
+      });
+      const retried = await requestPlaceTranslation(
+        korItem,
+        lang,
+        generator,
+        '이전 응답이 목표 언어가 아닌 다른 언어(예: 영어)로 나왔습니다. title을 제외한 모든 필드를 반드시 목표 언어의 문장으로 다시 번역하세요.',
+      );
+      if (Object.keys(retried).length > 0) {
+        fields = retried;
       }
     }
     if (Object.keys(fields).length === 0) {
@@ -298,7 +347,17 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
       });
       return { item: null, cacheable: false };
     }
-    return { item: fields, cacheable: true };
+    // 재시도를 다 써도 여전히 목표 언어가 아니면, 이 결과를 캐시에
+    // 박제하지 않는다 — 이번 요청엔 아쉬운 대로 보여주되, 다음 조회에서
+    // 바로 다시 시도할 기회를 남겨 둔다.
+    const cacheable = !needsCjkRetranslation(lang, korItem, fields);
+    if (!cacheable) {
+      logger?.warn?.('재시도 후에도 목표 언어가 아니어서 이번 결과는 캐시하지 않습니다.', {
+        contentId: korItem?.contentId,
+        lang,
+      });
+    }
+    return { item: fields, cacheable };
   } catch (error) {
     logger?.warn?.('장소 기계번역에 실패해 국문 정보로 대체하고 다음 조회에서 다시 시도합니다.', {
       errorName: error?.name || 'Error',
@@ -585,7 +644,19 @@ function createCachedPlacesService(options = {}) {
       field => korItem?.[field] && !cached.item[field],
     );
 
-    if (isFresh(cached, timestamp) && !cacheIsThin) {
+    // title이 한글을 포함하는데 캐시된 번역 title이 국문 원문과 완전히
+    // 동일하면, LLM이 그 상호명을 번역/음역하지 못하고 그대로 되돌려보낸
+    // 것으로 본다(실측: '대학천 책방거리', '소수책방'). 이 상태를 "신선"
+    // 하다고 계속 재사용하면 해당 언어에서 영원히 원문 그대로 보이므로,
+    // 다음 조회에서 다시 번역을 시도하도록 얕은 캐시로 취급한다. 다른
+    // 필드(openTime 등)는 원래 한글이 없어 번역해도 원문과 같을 수 있어
+    // 이 검사에서 제외한다.
+    const titleLooksUntranslated = Boolean(cached?.item) &&
+      Boolean(korItem?.title) &&
+      cached.item.title === korItem.title &&
+      /[가-힣]/.test(korItem.title);
+
+    if (isFresh(cached, timestamp) && !cacheIsThin && !titleLooksUntranslated) {
       return { item: cached.item, cacheStatus: CACHE_STATUS.HIT };
     }
 
