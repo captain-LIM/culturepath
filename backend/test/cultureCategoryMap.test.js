@@ -5,9 +5,29 @@ const test = require('node:test');
 const {
   CULTURE_CATEGORIES,
   CULTURE_MATCH_STRENGTH,
+  CULTURE_OFFICIAL_QUERY_CODES,
   classifyTourPlace,
   getCultureMatchStrength,
 } = require('../src/config/cultureCategoryMap');
+
+test('keeps official candidate queries limited to the six exact culture mappings', () => {
+  assert.deepEqual(CULTURE_OFFICIAL_QUERY_CODES, {
+    '커피·카페': { lclsSystm1: 'FD', lclsSystm2: 'FD05' },
+    '공예·공방': { lclsSystm1: 'EX', lclsSystm2: 'EX02' },
+    '미술·갤러리': {
+      lclsSystm1: 'VE', lclsSystm2: 'VE07', lclsSystm3: 'VE070600',
+    },
+    음악: {
+      lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060100',
+    },
+    '영화·애니메이션': {
+      lclsSystm1: 'VE', lclsSystm2: 'VE06', lclsSystm3: 'VE060200',
+    },
+    '근대 문화유산': {
+      lclsSystm1: 'HS', lclsSystm2: 'HS01', lclsSystm3: 'HS011100',
+    },
+  });
+});
 
 test('classifies with conservative official-code and keyword rules', () => {
   assert.deepEqual(
