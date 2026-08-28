@@ -209,3 +209,33 @@ test('uses the most specific title and asks compound edit operations to be split
   assert.equal(modelCalled, false);
   assert.deepEqual(liveSpecific.referencedCoursePlaceIds, ['200']);
 });
+
+test('clarifies duplicate titles without losing a longer unique title match', () => {
+  const state = {
+    courseId: 42,
+    coursePlaceIds: ['100', '101', '200'],
+    coursePlaces: [
+      { contentId: '100', title: '박물관', trackNumber: 1 },
+      { contentId: '101', title: '박물관', trackNumber: 2 },
+      { contentId: '200', title: '박물관 별관', trackNumber: 1 },
+    ],
+  };
+
+  const ambiguous = deterministicIntent([
+    { role: 'user', content: '박물관을 삭제해줘' },
+  ], state);
+  assert.equal(ambiguous.action, 'clarify');
+  assert.deepEqual(ambiguous.referencedCoursePlaceIds, []);
+
+  const specific = deterministicIntent([
+    { role: 'user', content: '박물관 별관을 삭제해줘' },
+  ], state);
+  assert.equal(specific.action, 'edit_course');
+  assert.deepEqual(specific.referencedCoursePlaceIds, ['200']);
+
+  const mixed = deterministicIntent([
+    { role: 'user', content: '박물관을 삭제하고 박물관 별관도 삭제해줘' },
+  ], state);
+  assert.equal(mixed.action, 'clarify');
+  assert.deepEqual(mixed.referencedCoursePlaceIds, []);
+});

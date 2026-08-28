@@ -219,9 +219,8 @@ function explicitCourseTitleTargets(text, coursePlaces = []) {
   for (const [title, places] of byTitle) {
     let start = normalizedText.indexOf(title);
     while (start >= 0) {
-      if (places.length > 1) return [];
       mentions.push({
-        contentId: String(places[0].contentId),
+        contentIds: places.map(place => String(place.contentId)),
         start,
         end: start + title.length,
         length: title.length,
@@ -236,13 +235,17 @@ function explicitCourseTitleTargets(text, coursePlaces = []) {
     if (selected.some(item => mention.start < item.end && item.start < mention.end)) continue;
     selected.push(mention);
   }
-  return selected.map(item => item.contentId);
+  return {
+    ambiguous: selected.some(item => item.contentIds.length > 1),
+    targets: selected.flatMap(item => item.contentIds),
+  };
 }
 
 function extractDeterministicCourseTargets(text, coursePlaces = []) {
   const places = Array.isArray(coursePlaces) ? coursePlaces : [];
-  const explicitTargets = explicitCourseTitleTargets(text, places);
-  if (explicitTargets.length > 0) return explicitTargets;
+  const explicit = explicitCourseTitleTargets(text, places);
+  if (explicit.ambiguous) return [];
+  if (explicit.targets.length > 0) return explicit.targets;
 
   const targetMatch = /([^,.!?]{2,60}?)(?:을|를|은|는)\s*(?:빼|삭제|제거|옮겨|이동|먼저|마지막)/
     .exec(String(text || ''));
