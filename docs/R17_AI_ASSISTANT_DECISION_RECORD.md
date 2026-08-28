@@ -6,7 +6,7 @@
 >
 > 목표 시점: 2026-08-29 토요일까지 핵심 흐름 대부분 구현
 >
-> 상태: **R17 구현 반영 완료 — Backend 316개 테스트 통과, Flutter CI·OpenRouter live smoke 대기**
+> 상태: **R17 구현 반영 완료 — Backend 317개 테스트 및 독립 리뷰 통과, Flutter CI·OpenRouter live smoke 대기**
 >
 > 적용 범위: AI 여행 대화, 장소 추천, 코스 초안, 기존 코스 다듬기,
 > MySQL·TourAPI 후보 수집, OpenRouter 사용 경계, 세션 문맥
@@ -486,9 +486,9 @@ Flutter 단위로 나누고, 검증 결과와 남은 live 항목은 문서 커�
 - [x] fixture로 다중 턴, 문맥 전환, 후보 외 장소 차단을 재현한다.
 - [ ] 실제 API smoke는 승인된 최소 횟수로만 실행하고 비밀값을 출력하지 않는다.
 - [x] OpenAPI와 Flutter 모델이 같은 응답 계약을 사용한다.
-- [ ] 리뷰 수정 후 별도 `gpt-5.6-sol high` 재리뷰에서 critical/high가 없다.
+- [x] 리뷰 수정 후 별도 `gpt-5.6-sol high` 최종 재리뷰에서 critical/high/medium/low 발견사항 없이 `APPROVE`를 받았다.
 
-2026-08-28 로컬 검증 결과: Backend `npm test` 316/316 통과. 현재 PC에는 Flutter SDK가
+2026-08-28 로컬 검증 결과: Backend `npm test` 317/317 통과. 현재 PC에는 Flutter SDK가
 없어 `flutter analyze`, Flutter 테스트, Android 빌드와 실기기 검수는 CI/Flutter 설치
 환경에서 수행해야 한다. OpenRouter·TourAPI live smoke는 비밀값과 호출 비용 보호를 위해
 이 구현 단계에서 자동 실행하지 않았다.
