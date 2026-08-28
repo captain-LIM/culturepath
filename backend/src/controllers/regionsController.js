@@ -34,6 +34,35 @@ const CULTURE_ID_TO_NAME = Object.freeze({
   10: '커피·카페',
 });
 
+// 프론트 assets/translations/{en,ja,zh}.json의 culture_{id}_name과 동일한
+// 문구를 그대로 옮겨왔다. collectFallbackRegions가 만드는 지역은 지역별
+// 큐레이션 문구가 없어서 일반 설명을 붙이는데, 이때도 언어별로 나가야 한다.
+const CULTURE_NAME_TRANSLATIONS = Object.freeze({
+  1: { en: 'Indie Bookstores', ja: '独立書店', zh: '独立书店' },
+  2: { en: 'Literature', ja: '文学', zh: '文学' },
+  3: { en: 'Music', ja: '音楽', zh: '音乐' },
+  4: { en: 'Traditional Liquor', ja: '伝統酒・醸造所', zh: '传统酒·酿酒坊' },
+  5: { en: 'Local Food', ja: 'ローカルグルメ', zh: '本地美食' },
+  6: { en: 'Crafts & Studios', ja: '工芸・工房', zh: '工艺·工坊' },
+  7: { en: 'Modern Heritage', ja: '近代文化遺産', zh: '近代文化遗产' },
+  8: { en: 'Art & Galleries', ja: 'アート・ギャラリー', zh: '艺术·画廊' },
+  9: { en: 'Film & Animation', ja: '映画・アニメ', zh: '电影·动漫' },
+  10: { en: 'Coffee & Cafés', ja: 'コーヒー・カフェ', zh: '咖啡·咖啡厅' },
+});
+
+function localizedCultureName(cultureId, lang) {
+  const translated = CULTURE_NAME_TRANSLATIONS[cultureId]?.[lang];
+  return translated || CULTURE_ID_TO_NAME[cultureId];
+}
+
+function fallbackRegionDescription(cultureId, lang) {
+  const culture = localizedCultureName(cultureId, lang);
+  if (lang === 'en') return `${culture} spots`;
+  if (lang === 'ja') return `${culture}スポット`;
+  if (lang === 'zh') return `${culture}景点`;
+  return `${culture} 명소`;
+}
+
 const SPOT_MAP = {
   gangneung: [
     { contentId: 'gn001', title: '하슬라아트월드', address: '강릉시 강동면 율곡로 1441', tel: '033-644-9411', openTime: '09:00~18:00', category: '미술·갤러리', latitude: 37.7064767, longitude: 129.0102036 },
@@ -355,7 +384,7 @@ function createRegionsController(options = {}) {
   // 아직 안 써본 등록 지역들도 실시간으로 확인해서 관련도 기준을 넘는
   // 만큼만 채운다. 이 지역들은 문화별 큐레이션 설명이 없으므로 일반
   // 문구를 쓴다.
-  async function collectFallbackRegions(cultureName, excludeAreaCodes, needed, lang) {
+  async function collectFallbackRegions(cultureId, cultureName, excludeAreaCodes, needed, lang) {
     if (needed <= 0) {
       return [];
     }
@@ -387,7 +416,7 @@ function createRegionsController(options = {}) {
       .map(({ areaCode, spotCount }) => ({
         areaCode,
         name: localizedRegionName(getRegionDefinition(areaCode), lang),
-        description: `${cultureName} 명소`,
+        description: fallbackRegionDescription(cultureId, lang),
         spotCount,
         score: Math.min(100, 40 + spotCount * 2),
       }));
@@ -422,6 +451,7 @@ function createRegionsController(options = {}) {
         if (items.length < MIN_REGIONS_PER_CULTURE) {
           const alreadyChecked = new Set(withLiveCounts.map(item => item.areaCode));
           const extras = await collectFallbackRegions(
+            Number(rawCultureId),
             cultureName,
             alreadyChecked,
             MIN_REGIONS_PER_CULTURE - items.length,

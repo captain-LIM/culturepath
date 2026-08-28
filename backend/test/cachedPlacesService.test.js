@@ -535,6 +535,171 @@ test('translation overlay keeps the Korean item when no nearby candidate title m
   assert.equal(overlaid.title, '김동명문학관');
 });
 
+test('does not match a short, generic neighborhood-name substring to an unrelated place', async () => {
+  // 실측 사례: "북촌전통공예체험관"(공백 없는 복합 국문 제목)이 근처의
+  // 무관한 "락고재 서울 북촌 한옥호텔"로 잘못 매칭됐다. 후보 제목의 "북촌"
+  // (동네 이름, 2자)이 원문 제목 안에 부분 문자열로만 우연히 들어있을 뿐인데
+  // 이를 같은 장소로 오인했다.
+  const korItem = {
+    contentId: '2993183',
+    title: '북촌전통공예체험관',
+    latitude: 37.5826,
+    longitude: 126.9847,
+  };
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [
+          {
+            contentId: 'unrelated-hotel',
+            title: 'Rakkojae Seoul Bukchon Hanok Hotel (락고재 서울 북촌 한옥호텔)',
+            latitude: 37.5827,
+            longitude: 126.9848,
+          },
+        ],
+      }),
+      getPlaceDetailTranslated: async () => {
+        throw new Error('should not fetch a detail without a real title match');
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.hasTranslatedInfo, false);
+  assert.equal(overlaid.title, '북촌전통공예체험관');
+});
+
+test('falls back to LLM translation when no TourAPI candidate matches', async () => {
+  const korItem = {
+    contentId: '2764935',
+    title: '김동명문학관',
+    address: '강릉시 사천면 방동리',
+    openTime: '09:00~18:00',
+    overview: '김유정 작가를 기리는 문학관입니다.',
+    restDate: '매주 월요일 휴관',
+    parking: '가능',
+    regionName: '강원특별자치도',
+    latitude: 37.820456,
+    longitude: 128.837729,
+  };
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+      getPlaceDetailTranslated: async () => {
+        throw new Error('should not fetch a detail without a title match');
+      },
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages, requestOptions) => {
+        generateCalls.push({ systemPrompt, messages, requestOptions });
+        return {
+          content: JSON.stringify({
+            title: 'Kim Dong-myeong Literature Museum',
+            address: 'Sacheon-myeon, Gangneung',
+            openTime: '09:00-18:00',
+            overview: 'A literature museum honoring writer Kim Dong-myeong.',
+            restDate: 'Closed every Monday',
+            parking: 'Available',
+            regionName: 'Gangwon Special Self-Governing Province',
+          }),
+        };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.hasTranslatedInfo, true);
+  assert.equal(overlaid.title, 'Kim Dong-myeong Literature Museum');
+  assert.equal(overlaid.address, 'Sacheon-myeon, Gangneung');
+  assert.equal(overlaid.openTime, '09:00-18:00');
+  assert.equal(overlaid.overview, 'A literature museum honoring writer Kim Dong-myeong.');
+  assert.equal(overlaid.restDate, 'Closed every Monday');
+  assert.equal(overlaid.parking, 'Available');
+  assert.equal(overlaid.regionName, 'Gangwon Special Self-Governing Province');
+  assert.equal(generateCalls.length, 1);
+  assert.equal(generateCalls[0].requestOptions.jsonSchema.name, 'culturepath_place_translation');
+});
+
+test('keeps the Korean item when LLM translation fails after a TourAPI miss', async () => {
+  const korItem = {
+    contentId: '2764935',
+    title: '김동명문학관',
+    latitude: 37.820456,
+    longitude: 128.837729,
+  };
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        throw new Error('OpenRouter timeout');
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.hasTranslatedInfo, false);
+  assert.equal(overlaid.title, '김동명문학관');
+});
+
+test('skips LLM translation in mock mode and keeps the Korean item', async () => {
+  const korItem = {
+    contentId: '2764935',
+    title: '김동명문학관',
+    latitude: 37.820456,
+    longitude: 128.837729,
+  };
+  let generateCalls = 0;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => true,
+      generate: async () => {
+        generateCalls += 1;
+        return { content: '{}' };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'en');
+
+  assert.equal(overlaid.hasTranslatedInfo, false);
+  assert.equal(generateCalls, 0);
+});
+
 test('translation overlay prefers the candidate with more overlapping title tokens over a partial match', async () => {
   // 실측 사례: 국문 "강릉 오죽헌·시립박물관"에 대해 중문 서비스는 부속기관명을
   // 축약한 후보("...강릉 오죽헌")와 온전한 후보("...강릉시 오죽헌/시립박물관")를

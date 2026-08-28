@@ -211,6 +211,61 @@ test('expands beyond curated candidates to reach the minimum region count', asyn
   assert.equal(res.body[1].description, '독립서점·책방 명소');
 });
 
+test('localizes fallback region name and description for non-Korean locales', async () => {
+  const onlyCuratedRegion = {
+    areaCode: 'seoul',
+    name: '서울',
+    description: '홍대·연남·망원 동네 책방 밀집지',
+    spotCount: 12,
+    score: 80,
+  };
+  const controller = createRegionsController({
+    regionScoreService: {
+      getRegionsByCulture: async () => ({
+        items: [onlyCuratedRegion],
+        dataStatus: 'HIT',
+      }),
+    },
+    placesService: {
+      getAreaBasedPlaces: async options => {
+        const items = options.lDongRegnCd === '11'
+          ? Array.from({ length: 5 }, (_, i) => tourPlace({
+              contentId: `seoul-${i}`,
+              title: `독립서점 ${i}`,
+              lclsSystmCodes: [],
+            }))
+          : options.lDongRegnCd === '51' && options.lDongSignguCd === '150'
+            ? Array.from({ length: 3 }, (_, i) => tourPlace({
+                contentId: `gangneung-${i}`,
+                title: `강릉책방 ${i}`,
+                lclsSystmCodes: [],
+              }))
+            : [];
+        return {
+          items,
+          pagination: { pageNo: 1, numOfRows: 50, totalCount: items.length },
+          cacheStatus: 'HIT',
+        };
+      },
+      searchPlacesByKeyword: async () => ({
+        items: [],
+        pagination: { pageNo: 1, numOfRows: 50, totalCount: 0 },
+        cacheStatus: 'HIT',
+      }),
+    },
+  });
+  const res = response();
+
+  await controller.getRegionsByCulture(
+    { params: { id: '1' }, headers: { 'accept-language': 'en' } },
+    res,
+  );
+
+  const fallback = res.body.find(item => item.areaCode === 'gangneung');
+  assert.equal(fallback.name, 'Gangneung');
+  assert.equal(fallback.description, 'Indie Bookstores spots');
+});
+
 test('sums the live spotCount across multiple pages when the first page is full', async () => {
   const item = {
     areaCode: 'seoul',

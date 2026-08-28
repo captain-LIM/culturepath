@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { getPlaceCacheConfig } = require('../config/placeCache');
 const placeCacheRepository = require('../repositories/placeCacheRepository');
 const tourApiService = require('./tourApiService');
+const llmService = require('./llmService');
 const {
   normalizeAreaBasedPlaceOptions,
   normalizeKeywordPlaceOptions,
@@ -108,6 +109,24 @@ function extractTokens(value) {
     .filter(token => token.length >= 2);
 }
 
+// 부분 문자열 포함만으로 같은 토큰으로 인정하면, "북촌"처럼 짧고 흔한
+// 동네 이름이 "북촌전통공예체험관"(공백 없는 복합 국문 제목) 같은 완전히
+// 다른 장소 이름 안에이만 우연히 들어있어도 매칭돼 버린다 — 실제로
+// "북촌전통공예체험관"이 인근의 무관한 "락고재 서울 북촌 한옥호텔"로 잘못
+// 매칭되는 걸 확인했다. 짧은 토큰이 긴 토큰의 절반 이상을 차지할 때만
+// 부분 일치로 인정해 이런 동네 이름 오매칭을 막는다.
+function tokensMatch(a, b) {
+  if (a === b) {
+    return true;
+  }
+  const shorter = a.length <= b.length ? a : b;
+  const longer = a.length <= b.length ? b : a;
+  if (!longer.includes(shorter)) {
+    return false;
+  }
+  return shorter.length >= Math.max(3, Math.ceil(longer.length / 2));
+}
+
 function countMatchingTokens(korTitle, candidateTitle) {
   const korTokens = extractTokens(korTitle);
   const candidateTokens = extractTokens(
@@ -117,12 +136,7 @@ function countMatchingTokens(korTitle, candidateTitle) {
     return 0;
   }
   return korTokens.filter(token =>
-    candidateTokens.some(
-      candidateToken =>
-        candidateToken === token ||
-        candidateToken.includes(token) ||
-        token.includes(candidateToken),
-    ),
+    candidateTokens.some(candidateToken => tokensMatch(token, candidateToken)),
   ).length;
 }
 
@@ -164,12 +178,117 @@ function applyTranslationOverlay(korItem, translatedItem) {
   return overlaid;
 }
 
+// TourAPI 국문·번역 서비스는 서로 별개의 데이터라 좌표+제목으로 매칭해야
+// 하는데(findTranslatedContentId), 등록이 안 된 작은 장소는 애초에 매칭될
+// 후보 자체가 없다. 이런 장소는 TourAPI에 없는 걸 찾을 수 없으므로, 이미
+// 검증된 국문 필드를 LLM으로 그대로 번역해 채운다 — 상세 화면에 실제로
+// 노출되는 TRANSLATION_OVERLAY_FIELDS 전부(parking·regionName 포함)를
+// 다룬다. 새로운 사실을 지어내지 않고 순수 번역만 하므로 다른 AI 기능들과
+// 같은 "검증된 데이터만 다룬다" 원칙 안에 있다.
+const PLACE_TRANSLATION_SYSTEM_PROMPT = `당신은 여행 정보 번역기입니다.
+입력으로 주어진 한국어 관광지 정보(title, address, openTime, overview,
+restDate, parking, regionName)를 요청된 언어로 자연스럽게 번역하세요. 원문에
+없는 사실을 추가하거나 지어내지 말고 번역만 하세요. 값이 비어 있으면 빈
+문자열을 그대로 반환하세요.`;
+
+const PLACE_TRANSLATION_LANG_NAMES = Object.freeze({
+  en: 'English',
+  ja: '日本語 (Japanese)',
+  zh: '简体中文 (Simplified Chinese)',
+});
+
+const PLACE_TRANSLATION_FIELDS = Object.freeze([
+  'title', 'address', 'openTime', 'overview', 'restDate', 'parking', 'regionName',
+]);
+
+const PLACE_TRANSLATION_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: false,
+  required: [...PLACE_TRANSLATION_FIELDS],
+  properties: {
+    title: { type: 'string' },
+    address: { type: 'string' },
+    openTime: { type: 'string' },
+    overview: { type: 'string' },
+    restDate: { type: 'string' },
+    parking: { type: 'string' },
+    regionName: { type: 'string' },
+  },
+});
+
+function parseTranslationJson(content) {
+  let text = String(content || '').trim();
+  if (text.startsWith('```')) {
+    text = text.replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '');
+  }
+  const value = JSON.parse(text);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('장소 번역 결과가 JSON 객체가 아닙니다.');
+  }
+  return value;
+}
+
+async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
+  if (!generator || generator.isMockMode(process.env)) {
+    return null;
+  }
+  try {
+    // overview는 장문일 수 있어 다른 필드보다 넉넉한 출력 토큰이 필요하다.
+    // OpenRouter 클라이언트가 OPENROUTER_MAX_OUTPUT_TOKENS를 넘는 값을 주면
+    // TypeError로 거부하므로 그 설정값을 상한으로 맞춘다.
+    const overviewLength = String(korItem?.overview || '').length;
+    const configuredMaxTokens = Number(process.env.OPENROUTER_MAX_OUTPUT_TOKENS) || 1600;
+    const maxTokens = Math.min(configuredMaxTokens, 400 + overviewLength * 2);
+    const response = await generator.generate(
+      PLACE_TRANSLATION_SYSTEM_PROMPT,
+      [{
+        role: 'user',
+        content: JSON.stringify({
+          targetLanguage: PLACE_TRANSLATION_LANG_NAMES[lang] || lang,
+          place: {
+            title: korItem?.title || '',
+            address: korItem?.address || '',
+            openTime: korItem?.openTime || '',
+            overview: korItem?.overview || '',
+            restDate: korItem?.restDate || '',
+            parking: korItem?.parking || '',
+            regionName: korItem?.regionName || '',
+          },
+        }),
+      }],
+      {
+        jsonSchema: { name: 'culturepath_place_translation', schema: PLACE_TRANSLATION_SCHEMA },
+        maxTokens,
+        temperature: 0,
+      },
+    );
+    const parsed = parseTranslationJson(response.content);
+    const fields = {};
+    for (const field of PLACE_TRANSLATION_FIELDS) {
+      const value = typeof parsed[field] === 'string' ? parsed[field].trim() : '';
+      if (value) {
+        fields[field] = value;
+      }
+    }
+    if (Object.keys(fields).length === 0) {
+      return null;
+    }
+    return fields;
+  } catch (error) {
+    logger?.warn?.('장소 기계번역에 실패해 국문 정보로 대체합니다.', {
+      errorName: error?.name || 'Error',
+    });
+    return null;
+  }
+}
+
 function createCachedPlacesService(options = {}) {
   const upstream = options.tourApiService || tourApiService;
   const repository = options.repository || placeCacheRepository;
   const config = options.config || getPlaceCacheConfig();
   const clock = options.clock || Date.now;
   const logger = options.logger || console;
+  const llm = options.llmService || llmService;
   const inFlight = new Map();
   let dbUnavailableUntil = 0;
 
@@ -435,9 +554,14 @@ function createCachedPlacesService(options = {}) {
     return runSingleFlight(`detail:${lang}:${contentId}`, async () => {
       try {
         const matchedContentId = await findTranslatedContentId(korItem, lang);
-        const item = matchedContentId
+        let item = matchedContentId
           ? await upstream.getPlaceDetailTranslated(lang, { contentId: matchedContentId })
           : null;
+        // TourAPI 번역 서비스에 아예 등록되지 않은(매칭 후보가 없는) 장소는
+        // 검증된 국문 title·address·openTime을 LLM으로 번역해 채운다.
+        if (!item) {
+          item = await translatePlaceFieldsWithLlm(korItem, lang, llm, logger);
+        }
         const refreshedAt = now();
         await writeCache(
           'saveDetailTranslation',
