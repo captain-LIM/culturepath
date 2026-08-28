@@ -4,7 +4,7 @@
 >
 > 승인일: 2026-08-26
 >
-> 상태: **R17 코드 전환 반영 완료 — Flutter CI·live smoke 대기**
+> 상태: **PR #24 main 병합·Backend/Flutter CI 완료 — OpenRouter live smoke 대기**
 > 적용 대상: `POST /ai/chat`, `POST /ai/transform`
 
 > 2026-08-27 이후의 통합 화면, 다중 턴 세션, 코스 초안, 지역 특성 태그 결정은
@@ -12,7 +12,7 @@
 > 우선한다.
 
 이 문서는 CulturePath AI 기능의 최신 제품·데이터 계약이다. 기존 Qdrant·BGE-M3 기반
-RAG 설계보다 우선한다. R17 작업 브랜치의 활성 AI 요청 경로는 이 계약으로 전환됐으며,
+RAG 설계보다 우선한다. 현재 `main`의 활성 AI 요청 경로는 이 계약으로 전환됐으며,
 과거 벡터 검색 모듈과 수동 평가 스크립트는 운영 경로에서 호출되지 않는 이력 코드다.
 
 ## 1. 한 문장 원칙
@@ -194,7 +194,8 @@ override, 공식 중·소분류 코드, 보수적인 제목 규칙의 우선순�
 - [x] `/ai/transform`의 허용 ID를 현재 코스 장소로 제한
 - [x] 신규 장소 추가와 모호한 동선 최적화 요청 거부·안내 테스트
 - [x] 변경안 미리보기·원본 보존·소유권 회귀 테스트
-- [ ] 사용하지 않는 Qdrant/BGE-M3 런타임 설정·스크립트·CI 정리
+- [x] 활성 요청 경로와 기본 런타임의 Qdrant/BGE-M3 의존 제거. 수동 이력 스크립트는
+  `decay` 계약과 함께 보존
 - [x] OpenAPI, Flutter 오류·빈 상태, 현행 로드맵 동기화
 - [ ] 제한된 OpenRouter live smoke와 비용·timeout·rate-limit 확인
 

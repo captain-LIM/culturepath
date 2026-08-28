@@ -3,7 +3,7 @@
 > 담당: 황찬우
 >
 > 적용 범위: `POST /ai/chat`, 세션 종료·저장 동기화 API
-> 상태: **구현 반영 완료 — Flutter CI·OpenRouter live smoke 대기**
+> 상태: **PR #24 main 병합·Backend/Flutter CI 완료 — OpenRouter live smoke 대기**
 
 > 통합 화면, 다중 턴 세션, 코스 초안과 지역 특성 태그의 최종 결정은
 > [R17 AI 여행 도우미 최종 의사결정 기록](./R17_AI_ASSISTANT_DECISION_RECORD.md)을
@@ -136,7 +136,7 @@ LLM은 다음을 하지 않는다.
 
 ## 7. 구현 상태와 완료 조건
 
-R17 작업 브랜치의 활성 챗봇 경로에는 다음 항목이 반영됐다. live smoke는 별도 승인된
+현재 `main`의 활성 챗봇 경로에는 다음 항목이 반영됐다. live smoke는 별도 승인된
 환경에서 수행한다.
 
 - [x] 다중 턴 의도 해석·구조화 세션과 MySQL→TourAPI 후보 resolver 구현

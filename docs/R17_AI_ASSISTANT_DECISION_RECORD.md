@@ -6,20 +6,21 @@
 >
 > 목표 시점: 2026-08-29 토요일까지 핵심 흐름 대부분 구현
 >
-> 상태: **R17 구현 반영 완료 — 최신 main 병합 후 Backend 325개 테스트 및 독립 리뷰 통과, Flutter CI·OpenRouter live smoke 대기**
+> 상태: **PR #24 main 병합·Backend/Flutter CI와 독립 리뷰 완료 — OpenRouter live smoke 대기**
 >
 > 적용 범위: AI 여행 대화, 장소 추천, 코스 초안, 기존 코스 다듬기,
 > MySQL·TourAPI 후보 수집, OpenRouter 사용 경계, 세션 문맥
 
 이 문서는 R17 구현 직전에 황찬우와 확정한 제품·데이터·LLM·세션 의사결정을 한곳에
 정리한 기준 문서다. 새 작업 세션은 이 문서를 가장 먼저 읽는다. 다른 현행 AI 문서와
-내용이 충돌하면 이 문서를 우선한다. 2026-08-27 작업 브랜치에는 이 계약의 Backend와
-Flutter 구현이 반영됐으며, 남은 완료 조건은 Flutter CI와 제한된 실환경 smoke다.
+내용이 충돌하면 이 문서를 우선한다. 현재 `main`에는 이 계약의 Backend와 Flutter
+구현이 반영됐으며, 남은 R17 완료 조건은 제한된 OpenRouter·MySQL·TourAPI 실환경
+smoke다.
 
 ## 1. 현재 상황과 결정 배경
 
-R16.3까지 `main`에 병합된 뒤 `feat/r17-live-rag-chatbot`에서 과거 Qdrant 기반 R17
-초안을 MySQL·TourAPI 설계로 전환했다. 재사용 가능한 Flutter 대화 UI·오류 처리·장소
+R16.3까지 `main`에 병합된 뒤 과거 Qdrant 기반 R17 초안을 MySQL·TourAPI 설계로
+전환했고, PR #24로 `main`에 병합했다. 재사용 가능한 Flutter 대화 UI·오류 처리·장소
 카드는 유지하고 Backend의 후보 결정 경로와 코스 변환 안전 경계는 새 계약으로
 교체했다.
 

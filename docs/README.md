@@ -4,6 +4,10 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 [`archive`](./archive/README.md), 최신 결정으로 대체된 문서는
 [`decay`](./decay/README.md)에 보관한다.
 
+> **현행 기준:** 2026-08-28 `main` (PR #25까지 반영)
+>
+> **자동 검증:** Backend 332개 테스트와 Flutter analyze·test·Android release CI 통과
+
 ## 먼저 읽을 문서
 
 | 문서 | 용도 |
@@ -28,15 +32,18 @@ CulturePath의 현행 계약과 작업 인수인계를 관리한다. 완료된 �
 | [AI 코스 다듬기 계약](./AI_TRANSFORM_CONTRACT.md) | `/ai/transform`, 기존 장소 전용 편집과 원본 보호 |
 
 AI 문서는 현재 **R17 구현에 반영된 계약**이다. 활성 AI 요청 경로는 Qdrant 없이
-MySQL→TourAPI 후보 resolver와 기존 장소 전용 transform을 사용한다. Flutter CI와
-OpenRouter live smoke는 아직 남은 검증 항목이다.
+MySQL→TourAPI 후보 resolver와 기존 장소 전용 transform을 사용한다. PR #24의
+Backend·Flutter CI는 완료됐고 OpenRouter live smoke만 실환경 검증으로 남아 있다.
+
+Flutter의 현행 하단 root 목적지는 `홈 / 탐색 / 만들기 / AI / 내정보` 5개다. R14·R15의
+4탭 문서는 당시 디자인 이력이며 현행 내비게이션 기준이 아니다.
 
 ## 현재 남은 큰 작업
 
-1. R17 Flutter CI·Android 빌드 검증과 OpenRouter 최소 live smoke
-2. R17 실제 MySQL·TourAPI·OpenRouter 통합 흐름의 제한된 수동 검수
-3. 공개 코스 장소 사용 횟수 UI 표시 여부 결정
-4. R18 배포·실기기·Google Play 준비
+1. 로컬·운영 DB에 `20260827_add_course_revision.sql` 적용 및 재실행 검증
+2. 실제 MySQL·TourAPI·OpenRouter를 사용한 `/ai/chat`, `/ai/transform` 최소 live smoke
+3. R18 운영 Backend·DB·비밀값과 Android release·실기기·Google Play 준비
+4. 선택 작업인 공개 코스 장소 사용 횟수 UI 표시 여부 결정
 
 상세 범위와 담당 제외 항목은 [현행 잔여 PR 로드맵](./HWANG_CHANWOO_REMAINING_PR_ROADMAP.md)을
 기준으로 한다.

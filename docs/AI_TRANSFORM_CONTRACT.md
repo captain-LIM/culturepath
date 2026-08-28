@@ -3,7 +3,7 @@
 > 담당: 황찬우
 >
 > 적용 범위: `POST /ai/transform`
-> 상태: **기존 장소 전용 변환 구현 완료 — Flutter CI·OpenRouter live smoke 대기**
+> 상태: **PR #24 main 병합·Backend/Flutter CI 완료 — OpenRouter live smoke 대기**
 
 > Flutter에서는 일반 상담과 같은 AI 여행 도우미 화면을 사용한다. 다만 추천과 편집의
 > Backend 안전 경계는 분리하며, 세션·진입 문맥·추천 결합 규칙은
@@ -153,7 +153,7 @@ Backend는 모델 결과에 다음 검증을 적용한다.
 
 ## 8. 구현 상태와 완료 조건
 
-R17 작업 브랜치의 `/ai/transform`에는 다음 제한이 반영됐다.
+현재 `main`의 `/ai/transform`에는 다음 제한이 반영됐다.
 
 - [x] 활성 변환 경로의 Qdrant·embedding·TourAPI 후보 검색 제거
 - [x] 허용 ID를 현재 저장 코스의 장소로만 제한
