@@ -253,24 +253,40 @@ function parseTranslationJson(content) {
   return value;
 }
 
-const CJK_SCRIPT_PATTERN = /[぀-ヿ一-鿿]/;
+const CJK_SCRIPT_PATTERN = /[぀-ヿ一-鿿]/g;
+// 정상적으로 번역된 일본어/중국어 overview는 공백을 뺀 글자의 90%
+// 이상이 CJK 문자다(실측: 93~95%). "문자가 하나라도 있는가"만 보면
+// 안 된다 — 실측 사례로, 통째로 영어인 overview 안에 지명 어원 설명
+// 등으로 한자 한두 개(예: '河回')만 우연히 섞여 있어도 통과해 버린다.
+// 이 임계값은 그 최악의 사례(약 1.4%)와 정상 사례(90%+) 사이에 아주
+// 넓은 여유를 두고 고른 것이다.
+const CJK_RATIO_THRESHOLD = 0.3;
+
+function cjkRatio(text) {
+  const cleaned = String(text || '').replace(/\s+/g, '');
+  if (!cleaned) {
+    return 0;
+  }
+  const matches = cleaned.match(CJK_SCRIPT_PATTERN) || [];
+  return matches.length / cleaned.length;
+}
 
 // OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 드물게 ja/zh
 // 요청인데도 응답 전체가 영어로 나오는 경우가 있다(실측: '대학천
-// 책방거리'). overview처럼 원문에 값이 있는 문장형 필드의 번역 결과에
-// 목표 언어(일본어/중국어) 문자가 하나도 없으면 통째로 다른 언어(영어)로
-// 답한 것으로 보고 재시도가 필요하다고 판단한다. address는 일부러
-// 빼둔다 — 도로명 주소는 정상적인 번역에서도 로마자로만 표기되는 게
-// 흔해서(실측: 테라로사 본점의 일본어 주소가 '25, Hyeoncheon-gil,
-// Gujeong-myeon, Gangneung-si') 이 검사에 넣으면 정상 번역까지 계속
-// 재시도/미캐시 상태에 빠뜨린다.
+// 책방거리', '안동 하회마을'). overview처럼 원문에 값이 있는 문장형
+// 필드의 번역 결과가 목표 언어(일본어/중국어) 문자로 채워져 있지 않으면
+// 통째로 다른 언어(영어)로 답한 것으로 보고 재시도가 필요하다고
+// 판단한다. address는 일부러 빼둔다 — 도로명 주소는 정상적인 번역에서도
+// 로마자로만 표기되는 게 흔해서(실측: 테라로사 본점의 일본어 주소가
+// '25, Hyeoncheon-gil, Gujeong-myeon, Gangneung-si') 이 검사에 넣으면
+// 정상 번역까지 계속 재시도/미캐시 상태에 빠뜨린다.
 function needsCjkRetranslation(lang, korItem, fields) {
   if (lang !== 'ja' && lang !== 'zh') {
     return false;
   }
   const source = korItem?.overview;
   const translated = fields.overview;
-  return Boolean(source) && Boolean(translated) && !CJK_SCRIPT_PATTERN.test(translated);
+  return Boolean(source) && Boolean(translated) && cjkRatio(translated) < CJK_RATIO_THRESHOLD;
 }
 
 // 원문 필드가 한글을 포함하는데 번역 결과가 그 원문과 완전히 동일하면,
@@ -373,12 +389,15 @@ function translationIsIncomplete(lang, korItem, fields) {
     hasUnwrappedKoreanText(lang, fields);
 }
 
-// 캐시된 번역의 신선도를 볼 때는 위 needsCjkRetranslation을 빼고, 한글이
-// 그대로 새어나온 두 가지 확실한 신호(필드 전체가 원문과 동일함 / 괄호
-// 밖에 한글이 남아 있음)만 본다.
+// 캐시된 번역의 신선도 검사에도 translationIsIncomplete를 그대로 쓴다.
+// needsCjkRetranslation이 이제 overview만 보도록 좁혀졌으므로(주소는
+// 로마자 표기가 정상이라 예전엔 오탐 원인이었다) 여기 다시 포함해도
+// 안전하다 — 이걸 빼면 예전에 통째로 영어로 캐시된 overview(실측:
+// '군산근대역사박물관', '최참판댁', '하동 야생차박물관'의 중국어)가
+// 한글이 하나도 없어 hasUntranslatedKoreanField·hasUnwrappedKoreanText
+// 둘 다 못 잡고 영원히 "신선"한 캐시로 남는다.
 function cachedTranslationLooksStale(lang, korItem, cachedFields) {
-  return hasUntranslatedKoreanField(korItem, cachedFields) ||
-    hasUnwrappedKoreanText(lang, cachedFields);
+  return translationIsIncomplete(lang, korItem, cachedFields);
 }
 
 // item이 null이어도 두 가지 서로 다른 상황을 구분해야 한다: mock 모드처럼

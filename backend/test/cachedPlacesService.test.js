@@ -1074,6 +1074,132 @@ test('does not cache an ja/zh translation that stayed in English after two retri
   assert.equal(generateCalls.length, 6);
 });
 
+test('re-translates a previously cached overview that is entirely in the wrong language', async () => {
+  // 실측 사례: '군산근대역사박물관', '최참판댁', '하동 야생차박물관'의
+  // 중국어 overview가 통째로 영어로 캐시돼 있었다. 한글이 하나도 없는
+  // 영어 문장이라 hasUntranslatedKoreanField·hasUnwrappedKoreanText
+  // 둘 다 이 상태를 "이상 없음"으로 본다 — needsCjkRetranslation을 캐시
+  // 신선도 검사에도 포함해야 다음 조회에서 다시 시도한다.
+  const store = new Map();
+  store.set('1684836', {
+    translations: {
+      zh: {
+        detail: {
+          title: 'Gunsan Modern History Museum',
+          overview: 'Located in Gunsan, a city at the heart of modern history.',
+        },
+        cachedAt: 5_000,
+        expiresAt: 50_000,
+      },
+    },
+  });
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        return {
+          content: JSON.stringify({
+            title: '群山近代历史博物馆',
+            address: '',
+            openTime: '',
+            overview: '群山近代历史博物馆位于韩国近代历史的中心城市群山。',
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = {
+    contentId: '1684836',
+    title: '군산근대역사박물관',
+    overview: '전북 군산시 해망로에 위치한 군산근대역사박물관은 근대 역사의 중심 도시 군산에 위치하고 있다.',
+  };
+
+  const [result] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(generateCalls.length, 1);
+  assert.equal(result.overview, '群山近代历史博物馆位于韩国近代历史的中心城市群山。');
+});
+
+test('retries when an overview is almost entirely English with only an incidental CJK word', async () => {
+  // 실측 사례: '안동 하회마을'의 중국어 overview가 통째로 영어 문장인데,
+  // 지명 어원 설명 중 한자 표기('河回') 한 단어만 우연히 섞여 있었다.
+  // "CJK 문자가 하나라도 있는가"만 보는 예전 기준은 이걸 통과시켰다 —
+  // 전체 글자 중 CJK 비율을 봐야 통째로 영어인 응답을 잡아낼 수 있다.
+  const store = new Map();
+  const generateCalls = [];
+  let isFixed = false;
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async contentId => store.get(contentId) ?? null,
+      saveDetailTranslation: async ({ contentId, lang, item, cachedAt, expiresAt }) => {
+        const record = store.get(contentId) ?? { translations: {} };
+        record.translations[lang] = { detail: item, cachedAt, expiresAt };
+        store.set(contentId, record);
+      },
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({ items: [] }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async (systemPrompt, messages) => {
+        generateCalls.push(messages);
+        return {
+          content: JSON.stringify({
+            title: 'Andong Hahoe Village',
+            address: '',
+            openTime: '',
+            overview: isFixed
+              ? '河回村是丰山柳氏世代居住的典型集姓村落，保留着韩国传统韩屋之美。'
+              : "Hahoe Village is a typical clan village. The village's name, Hahoe (河回), originates from the Nakdong River.",
+            restDate: '',
+            parking: '',
+            regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const korItem = {
+    contentId: '894027',
+    title: '안동 하회마을',
+    overview: '하회마을은 풍산 류씨가 대대로 살아온 대표적인 동성마을로, 한국 전통 한옥의 아름다움을 간직하고 있다.',
+  };
+
+  // 첫 조회: overview에 한자가 '河回' 한 단어만 섞인 사실상 영어 응답이라
+  // 요청 안에서 재시도까지 다 써보지만(총 3번 호출) 그래도 실패해
+  // 캐시되지 않는다.
+  const [first] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.match(first.overview, /^Hahoe Village/);
+  assert.equal(generateCalls.length, 3);
+
+  isFixed = true;
+  const [second] = await service.attachTranslationOverlay([korItem], 'zh');
+  assert.equal(second.overview, '河回村是丰山柳氏世代居住的典型集姓村落，保留着韩国传统韩屋之美。');
+  assert.equal(generateCalls.length, 4);
+});
+
 test('falls back to LLM translation when a TourAPI match has no usable title', async () => {
   // 실측 사례: '가나아트센터'가 일본어 서비스에서 후보는 찾았지만(좌표·
   // 부분 제목 일치) 그 레코드 자체의 title이 비어있었다 — item이 truthy라
