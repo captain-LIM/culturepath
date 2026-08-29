@@ -435,7 +435,7 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
         korItem,
         lang,
         generator,
-        '이전 응답이 불완전했습니다. 응답 전체가 목표 언어가 아닌 다른 언어(예: 영어)로 나왔거나, 일부 필드가 한글 원문 그대로 남아 있었거나, 번역문에 괄호로 감싸지 않은 한글이 섞여 있었습니다. title을 제외한 모든 필드를 반드시 목표 언어로 다시 번역하고, 원문 한글을 남길 때는 반드시 괄호 안에만 넣으세요.',
+        '이전 응답이 불완전했습니다. 응답 전체가 목표 언어가 아닌 다른 언어(예: 영어)로 나왔거나, title을 포함한 일부 필드가 한글 원문 그대로 남아 있었거나, 번역문에 괄호로 감싸지 않은 한글이 섞여 있었습니다. title을 포함한 모든 필드를 반드시 목표 언어로 다시 번역하고, 원문 한글을 남길 때는 반드시 괄호 안에만 넣으세요.',
       );
       if (Object.keys(retried).length > 0) {
         fields = retried;
