@@ -818,21 +818,21 @@ test('retries LLM translation when the cached title was never actually translate
 
   const korItem = { contentId: '132202', title: '대학천 책방거리' };
 
-  // 첫 조회: title이 계속 원문 그대로라 요청 안에서 최대치(2번)까지
-  // 즉시 재시도하지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
+  // 첫 조회: title이 계속 원문 그대로라 요청 안에서 최대치(3번)까지
+  // 즉시 재시도하지만(총 4번 호출) 그래도 실패해 캐시되지 않는다.
   const [first] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(first.title, '대학천 책방거리');
-  assert.equal(generateCalls.length, 3);
+  assert.equal(generateCalls.length, 4);
 
   shouldTranslateTitle = true;
   const [second] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(second.title, 'Daehakcheon Bookstore Street');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 
   // 이제 실제로 번역됐고 캐시됐으니 더는 재시도하지 않는다.
   const [third] = await service.attachTranslationOverlay([korItem], 'ja');
   assert.equal(third.title, 'Daehakcheon Bookstore Street');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 });
 
 test('retries when a non-title field (e.g. parking) was left untranslated, identical to Korean', async () => {
@@ -880,21 +880,21 @@ test('retries when a non-title field (e.g. parking) was left untranslated, ident
 
   const korItem = { contentId: '2989636', title: '소수책방', parking: '가능' };
 
-  // 첫 조회: parking이 계속 원문 그대로라 요청 안에서 최대치(2번)까지
-  // 즉시 재시도하지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
+  // 첫 조회: parking이 계속 원문 그대로라 요청 안에서 최대치(3번)까지
+  // 즉시 재시도하지만(총 4번 호출) 그래도 실패해 캐시되지 않는다.
   const [first] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(first.parking, '가능');
-  assert.equal(generateCalls.length, 3);
+  assert.equal(generateCalls.length, 4);
 
   shouldTranslateParking = true;
   const [second] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(second.parking, '可能');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 
   // 이제 실제로 번역됐고 캐시됐으니 더는 재시도하지 않는다.
   const [third] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(third.parking, '可能');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 });
 
 test('retries when a translated field has unwrapped Korean text mixed in (no parens)', async () => {
@@ -943,20 +943,20 @@ test('retries when a translated field has unwrapped Korean text mixed in (no par
   const korItem = { contentId: '125800', title: '강릉 선교장' };
 
   // 첫 조회: title에 괄호 없는 한글이 섞여 있어 요청 안에서 재시도까지
-  // 다 써보지만(총 3번 호출) 그래도 실패해 캐시되지 않는다.
+  // 다 써보지만(총 4번 호출) 그래도 실패해 캐시되지 않는다.
   const [first] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(first.title, '江陵船桥庄강릉 선교장');
-  assert.equal(generateCalls.length, 3);
+  assert.equal(generateCalls.length, 4);
 
   isFixed = true;
   const [second] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(second.title, '江陵船桥庄（강릉 선교장）');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 
   // 이제 괄호로 올바르게 감쌌으니 더는 재시도하지 않는다.
   const [third] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(third.title, '江陵船桥庄（강릉 선교장）');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 });
 
 test('retries once when the LLM answers ja/zh requests entirely in English', async () => {
@@ -1020,8 +1020,8 @@ function messagesReminder(messages) {
   return JSON.parse(messages[0].content).reminder || '';
 }
 
-test('does not cache an ja/zh translation that stayed in English after two retries', async () => {
-  // 재시도 두 번을 다 써도 여전히 영어로만 나오는 최악의 경우, 이번
+test('does not cache an ja/zh translation that stayed in English after all retries', async () => {
+  // 재시도를 다 써도 여전히 영어로만 나오는 최악의 경우, 이번
   // 요청엔 그 결과를 그대로 보여주더라도 캐시에는 저장하지 않아야
   // 다음 조회에서 바로 다시 시도할 수 있다.
   const store = new Map();
@@ -1066,12 +1066,12 @@ test('does not cache an ja/zh translation that stayed in English after two retri
   };
 
   const [result] = await service.attachTranslationOverlay([korItem], 'ja');
-  assert.equal(generateCalls.length, 3);
+  assert.equal(generateCalls.length, 4);
   assert.equal(result.overview, 'Daehakcheon Bookstore Street is an old alley.');
 
   // 캐시에 저장되지 않았으니, 다음 조회는 처음부터 다시 시도한다.
   await service.attachTranslationOverlay([korItem], 'ja');
-  assert.equal(generateCalls.length, 6);
+  assert.equal(generateCalls.length, 8);
 });
 
 test('re-translates a previously cached overview that is entirely in the wrong language', async () => {
@@ -1188,16 +1188,16 @@ test('retries when an overview is almost entirely English with only an incidenta
   };
 
   // 첫 조회: overview에 한자가 '河回' 한 단어만 섞인 사실상 영어 응답이라
-  // 요청 안에서 재시도까지 다 써보지만(총 3번 호출) 그래도 실패해
+  // 요청 안에서 재시도까지 다 써보지만(총 4번 호출) 그래도 실패해
   // 캐시되지 않는다.
   const [first] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.match(first.overview, /^Hahoe Village/);
-  assert.equal(generateCalls.length, 3);
+  assert.equal(generateCalls.length, 4);
 
   isFixed = true;
   const [second] = await service.attachTranslationOverlay([korItem], 'zh');
   assert.equal(second.overview, '河回村是丰山柳氏世代居住的典型集姓村落，保留着韩国传统韩屋之美。');
-  assert.equal(generateCalls.length, 4);
+  assert.equal(generateCalls.length, 5);
 });
 
 test('falls back to LLM translation when a TourAPI match has no usable title', async () => {
@@ -1247,6 +1247,117 @@ test('falls back to LLM translation when a TourAPI match has no usable title', a
   const [overlaid] = await service.attachTranslationOverlay([korItem], 'ja');
 
   assert.equal(overlaid.title, 'Gana Art Center');
+  assert.equal(generateCalls.length, 1);
+});
+
+test('falls back to LLM translation when a TourAPI match has a malformed (not empty) title', async () => {
+  // 실측 사례: '강릉 선교장'의 중국어 TourAPI 레코드는 title이 비어
+  // 있지 않고 '江陵船桥庄강릉 선교장'처럼 번역문과 한글 원문이 괄호
+  // 없이 그대로 붙어 있었다 — 이건 우리가 만든 게 아니라 공공데이터
+  // 자체의 결함이다. title이 비어있지 않으니 예전 조건(!item.title)은
+  // 이 레코드를 "정상 매칭"으로 받아들여 그대로 캐시했다. 괄호로
+  // 감싸지 않은 한글이 섞여 있으면 title이 있어도 LLM로 넘어가야
+  // 한다.
+  const korItem = {
+    contentId: '125800',
+    title: '강릉 선교장',
+    address: '강원특별자치도 강릉시 운정길 63',
+    latitude: 37.7865588677,
+    longitude: 128.8850778068,
+  };
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [{
+          contentId: 'matched-malformed',
+          title: '강릉 선교장',
+          latitude: 37.7865588677,
+          longitude: 128.8850778068,
+        }],
+      }),
+      getPlaceDetailTranslated: async () => ({
+        contentId: 'matched-malformed',
+        title: '江陵船桥庄강릉 선교장',
+        overview: '船桥庄是江原道地区现存的、最具风韵的一处士大夫宅院。',
+      }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: '江陵船桥庄（강릉 선교장）', address: '', openTime: '', overview: '', restDate: '', parking: '', regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'zh');
+
+  assert.equal(overlaid.title, '江陵船桥庄（강릉 선교장）');
+  assert.equal(generateCalls.length, 1);
+});
+
+test('falls back to LLM translation when a TourAPI match has a title but its overview is entirely English', async () => {
+  // 실측 사례: '동피랑마을'의 중국어 TourAPI 레코드는 title은 정상
+  // ('Dongpirang Village')인데 overview 전체가 한자 하나 없이 영어
+  // 문장 그대로였다 — 역시 우리가 만든 게 아니라 공공데이터 자체의
+  // 결함이다. title만 보던 예전 조건은 이 레코드를 그대로 캐시했다.
+  const korItem = {
+    contentId: '753306',
+    title: '동피랑마을',
+    overview: '동피랑이라는 이름은 동쪽과 비랑이라는 말이 합쳐져서 생겼다.',
+    latitude: 34.8453461228,
+    longitude: 128.4276467571,
+  };
+  const generateCalls = [];
+  const service = createCachedPlacesService({
+    config: CONFIG,
+    clock: () => 10_000,
+    repository: {
+      findPlace: async () => null,
+      saveDetailTranslation: async () => {},
+    },
+    tourApiService: {
+      searchPlacesByLocationTranslated: async () => ({
+        items: [{
+          contentId: 'matched-english-overview',
+          title: '동피랑마을',
+          latitude: 34.8453461228,
+          longitude: 128.4276467571,
+        }],
+      }),
+      getPlaceDetailTranslated: async () => ({
+        contentId: 'matched-english-overview',
+        title: 'Dongpirang Village',
+        overview: "The name 'Dongpirang' is a combination of the words 'Dong' (East) and 'Pirang'.",
+      }),
+    },
+    llmService: {
+      isMockMode: () => false,
+      generate: async () => {
+        generateCalls.push(1);
+        return {
+          content: JSON.stringify({
+            title: 'Dongpirang Village', address: '', openTime: '', overview: '东坡浪村的名字由“东”和“坡浪”两个词组合而成。', restDate: '', parking: '', regionName: '',
+          }),
+        };
+      },
+    },
+  });
+
+  const [overlaid] = await service.attachTranslationOverlay([korItem], 'zh');
+
+  assert.match(overlaid.overview, /东坡浪村/);
   assert.equal(generateCalls.length, 1);
 });
 

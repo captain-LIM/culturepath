@@ -413,11 +413,15 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
   try {
     let fields = await requestPlaceTranslation(korItem, lang, generator);
     // OpenRouter는 temperature:0이어도 완전히 결정적이지 않아, 이 검사에
-    // 걸리는 응답이 재시도에서도 다시 실패할 수 있다(실측: '대학천
-    // 책방거리'가 3번 중 1번꼴로 영어로 나옴). 최대 두 번까지 재시도한다.
+    // 걸리는 응답이 재시도에서도 다시 실패할 수 있다. 실측: 같은
+    // 장소·같은 프롬프트로 언어만 바꿔 반복 호출했을 때 중국어는 3번
+    // 다 성공하고 일본어는 3번 다 실패하는 식으로, 어느 언어가 더
+    // 어렵다기보다 매 호출이 그 자체로 독립적인 도박에 가깝다. 최대 세
+    // 번까지 재시도한다(성공 확률이 매 시도마다 독립적이라면 시도를
+    // 늘릴수록 최종 실패 확률이 빠르게 줄어든다).
     for (
       let attempt = 0;
-      attempt < 2 && translationIsIncomplete(lang, korItem, fields);
+      attempt < 3 && translationIsIncomplete(lang, korItem, fields);
       attempt += 1
     ) {
       logger?.warn?.('장소 기계번역 결과가 불완전해 재시도합니다.', {
@@ -775,11 +779,15 @@ function createCachedPlacesService(options = {}) {
           item = null;
         }
         // TourAPI 매칭 후보 자체가 없을 때뿐 아니라, 후보는 찾았는데 그
-        // 번역 레코드에 title이 비어있는(실측: 가나아트센터 일본어 레코드)
-        // 경우도 쓸모가 없기는 마찬가지다 — title 없는 "성공"을 그대로
-        // 쓰지 않고 LLM 번역으로 넘어간다.
+        // 번역 레코드 자체가 쓸모없는 경우도 마찬가지로 LLM 번역으로
+        // 넘어가야 한다 — 이건 우리가 만든 게 아니라 공공데이터
+        // 자체의 결함이다. 실측 두 가지: (1) title이 비어있음(가나아트
+        // 센터 일본어 레코드), (2) title/overview에 괄호로 감싸지 않은
+        // 한글이 섞이거나(강릉 선교장 중국어 title이 TourAPI 원본부터
+        // '江陵船桥庄강릉 선교장') overview가 통째로 다른 언어(동피랑
+        // 마을의 중국어 레코드가 overview 전체를 영어로 갖고 있음).
         let cacheable = true;
-        if (!item || !item.title) {
+        if (!item || !item.title || translationIsIncomplete(lang, korItem, item)) {
           const llmResult = await translatePlaceFieldsWithLlm(korItem, lang, llm, logger);
           item = llmResult.item;
           cacheable = llmResult.cacheable;
