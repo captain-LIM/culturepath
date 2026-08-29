@@ -416,12 +416,14 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
     // 걸리는 응답이 재시도에서도 다시 실패할 수 있다. 실측: 같은
     // 장소·같은 프롬프트로 언어만 바꿔 반복 호출했을 때 중국어는 3번
     // 다 성공하고 일본어는 3번 다 실패하는 식으로, 어느 언어가 더
-    // 어렵다기보다 매 호출이 그 자체로 독립적인 도박에 가깝다. 최대 세
+    // 어렵다기보다 매 호출이 그 자체로 독립적인 도박에 가깝다. 실측:
+    // '동피랑마을' 같은 일부 콘텐츠(어원 설명이 섞인 문장)는 실패율이
+    // 유독 높아 세 번을 다 써도 계속 실패하는 경우가 있었다. 최대 다섯
     // 번까지 재시도한다(성공 확률이 매 시도마다 독립적이라면 시도를
     // 늘릴수록 최종 실패 확률이 빠르게 줄어든다).
     for (
       let attempt = 0;
-      attempt < 3 && translationIsIncomplete(lang, korItem, fields);
+      attempt < 5 && translationIsIncomplete(lang, korItem, fields);
       attempt += 1
     ) {
       logger?.warn?.('장소 기계번역 결과가 불완전해 재시도합니다.', {
