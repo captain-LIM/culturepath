@@ -10,9 +10,12 @@ import '../data/region_model.dart';
 import '../data/regions_repository.dart';
 import 'widgets/region_card.dart';
 
+// keepAlive를 쓰지 않는다 — spotsProvider(region_detail_screen.dart)와
+// 같은 이유로, 백엔드를 고쳐도 이미 조회했던 (문화, 언어) 조합이 앱을
+// 완전히 재시작하기 전까지 옛날 결과 그대로 영원히 캐시되는 문제를
+// 막는다.
 final regionsProvider =
     FutureProvider.family<List<RegionItem>, (int, String)>((ref, args) {
-  ref.keepAlive();
   return RegionsRepository().getRegionsByCulture(args.$1);
 });
 

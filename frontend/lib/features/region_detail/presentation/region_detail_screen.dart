@@ -13,9 +13,14 @@ import '../data/spot_model.dart';
 import '../data/spots_repository.dart';
 import 'widgets/spot_card.dart';
 
+// keepAlive를 쓰지 않는다 — 이전에 이 provider가 keepAlive를 걸고 있어서,
+// 백엔드 번역 로직을 아무리 고쳐도 앱을 완전히 재시작하기 전까지는 이미
+// 조회했던 (지역, 문화, 언어) 조합이 그 옛날 결과 그대로 영원히 캐시돼
+// 보였다(실측: 사용자가 같은 화면을 다시 들어가도 안 고쳐진 것처럼 보임).
+// 이 화면을 나갔다 다시 들어오면 자연히 재조회되므로, keepAlive 없이도
+// 앱 세션 안에서 반복 방문할 때만 약간의 재요청 비용이 생길 뿐이다.
 final spotsProvider = FutureProvider.family<List<SpotItem>, ({String areaCode, String? culture, String lang})>(
   (ref, args) {
-    ref.keepAlive();
     return SpotsRepository().getSpotsByRegion(args.areaCode, culture: args.culture);
   },
 );
