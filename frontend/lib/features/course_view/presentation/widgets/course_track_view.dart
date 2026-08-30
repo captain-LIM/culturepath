@@ -9,6 +9,7 @@ import '../../../../shared/widgets/place_network_image.dart';
 import '../../../course_builder/data/course_model.dart';
 import '../../../place_detail/data/place_detail_model.dart';
 import '../../../place_detail/data/place_detail_repository.dart';
+import '../../../home/data/recommended_course_translations.dart';
 
 final _numericContentId = RegExp(r'^\d+$');
 
@@ -60,11 +61,24 @@ class CourseTrackView extends ConsumerWidget {
                 (contentId: place.contentId, lang: appLocaleCode),
               )).valueOrNull
             : null;
-        final displayTitle = translated?.title ?? place.title;
+        // 실제 contentId가 없는 추천 코스 고정 항목(rec_* 접두사)은
+        // 상세 조회 자체가 불가능해 translated가 항상 null이다 — 대신
+        // 직접 들고 있는 로컬 번역표를 쓴다.
+        Map<String, String>? fallback;
+        if (!isNumericId && appLocaleCode != 'ko') {
+          final byLang = recommendedCourseFallbackTranslations[place.contentId];
+          fallback = byLang == null ? null : byLang[appLocaleCode];
+        }
+        String? regionFallback;
+        if (appLocaleCode != 'ko') {
+          final byLang = recommendedCourseRegionTranslations[place.region];
+          regionFallback = byLang == null ? null : byLang[appLocaleCode];
+        }
+        final displayTitle = translated?.title ?? fallback?['title'] ?? place.title;
         final displayAddress = (translated?.address.isNotEmpty ?? false)
             ? translated!.address
-            : place.address;
-        final displayRegion = translated?.region ?? place.region;
+            : fallback?['address'] ?? place.address;
+        final displayRegion = translated?.region ?? regionFallback ?? place.region;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

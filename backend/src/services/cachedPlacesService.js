@@ -406,6 +406,17 @@ function cachedTranslationLooksStale(lang, korItem, cachedFields) {
 // 모든 필드를 빈 값으로 반환한 경우(실측: '고양이똥'처럼 특이한 상호명에서
 // 드물게 발생)는 캐시하면 TTL 동안 계속 원문만 나오게 된다 — 이런 건
 // cacheable:false로 표시해 다음 조회에서 바로 다시 시도하게 한다.
+// 재시도 1회당 LLM 호출(=비용)이 하나씩 늘어난다. 기본값 5는 '동피랑마을'
+// 같은 실패율 높은 콘텐츠에서 실측으로 정한 값인데, 대다수 장소는 첫
+// 시도에 성공해 재시도가 아예 발생하지 않으므로 평균 비용에 미치는
+// 영향은 적다 — 그래도 트래픽이 커지면 최악의 경우(재시도를 다 쓰는
+// 장소) 비용이 커지니, 운영 중 코드 변경 없이 조정할 수 있도록 환경
+// 변수로 뺀다.
+function maxTranslationRetries(env = process.env) {
+  const parsed = Number(env.PLACE_TRANSLATION_MAX_RETRIES);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 5;
+}
+
 async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
   if (!generator || generator.isMockMode(process.env)) {
     return { item: null, cacheable: true };
@@ -418,12 +429,13 @@ async function translatePlaceFieldsWithLlm(korItem, lang, generator, logger) {
     // 다 성공하고 일본어는 3번 다 실패하는 식으로, 어느 언어가 더
     // 어렵다기보다 매 호출이 그 자체로 독립적인 도박에 가깝다. 실측:
     // '동피랑마을' 같은 일부 콘텐츠(어원 설명이 섞인 문장)는 실패율이
-    // 유독 높아 세 번을 다 써도 계속 실패하는 경우가 있었다. 최대 다섯
-    // 번까지 재시도한다(성공 확률이 매 시도마다 독립적이라면 시도를
-    // 늘릴수록 최종 실패 확률이 빠르게 줄어든다).
+    // 유독 높아 세 번을 다 써도 계속 실패하는 경우가 있었다(성공 확률이
+    // 매 시도마다 독립적이라면 시도를 늘릴수록 최종 실패 확률이 빠르게
+    // 줄어든다).
+    const maxRetries = maxTranslationRetries();
     for (
       let attempt = 0;
-      attempt < 5 && translationIsIncomplete(lang, korItem, fields);
+      attempt < maxRetries && translationIsIncomplete(lang, korItem, fields);
       attempt += 1
     ) {
       logger?.warn?.('장소 기계번역 결과가 불완전해 재시도합니다.', {
