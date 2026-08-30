@@ -4,6 +4,7 @@ import 'package:culturepath/core/theme/app_theme.dart';
 import 'package:culturepath/features/course_builder/data/course_model.dart';
 import 'package:culturepath/features/course_builder/data/my_courses_provider.dart';
 import 'package:culturepath/features/course_builder/data/course_repository.dart';
+import 'package:culturepath/features/course_builder/data/place_item.dart';
 import 'package:culturepath/features/explore/presentation/explore_screen.dart';
 import 'package:culturepath/features/home/data/culture_model.dart';
 import 'package:culturepath/features/home/presentation/home_screen.dart';
@@ -61,8 +62,20 @@ class _ShellHost extends StatelessWidget {
       );
 }
 
+PlaceItem _place(String contentId, String title) => PlaceItem(
+      contentId: contentId,
+      title: title,
+      address: '주소',
+      tel: '',
+      openTime: '',
+      category: '기타',
+    );
+
 class _SearchShellHost extends StatelessWidget {
-  const _SearchShellHost();
+  final CourseSearchLoader? courseLoader;
+  final PlaceSearchLoader? placeLoader;
+
+  const _SearchShellHost({this.courseLoader, this.placeLoader});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -76,7 +89,9 @@ class _SearchShellHost extends StatelessWidget {
                     onPressed: () => showSearch<void>(
                       context: branchContext,
                       delegate: CourseSearchDelegate(
-                        courseLoader: () async => [_course('Search course')],
+                        courseLoader: courseLoader ??
+                            (() async => [_course('Search course')]),
+                        placeLoader: placeLoader ?? ((query) async => const []),
                       ),
                     ),
                     child: const Text('Open search'),
@@ -259,6 +274,27 @@ void main() {
 
     expect(find.byKey(const ValueKey('test-shell-navigation')), findsNothing);
     expect(find.text('Search course'), findsWidgets);
+  });
+
+  testWidgets('search surfaces matching places under their own section', (tester) async {
+    await _pump(
+      tester,
+      _SearchShellHost(
+        courseLoader: () async => const [],
+        placeLoader: (query) async => [_place('125790', '강릉 경포대')],
+      ),
+      overrides: const [],
+    );
+
+    await tester.tap(find.byKey(const ValueKey('open-course-search')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '강릉');
+    await tester.pumpAndSettle();
+
+    expect(find.text('관광지'), findsOneWidget);
+    expect(find.text('강릉 경포대'), findsOneWidget);
+    // 이 검색어와 일치하는 공개 코스는 없으므로 코스 섹션은 아예 없어야 한다.
+    expect(find.text('코스'), findsNothing);
   });
 
   for (final width in [360.0, 390.0, 430.0]) {

@@ -37,6 +37,8 @@
   "search_enter_query": "Enter a search keyword",
   "search_no_results": "No results for \"{query}\".",
   "search_load_failed": "Failed to load",
+  "search_section_places": "Places",
+  "search_section_courses": "Courses",
 
   "explore_title": "Explore",
   "tab_my_courses": "My Courses",

@@ -37,6 +37,8 @@
   "search_enter_query": "검색어를 입력해 주세요",
   "search_no_results": "\"{query}\" 검색 결과가 없습니다.",
   "search_load_failed": "불러오기 실패",
+  "search_section_places": "관광지",
+  "search_section_courses": "코스",
 
   "explore_title": "탐색",
   "tab_my_courses": "내 코스",

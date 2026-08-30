@@ -37,6 +37,8 @@
   "search_enter_query": "请输入搜索关键词",
   "search_no_results": "没有「{query}」的搜索结果。",
   "search_load_failed": "加载失败",
+  "search_section_places": "景点",
+  "search_section_courses": "路线",
 
   "explore_title": "探索",
   "tab_my_courses": "我的路线",

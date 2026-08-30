@@ -37,6 +37,8 @@
   "search_enter_query": "検索キーワードを入力してください",
   "search_no_results": "「{query}」の検索結果がありません。",
   "search_load_failed": "読み込み失敗",
+  "search_section_places": "観光地",
+  "search_section_courses": "コース",
 
   "explore_title": "探索",
   "tab_my_courses": "マイコース",
