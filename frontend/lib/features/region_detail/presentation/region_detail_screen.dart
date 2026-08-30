@@ -38,6 +38,10 @@ class RegionDetailScreen extends ConsumerStatefulWidget {
 class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
   final List<PlaceItem> _basket = [];
   final Set<String> _basketIds = {};
+  // 문화 하나로 필터링된 상태로 들어와도, 같은 지역의 다른 문화 관광지를
+  // 못 보는 문제가 있었다 — 백엔드는 culture 파라미터 없이도 지역 전체를
+  // 이미 조회할 수 있었으니, 화면에 이 토글만 추가하면 됐다.
+  bool _showAllCultures = false;
 
   void _toggle(SpotItem spot) {
     setState(() {
@@ -103,7 +107,7 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
     final spotsAsync = ref.watch(
       spotsProvider((
         areaCode: widget.region.areaCode,
-        culture: widget.culture.name,
+        culture: _showAllCultures ? null : widget.culture.name,
         lang: appLocaleCode,
       )),
     );
@@ -123,13 +127,42 @@ class _RegionDetailScreenState extends ConsumerState<RegionDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${widget.region.name} × ${'culture_${widget.culture.id}_name'.tr()}',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _showAllCultures
+                                  ? '${widget.region.name} · ${'region_all_cultures_label'.tr()}'
+                                  : '${widget.region.name} × ${'culture_${widget.culture.id}_name'.tr()}',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: () => setState(() => _showAllCultures = !_showAllCultures),
+                            icon: Icon(
+                              _showAllCultures ? Icons.filter_alt : Icons.filter_alt_outlined,
+                              size: 16,
+                            ),
+                            label: Text(
+                              _showAllCultures
+                                  ? 'region_show_current_culture_only'.tr()
+                                  : 'region_show_all_cultures'.tr(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.accent,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: const Size(0, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(

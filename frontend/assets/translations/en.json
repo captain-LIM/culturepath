@@ -288,6 +288,9 @@
   "region_culture_fit": "Culture fit {score}",
   "region_spots_load_failed": "Unable to load tourist spot info.\n{error}",
   "region_spots_empty": "No recommended spots available.",
+  "region_show_all_cultures": "Show all cultures",
+  "region_show_current_culture_only": "Show this culture only",
+  "region_all_cultures_label": "All cultures",
 
   "login_required_like": "Please log in to like this.",
   "share_course_summary": "{days}-day course · {count} places total",

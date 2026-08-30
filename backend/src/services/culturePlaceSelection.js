@@ -147,7 +147,12 @@ async function collectAreaPlacePage({ placesService, requests, pagination, logge
       }
     }
   }
-  const candidates = [...unique.values()];
+  // culture 파라미터 없이 지역 전체를 조회하는 이 경로는 원래 TourAPI
+  // 원본 항목을 그대로 반환해 category가 분류되지 않은 채(=기본값 '기타')
+  // 내려갔다 — "지역 전체 보기" 토글에서 문화가 뒤섞인 카드마다 실제
+  // 문화가 표시돼야 의미가 있으므로, 문화 필터 경로와 동일하게
+  // classifyTourPlace 기반 재분류를 거친다.
+  const candidates = [...unique.values()].map(place => reclassifyPlace(place));
   return Object.freeze({
     items: candidates.slice(offset, offset + pageSize),
     cacheStatus: successes

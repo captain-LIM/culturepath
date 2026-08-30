@@ -288,6 +288,9 @@
   "region_culture_fit": "文化適合度 {score}点",
   "region_spots_load_failed": "観光地情報を読み込めません。\n{error}",
   "region_spots_empty": "おすすめの観光地がありません。",
+  "region_show_all_cultures": "すべての文化を表示",
+  "region_show_current_culture_only": "この文化のみ表示",
+  "region_all_cultures_label": "全文化",
 
   "login_required_like": "ログイン後にいいねできます。",
   "share_course_summary": "{days}日間のコース · 全{count}か所",

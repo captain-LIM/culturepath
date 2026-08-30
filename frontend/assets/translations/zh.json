@@ -288,6 +288,9 @@
   "region_culture_fit": "文化契合度 {score}分",
   "region_spots_load_failed": "无法加载景点信息。\n{error}",
   "region_spots_empty": "暂无推荐景点。",
+  "region_show_all_cultures": "查看全部文化",
+  "region_show_current_culture_only": "仅看该文化",
+  "region_all_cultures_label": "全部文化",
 
   "login_required_like": "登录后才能点赞。",
   "share_course_summary": "{days}天路线 · 共{count}个地点",
