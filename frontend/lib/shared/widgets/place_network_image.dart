@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -38,8 +39,8 @@ class PlaceNetworkImage extends StatelessWidget {
     return Semantics(
       image: true,
       label: semanticLabel ?? (selectedUrl == null
-          ? '$placeTitle 사진 없음'
-          : '$placeTitle 관광지 사진'),
+          ? 'place_photo_none'.tr(namedArgs: {'title': placeTitle})
+          : 'place_photo_available'.tr(namedArgs: {'title': placeTitle})),
       child: ExcludeSemantics(
         child: ClipRRect(
           borderRadius: borderRadius ?? BorderRadius.zero,
@@ -144,8 +145,8 @@ class _PlaceImagePlaceholder extends StatelessWidget {
                   Flexible(
                     child: Text(
                       loading
-                          ? '$placeTitle 사진을 불러오는 중'
-                          : '$placeTitle 사진 없음',
+                          ? 'place_photo_loading'.tr(namedArgs: {'title': placeTitle})
+                          : 'place_photo_none'.tr(namedArgs: {'title': placeTitle}),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,

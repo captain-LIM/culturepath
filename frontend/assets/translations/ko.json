@@ -283,6 +283,10 @@
   "place_detail_related_load_failed": "연관 장소를 불러오지 못했습니다.",
   "place_detail_unavailable": "이 장소는 상세 정보를 제공하지 않아요.",
   "place_detail_no_translation_notice": "이 장소는 선택한 언어의 정보가 없어 한국어로 표시돼요.",
+  "place_photo_none": "{title} 사진 없음",
+  "place_photo_available": "{title} 관광지 사진",
+  "place_photo_available_indexed": "{title} 관광지 사진 {index}/{count}",
+  "place_photo_loading": "{title} 사진을 불러오는 중",
 
   "score": "점수 {score}",
   "by_author": "by {author}",

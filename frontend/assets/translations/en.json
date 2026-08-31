@@ -283,6 +283,10 @@
   "place_detail_related_load_failed": "Couldn't load related places.",
   "place_detail_unavailable": "No detailed info is available for this place.",
   "place_detail_no_translation_notice": "No English info is available for this place, so it's shown in Korean.",
+  "place_photo_none": "No photo of {title}",
+  "place_photo_available": "Photo of {title}",
+  "place_photo_available_indexed": "Photo of {title} {index}/{count}",
+  "place_photo_loading": "Loading photo of {title}",
 
   "score": "Score {score}",
   "by_author": "by {author}",

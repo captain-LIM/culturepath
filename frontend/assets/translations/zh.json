@@ -283,6 +283,10 @@
   "place_detail_related_load_failed": "无法加载相关地点。",
   "place_detail_unavailable": "该地点不提供详细信息。",
   "place_detail_no_translation_notice": "该地点没有该语言版本的信息，因此以韩文显示。",
+  "place_photo_none": "{title} 暂无照片",
+  "place_photo_available": "{title} 景点照片",
+  "place_photo_available_indexed": "{title} 景点照片 {index}/{count}",
+  "place_photo_loading": "正在加载 {title} 照片",
 
   "score": "分数 {score}",
   "by_author": "by {author}",

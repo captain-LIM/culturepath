@@ -305,8 +305,12 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               imageUrl: images[index].imageUrl,
               semanticLabel: images[index].imageUrl == null &&
                       images[index].thumbnailUrl == null
-                  ? '${detail.title} 사진 없음'
-                  : '${detail.title} 관광지 사진 ${index + 1}/${images.length}',
+                  ? 'place_photo_none'.tr(namedArgs: {'title': detail.title})
+                  : 'place_photo_available_indexed'.tr(namedArgs: {
+                      'title': detail.title,
+                      'index': '${index + 1}',
+                      'count': '${images.length}',
+                    }),
             ),
           ),
         ),

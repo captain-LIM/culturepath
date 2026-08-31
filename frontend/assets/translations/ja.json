@@ -283,6 +283,10 @@
   "place_detail_related_load_failed": "関連スポットを読み込めませんでした。",
   "place_detail_unavailable": "この場所は詳細情報を提供していません。",
   "place_detail_no_translation_notice": "この場所の日本語情報がないため、韓国語で表示しています。",
+  "place_photo_none": "{title} 写真なし",
+  "place_photo_available": "{title} 観光地の写真",
+  "place_photo_available_indexed": "{title} 観光地の写真 {index}/{count}",
+  "place_photo_loading": "{title} 写真を読み込み中",
 
   "score": "スコア {score}",
   "by_author": "by {author}",
