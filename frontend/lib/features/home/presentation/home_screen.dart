@@ -67,14 +67,21 @@ class _HomeHeader extends StatelessWidget {
             children: [
               Image.asset('assets/images/mascot.png', height: 96),
               const SizedBox(width: AppSpacing.sm),
+              // 로마자 표기(예: "Tara-gabang")는 한글 "따라가방"보다 훨씬 길어
+              // 42px 고정 크기로는 폭을 넘겨 "..."로 잘렸다. ellipsis로 자르는
+              // 대신 FittedBox로 폭에 맞게 통째로 줄여, 언어와 무관하게 앱
+              // 이름 전체가 항상 보이게 한다.
               Expanded(
-                child: Text(
-                  'app_name'.tr(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.blackHanSans(
-                    fontSize: 42,
-                    color: AppColors.textDark,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'app_name'.tr(),
+                    maxLines: 1,
+                    style: GoogleFonts.blackHanSans(
+                      fontSize: 42,
+                      color: AppColors.textDark,
+                    ),
                   ),
                 ),
               ),
