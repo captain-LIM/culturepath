@@ -17,6 +17,7 @@ test('rejects a different embedding model for the v1 collection before searching
   await assert.rejects(
     vectorStore.search('query', {}, {
       env: {
+        USE_MOCK_AI: 'false',
         USE_MOCK_RAG: 'false',
         OPENROUTER_EMBEDDING_MODEL: 'another/model',
         QDRANT_COLLECTION: 'culturepath_places_v1',
@@ -34,6 +35,7 @@ test('validates search embeddings against the collection dimension contract', as
   let embeddingOptions;
   const result = await vectorStore.search('query', {}, {
     env: {
+      USE_MOCK_AI: 'false',
       USE_MOCK_RAG: 'false',
       OPENROUTER_EMBEDDING_MODEL: 'baai/bge-m3',
       OPENROUTER_EMBEDDING_DIMENSIONS: '1024',
@@ -57,6 +59,7 @@ test('fails explicitly when a live Qdrant collection has no indexed points', asy
   await assert.rejects(
     vectorStore.searchDetailed('통영 문학', {}, {
       env: {
+        USE_MOCK_AI: 'false',
         USE_MOCK_RAG: 'false',
         QDRANT_COLLECTION: 'culturepath_places_v1',
       },

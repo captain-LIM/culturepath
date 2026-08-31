@@ -9,11 +9,12 @@ const MOCK_RESPONSES = {
   통영: '통영의 문화 장소를 바탕으로 코스를 함께 조정해볼게요.',
 };
 
+// USE_MOCK_AI만 본다. 예전에는 이 값이 없으면 USE_MOCK_RAG(Qdrant/embedding
+// 전용 플래그, AI_CHAT_CONTRACT상 실제 답변 생성과 무관)로 대신 판정해서,
+// OPENROUTER_API_KEY를 넣고 USE_MOCK_AI만 깜빡해도 조용히 mock 응답만
+// 나가는 문제가 있었다. 명시적으로 'false'를 줄 때만 실제 LLM을 호출한다.
 function isMockMode(env = process.env) {
-  if (env.USE_MOCK_AI !== undefined) {
-    return env.USE_MOCK_AI !== 'false';
-  }
-  return env.USE_MOCK_RAG !== 'false';
+  return env.USE_MOCK_AI !== 'false';
 }
 
 function getMockResponse(messages) {

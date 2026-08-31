@@ -253,7 +253,7 @@ test('uses the cost-safe default of three AI requests per minute', () => {
 test('returns a safe unchanged preview when the model cannot verify the request', async () => {
   const original = course();
   const result = await editCourse(course(), '비 오는 날 실내 코스로 바꿔줘', {}, {
-    env: { USE_MOCK_RAG: 'false' },
+    env: { USE_MOCK_AI: 'false', USE_MOCK_RAG: 'false' },
     ragSearchService: {
       async search() {
         throw new Error('검증 불가능한 요청은 검색하지 않아야 합니다.');
