@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import '../../core/i18n/category_localization.dart';
 import '../../core/theme/app_theme.dart';
 
 String? selectSafePlaceImageUrl(String? thumbnailUrl, String? imageUrl) {
@@ -19,6 +20,7 @@ class PlaceNetworkImage extends StatelessWidget {
   final String? thumbnailUrl;
   final String? imageUrl;
   final String placeTitle;
+  final String? category;
   final BoxFit fit;
   final BorderRadius? borderRadius;
   final String? semanticLabel;
@@ -28,6 +30,7 @@ class PlaceNetworkImage extends StatelessWidget {
     required this.placeTitle,
     this.thumbnailUrl,
     this.imageUrl,
+    this.category,
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.semanticLabel,
@@ -47,7 +50,10 @@ class PlaceNetworkImage extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (selectedUrl == null) {
-                return _PlaceImagePlaceholder(placeTitle: placeTitle);
+                return _PlaceImagePlaceholder(
+                  placeTitle: placeTitle,
+                  category: category,
+                );
               }
               final fallbackWidth = MediaQuery.sizeOf(context).width;
               final logicalWidth = constraints.hasBoundedWidth &&
@@ -80,10 +86,13 @@ class PlaceNetworkImage extends StatelessWidget {
                 fadeInDuration: const Duration(milliseconds: 180),
                 placeholder: (_, _) => _PlaceImagePlaceholder(
                   placeTitle: placeTitle,
+                  category: category,
                   loading: true,
                 ),
-                errorWidget: (_, _, _) =>
-                    _PlaceImagePlaceholder(placeTitle: placeTitle),
+                errorWidget: (_, _, _) => _PlaceImagePlaceholder(
+                  placeTitle: placeTitle,
+                  category: category,
+                ),
               );
             },
           ),
@@ -95,10 +104,12 @@ class PlaceNetworkImage extends StatelessWidget {
 
 class _PlaceImagePlaceholder extends StatelessWidget {
   final String placeTitle;
+  final String? category;
   final bool loading;
 
   const _PlaceImagePlaceholder({
     required this.placeTitle,
+    this.category,
     this.loading = false,
   });
 
@@ -118,7 +129,7 @@ class _PlaceImagePlaceholder extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(
-                      Icons.photo_outlined,
+                      categoryPhotoIcon(category),
                       size: 24,
                       color: AppColors.primary.withValues(alpha: 0.42),
                     ),
@@ -137,7 +148,7 @@ class _PlaceImagePlaceholder extends StatelessWidget {
                     )
                   else
                     Icon(
-                      Icons.photo_outlined,
+                      categoryPhotoIcon(category),
                       size: 32,
                       color: AppColors.primary.withValues(alpha: 0.42),
                     ),

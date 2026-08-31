@@ -145,6 +145,7 @@ class CourseTrackView extends ConsumerWidget {
                             placeTitle: displayTitle,
                             thumbnailUrl: place.thumbnailUrl,
                             imageUrl: place.imageUrl,
+                            category: place.category,
                             borderRadius: BorderRadius.circular(AppRadius.image),
                           ),
                         ),

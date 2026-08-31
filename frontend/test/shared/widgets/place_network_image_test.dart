@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:culturepath/core/i18n/category_localization.dart';
 import 'package:culturepath/shared/widgets/place_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -162,6 +163,28 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('연관 방문 장소 이름이 긴 경우 사진 없음'), findsOneWidget);
+  });
+
+  testWidgets('shows the category icon instead of the generic camera icon when known',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrapWithLocale(
+        const Scaffold(
+          body: SizedBox(
+            width: 200,
+            height: 120,
+            child: PlaceNetworkImage(
+              placeTitle: '오죽헌',
+              category: '문학',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byIcon(categoryPhotoIcon('문학')), findsOneWidget);
+    expect(find.byIcon(Icons.photo_outlined), findsNothing);
   });
 
   testWidgets('uses an icon-only fallback inside a 40 pixel search thumbnail',

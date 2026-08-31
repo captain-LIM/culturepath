@@ -303,6 +303,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
               placeTitle: detail.title,
               thumbnailUrl: images[index].thumbnailUrl,
               imageUrl: images[index].imageUrl,
+              category: detail.category,
               semanticLabel: images[index].imageUrl == null &&
                       images[index].thumbnailUrl == null
                   ? 'place_photo_none'.tr(namedArgs: {'title': detail.title})
@@ -393,6 +394,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                             placeTitle: place.title,
                             thumbnailUrl: place.thumbnailUrl,
                             imageUrl: place.imageUrl,
+                            category: place.category,
                           ),
                         ),
                         Padding(
@@ -435,6 +437,7 @@ class _LoadingState extends StatelessWidget {
             placeTitle: initialPlace?.title ?? 'place_detail_generic'.tr(),
             thumbnailUrl: initialPlace?.thumbnailUrl,
             imageUrl: initialPlace?.imageUrl,
+            category: initialPlace?.category,
           ),
         ),
         const Expanded(child: Center(child: CircularProgressIndicator())),

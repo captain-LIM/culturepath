@@ -47,6 +47,7 @@ class SpotCard extends StatelessWidget {
                     placeTitle: spot.title,
                     thumbnailUrl: spot.thumbnailUrl,
                     imageUrl: spot.imageUrl,
+                    category: spot.category,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(AppRadius.image),
                     ),

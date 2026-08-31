@@ -238,6 +238,7 @@ class _PlaceResultTile extends StatelessWidget {
           placeTitle: place.title,
           thumbnailUrl: place.thumbnailUrl,
           imageUrl: place.imageUrl,
+          category: place.category,
           borderRadius: BorderRadius.circular(10),
         ),
       ),
