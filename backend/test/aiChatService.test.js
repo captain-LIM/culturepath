@@ -81,6 +81,48 @@ test('returns only Backend candidate cards and reuses the structured session', a
   assert.equal(second.suggestedCourse.tracks[0].places[0].contentId, '100');
 });
 
+test('caps a plain recommendation to a browsable number and explains each one', async () => {
+  const sessionStore = createAiSessionStore();
+  const items = ['100', '200', '300', '400', '500'].map(id => source(id));
+  let explainedCandidateCount = null;
+  const intents = [intent('discover_places'), intent('create_course_draft', { dayCount: 1 })];
+  const service = createAiChatService({
+    sessionStore,
+    intentService: { async parse() { return intents.shift(); } },
+    candidateResolver: {
+      async resolve() { return { items, cacheStatus: 'HIT', partial: false }; },
+      async rehydrate() { return { items, cacheStatus: 'HIT', partial: false }; },
+    },
+    llmService: {
+      isMockMode: () => false,
+      async generate(_systemPrompt, messages) {
+        explainedCandidateCount = JSON.parse(messages[0].content).referenceCandidates.length;
+        return { content: '설명', usage: null };
+      },
+    },
+  });
+
+  const response = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: '영화 관광지 추천해줘' }],
+    entryContext: { type: 'general', courseId: null },
+  });
+
+  // 후보가 5곳이어도 화면엔 한 번에 훑을 수 있는 3곳까지만 보여준다.
+  assert.deepEqual(response.sources.map(item => item.contentId), ['100', '200', '300']);
+  // LLM에도 잘린 3곳만 넘겨, 보여주지 않는 후보를 본문에서 언급하지 않는다.
+  assert.equal(explainedCandidateCount, 3);
+
+  const followUp = await service.chat({
+    userId: 7,
+    sessionId: response.sessionId,
+    messages: [{ role: 'user', content: '2일 코스로 만들어줘' }],
+    entryContext: { type: 'general', courseId: null },
+  });
+  // 화면 표시는 3곳으로 줄였지만, 다음 턴(코스 초안)은 전체 후보 5곳을 그대로 쓸 수 있다.
+  assert.equal(followUp.suggestedCourse.tracks.reduce((sum, t) => sum + t.places.length, 0), 5);
+});
+
 test('routes a course-context edit to the existing-place editor without candidate search', async () => {
   let resolverCalled = false;
   let editedCourse;
@@ -153,6 +195,34 @@ test('does not fabricate candidates when the resolver returns an empty result', 
   });
   assert.deepEqual(response.sources, []);
   assert.match(response.content, /찾지 못했어요/);
+});
+
+test('never calls the model when no candidates are found, even outside mock mode', async () => {
+  // 라이브 스모크에서 실제로 확인된 사례: referenceCandidates가 빈 배열이어도
+  // 모델이 "한계를 알려주라"는 지시를 어기고 실존하는 듯한 장소를 만들어냈다.
+  // 모델의 준수 여부에 맡기지 않고, 후보가 0곳이면 Backend가 모델을 아예
+  // 호출하지 않아야 한다.
+  let generateCalled = false;
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: { async parse() { return intent('discover_places'); } },
+    candidateResolver: {
+      async resolve() { return { items: [], cacheStatus: 'HIT', partial: false }; },
+    },
+    llmService: {
+      isMockMode: () => false,
+      async generate() { generateCalled = true; return { content: '조작된 답변', usage: null }; },
+    },
+  });
+  const response = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: '군산 영화 관광지 추천해줘' }],
+    entryContext: { type: 'general', courseId: null },
+  });
+  assert.equal(generateCalled, false);
+  assert.deepEqual(response.sources, []);
+  assert.match(response.content, /찾지 못했어요/);
+  assert.equal(response.mock, false);
 });
 
 test('asks the user to narrow more than two culture filters before candidate lookup', async () => {
