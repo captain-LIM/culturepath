@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS courses (
   forked_from_course_id  INT DEFAULT NULL,
   forked_from_title      VARCHAR(255) DEFAULT NULL,
     forked_from_author_id  VARCHAR(100) DEFAULT NULL,
+    forked_from_author_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     idempotency_key        VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     idempotency_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     area_code              VARCHAR(50) DEFAULT NULL,

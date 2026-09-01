@@ -5,14 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../course_builder/data/my_courses_provider.dart';
 import '../data/profile_model.dart';
 import '../data/profile_repository.dart';
 import 'completions_list_screen.dart';
 import 'created_courses_list_screen.dart';
 import 'liked_courses_list_screen.dart';
 
-final _profileProvider = FutureProvider.autoDispose<UserProfile>(
-  (ref) => ProfileRepository().getMyProfile(),
+final profileRepositoryProvider = Provider<ProfileRepository>(
+  (ref) => ProfileRepository(),
+);
+
+final profileProvider = FutureProvider.autoDispose<UserProfile>(
+  (ref) => ref.watch(profileRepositoryProvider).getMyProfile(),
 );
 
 class ProfileScreen extends ConsumerWidget {
@@ -23,9 +28,11 @@ class ProfileScreen extends ConsumerWidget {
     EasyLocalization.of(context);
     final authAsync = ref.watch(authStateProvider);
     return authAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, stack) => const _GuestView(),
-      data: (isLoggedIn) => isLoggedIn ? const _LoggedInView() : const _GuestView(),
+      data: (isLoggedIn) =>
+          isLoggedIn ? const _LoggedInView() : const _GuestView(),
     );
   }
 }
@@ -53,15 +60,31 @@ class _GuestView extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person_outline, size: 40, color: AppColors.primary),
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 40,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 20),
-              Text('profile_title'.tr(),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Text(
+                'profile_title'.tr(),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text('profile_guest_desc'.tr(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5)),
+              Text(
+                'profile_guest_desc'.tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
+              ),
               const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
@@ -88,14 +111,15 @@ class _LoggedInView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     EasyLocalization.of(context);
-    final profileAsync = ref.watch(_profileProvider);
+    final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) {
-          final unauthorized = e is DioException && e.response?.statusCode == 401;
+          final unauthorized =
+              e is DioException && e.response?.statusCode == 401;
           if (unauthorized) {
             return Center(
               child: Padding(
@@ -103,7 +127,11 @@ class _LoggedInView extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.lock_clock_outlined, size: 40, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.lock_clock_outlined,
+                      size: 40,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'session_expired'.tr(),
@@ -115,7 +143,9 @@ class _LoggedInView extends ConsumerWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () async {
-                          await AuthRepository().clearExpiredSession();
+                          await ref
+                              .read(authRepositoryProvider)
+                              .clearExpiredSession();
                           ref.invalidate(authStateProvider);
                           if (context.mounted) context.go('/login');
                         },
@@ -133,17 +163,23 @@ class _LoggedInView extends ConsumerWidget {
               children: [
                 Icon(Icons.cloud_off, size: 40, color: Colors.grey.shade400),
                 const SizedBox(height: 12),
-                Text('profile_error'.tr(), style: TextStyle(color: Colors.grey.shade500)),
+                Text(
+                  'profile_error'.tr(),
+                  style: TextStyle(color: Colors.grey.shade500),
+                ),
                 const SizedBox(height: 12),
-                TextButton(onPressed: () => ref.invalidate(_profileProvider), child: Text('retry'.tr())),
+                TextButton(
+                  onPressed: () => ref.invalidate(profileProvider),
+                  child: Text('retry'.tr()),
+                ),
               ],
             ),
           );
         },
         data: (profile) => RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(_profileProvider);
-            await ref.read(_profileProvider.future);
+            ref.invalidate(profileProvider);
+            await ref.read(profileProvider.future);
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -153,6 +189,7 @@ class _LoggedInView extends ConsumerWidget {
               _buildStats(profile.stats, context),
               _sectionTitle('my_badges'.tr()),
               _buildBadgeGrid(profile.badges, context),
+              const _AccountManagementSection(),
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
@@ -161,7 +198,11 @@ class _LoggedInView extends ConsumerWidget {
     );
   }
 
-  SliverToBoxAdapter _buildHeader(UserProfile profile, BuildContext context, WidgetRef ref) {
+  SliverToBoxAdapter _buildHeader(
+    UserProfile profile,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     return SliverToBoxAdapter(
       child: Container(
         color: Colors.white,
@@ -171,11 +212,20 @@ class _LoggedInView extends ConsumerWidget {
             Container(
               width: 64,
               height: 64,
-              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
               child: Center(
                 child: Text(
-                  profile.nickname.isNotEmpty ? profile.nickname[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
+                  profile.nickname.isNotEmpty
+                      ? profile.nickname[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -184,11 +234,19 @@ class _LoggedInView extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(profile.nickname,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  Text(
+                    profile.nickname,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(profile.email,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  Text(
+                    profile.email,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
                 ],
               ),
             ),
@@ -196,7 +254,7 @@ class _LoggedInView extends ConsumerWidget {
               icon: const Icon(Icons.logout, color: AppColors.primary),
               tooltip: 'logout'.tr(),
               onPressed: () async {
-                await AuthRepository().logout();
+                await ref.read(authRepositoryProvider).logout();
                 ref.invalidate(authStateProvider);
                 if (context.mounted) context.go('/login');
               },
@@ -227,26 +285,38 @@ class _LoggedInView extends ConsumerWidget {
         child: Row(
           children: [
             _StatItem(
-              'stat_completed'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.completedCount}'}),
-              Icons.emoji_events, AppColors.accentGold,
+              'stat_completed'.tr(),
+              'stat_count'.tr(namedArgs: {'n': '${stats.completedCount}'}),
+              Icons.emoji_events,
+              AppColors.accentGold,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const CompletionsListScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const CompletionsListScreen(),
+                ),
               ),
             ),
             _Divider(),
             _StatItem(
-              'stat_created'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.createdCount}'}),
-              Icons.edit_note, AppColors.primary,
+              'stat_created'.tr(),
+              'stat_count'.tr(namedArgs: {'n': '${stats.createdCount}'}),
+              Icons.edit_note,
+              AppColors.primary,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const CreatedCoursesListScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const CreatedCoursesListScreen(),
+                ),
               ),
             ),
             _Divider(),
             _StatItem(
-              'stat_liked'.tr(), 'stat_count'.tr(namedArgs: {'n': '${stats.likedCount}'}),
-              Icons.favorite, Colors.red,
+              'stat_liked'.tr(),
+              'stat_count'.tr(namedArgs: {'n': '${stats.likedCount}'}),
+              Icons.favorite,
+              Colors.red,
               onTap: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const LikedCoursesListScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const LikedCoursesListScreen(),
+                ),
               ),
             ),
           ],
@@ -259,16 +329,29 @@ class _LoggedInView extends ConsumerWidget {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
-        child: Text(title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }
 
   static const _allBadges = [
-    (1, '독립서점·책방', '📚'), (2, '문학', '✍️'), (3, '음악', '🎵'), (4, '전통주·양조장', '🍶'),
-    (5, '로컬 미식', '🍽️'), (6, '공예·공방', '🎨'), (7, '근대 문화유산', '🏛️'),
-    (8, '미술·갤러리', '🖼️'), (9, '영화·애니메이션', '🎬'), (10, '커피·카페', '☕'),
+    (1, '독립서점·책방', '📚'),
+    (2, '문학', '✍️'),
+    (3, '음악', '🎵'),
+    (4, '전통주·양조장', '🍶'),
+    (5, '로컬 미식', '🍽️'),
+    (6, '공예·공방', '🎨'),
+    (7, '근대 문화유산', '🏛️'),
+    (8, '미술·갤러리', '🖼️'),
+    (9, '영화·애니메이션', '🎬'),
+    (10, '커피·카페', '☕'),
   ];
 
   SliverPadding _buildBadgeGrid(Map<String, int> badges, BuildContext context) {
@@ -282,18 +365,207 @@ class _LoggedInView extends ConsumerWidget {
           mainAxisSpacing: 10,
           mainAxisExtent: largeText ? 80 : 56,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final b = _allBadges[index];
-            final count = badges[b.$2] ?? 0;
-            return _BadgeChip(name: 'culture_${b.$1}_name'.tr(), emoji: b.$3, count: count);
-          },
-          childCount: _allBadges.length,
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final b = _allBadges[index];
+          final count = badges[b.$2] ?? 0;
+          return _BadgeChip(
+            name: 'culture_${b.$1}_name'.tr(),
+            emoji: b.$3,
+            count: count,
+          );
+        }, childCount: _allBadges.length),
+      ),
+    );
+  }
+}
+
+class _AccountManagementSection extends ConsumerStatefulWidget {
+  const _AccountManagementSection();
+
+  @override
+  ConsumerState<_AccountManagementSection> createState() =>
+      _AccountManagementSectionState();
+}
+
+class _AccountManagementSectionState
+    extends ConsumerState<_AccountManagementSection> {
+  bool _deleting = false;
+
+  Future<bool> _confirmDeletion() async {
+    final firstConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('account_delete_title'.tr()),
+        content: Text('account_delete_description'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('account_delete_continue'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (firstConfirmed != true || !mounted) return false;
+
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => _DeleteConfirmationDialog(
+            confirmationWord: 'account_delete_confirmation_word'.tr(),
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _deleteAccount() async {
+    if (_deleting || !await _confirmDeletion() || !mounted) return;
+
+    setState(() => _deleting = true);
+    final repository = ref.read(authRepositoryProvider);
+    try {
+      await repository.deleteAccount();
+      ref.invalidate(profileProvider);
+      ref.invalidate(myCoursesProvider);
+      ref.invalidate(authStateProvider);
+      if (mounted) context.go('/login');
+    } catch (error) {
+      final unauthorized =
+          error is DioException && error.response?.statusCode == 401;
+      if (unauthorized) {
+        await repository.clearExpiredSession();
+        ref.invalidate(authStateProvider);
+        ref.invalidate(myCoursesProvider);
+        if (mounted) context.go('/login');
+      } else if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('account_delete_error'.tr())));
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Container(
+        color: Colors.white,
+        margin: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'account_management'.tr(),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'account_delete_summary'.tr(),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const Key('account-delete-button'),
+                onPressed: _deleting ? null : _deleteAccount,
+                icon: _deleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.person_remove_outlined),
+                label: Text(
+                  _deleting
+                      ? 'account_delete_processing'.tr()
+                      : 'account_delete_action'.tr(),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  side: BorderSide(color: Colors.red.shade200),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
+class _DeleteConfirmationDialog extends StatefulWidget {
+  final String confirmationWord;
+
+  const _DeleteConfirmationDialog({required this.confirmationWord});
+
+  @override
+  State<_DeleteConfirmationDialog> createState() =>
+      _DeleteConfirmationDialogState();
+}
+
+class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('account_delete_final_title'.tr()),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'account_delete_confirmation_prompt'.tr(
+              namedArgs: {'word': widget.confirmationWord},
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('account-delete-confirmation-field'),
+            controller: _controller,
+            autofocus: true,
+            decoration: InputDecoration(hintText: widget.confirmationWord),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text('cancel'.tr()),
+        ),
+        TextButton(
+          key: const Key('account-delete-final-button'),
+          onPressed: _controller.text.trim() == widget.confirmationWord
+              ? () => Navigator.pop(context, true)
+              : null,
+          style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+          child: Text('account_delete_action'.tr()),
+        ),
+      ],
+    );
+  }
 }
 
 // ─── 언어 선택기 ──────────────────────────────────────────────────────────────
@@ -313,7 +585,11 @@ class _LanguageSelector extends StatelessWidget {
       children: [
         Text(
           'language_setting'.tr(),
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -323,12 +599,17 @@ class _LanguageSelector extends StatelessWidget {
             return GestureDetector(
               onTap: () => context.setLocale(Locale(l.$1)),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                    color: isSelected
+                        ? AppColors.primary
+                        : Colors.grey.shade300,
                   ),
                 ),
                 child: Text(
@@ -364,22 +645,38 @@ class _StatItem extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 22),
         const SizedBox(height: 6),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
         const SizedBox(height: 2),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
             if (onTap != null) ...[
               const SizedBox(width: 2),
-              Icon(Icons.arrow_forward_ios, size: 9, color: Colors.grey.shade400),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 9,
+                color: Colors.grey.shade400,
+              ),
             ],
           ],
         ),
       ],
     );
     return Expanded(
-      child: onTap != null ? GestureDetector(onTap: onTap, child: content) : content,
+      child: onTap != null
+          ? GestureDetector(onTap: onTap, child: content)
+          : content,
     );
   }
 }
@@ -395,7 +692,11 @@ class _BadgeChip extends StatelessWidget {
   final String emoji;
   final int count;
 
-  const _BadgeChip({required this.name, required this.emoji, required this.count});
+  const _BadgeChip({
+    required this.name,
+    required this.emoji,
+    required this.count,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -408,10 +709,14 @@ class _BadgeChip extends StatelessWidget {
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: earned ? AppColors.accentGold.withValues(alpha: 0.12) : Colors.grey.shade100,
+            color: earned
+                ? AppColors.accentGold.withValues(alpha: 0.12)
+                : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(AppRadius.surface),
             border: Border.all(
-              color: earned ? AppColors.accentGold.withValues(alpha: 0.5) : Colors.grey.shade300,
+              color: earned
+                  ? AppColors.accentGold.withValues(alpha: 0.5)
+                  : Colors.grey.shade300,
             ),
           ),
           child: Row(
@@ -446,7 +751,11 @@ class _BadgeChip extends StatelessWidget {
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -454,4 +763,3 @@ class _BadgeChip extends StatelessWidget {
     );
   }
 }
-

@@ -269,7 +269,11 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
           if (widget.initialCourse == null)
             const _AiAssistantEntryCard(),
           if (isFork)
-            _ForkBanner(originalTitle: course.forkedFrom!.title, authorId: course.forkedFrom!.authorId),
+            _ForkBanner(
+              originalTitle: course.forkedFrom!.title,
+              authorId: course.forkedFrom!.authorId,
+              authorDeleted: course.forkedFrom!.authorDeleted,
+            ),
           if (widget.aiOriginalCourse != null)
             Material(
               key: const ValueKey('ai-draft-banner'),
@@ -516,11 +520,19 @@ class _AiAssistantEntryCard extends StatelessWidget {
 class _ForkBanner extends StatelessWidget {
   final String originalTitle;
   final String authorId;
+  final bool authorDeleted;
 
-  const _ForkBanner({required this.originalTitle, required this.authorId});
+  const _ForkBanner({
+    required this.originalTitle,
+    required this.authorId,
+    required this.authorDeleted,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final author = authorDeleted
+        ? 'deleted_user'.tr()
+        : authorId;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -531,7 +543,7 @@ class _ForkBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'forked_from'.tr(namedArgs: {'title': originalTitle, 'author': authorId}),
+              'forked_from'.tr(namedArgs: {'title': originalTitle, 'author': author}),
               style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.accentGold,

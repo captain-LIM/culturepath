@@ -2,6 +2,7 @@
 
 const pool = require('../config/db');
 const placeCacheRepository = require('../repositories/placeCacheRepository');
+const { buildForkedFrom } = require('./courseProvenance');
 
 const MAX_TRACKS = 3;
 const MAX_PLACES_PER_TRACK = 20;
@@ -22,7 +23,8 @@ function createAiCourseContextService(options = {}) {
   async function loadCourseForTransform(courseId, userId) {
   const [[course]] = await database.query(
     `SELECT id, user_id, title, description, is_public, revision,
-            forked_from_course_id, forked_from_title, forked_from_author_id
+            forked_from_course_id, forked_from_title, forked_from_author_id,
+            forked_from_author_deleted
      FROM courses
      WHERE id = ?`,
     [courseId],
@@ -99,11 +101,7 @@ function createAiCourseContextService(options = {}) {
     isPublic: Boolean(course.is_public),
     isOwner,
     revision: Number(course.revision || 1),
-    forkedFrom: course.forked_from_course_id ? {
-      courseId: Number(course.forked_from_course_id),
-      title: String(course.forked_from_title || ''),
-      authorId: String(course.forked_from_author_id || ''),
-    } : null,
+    forkedFrom: buildForkedFrom(course),
     tracks,
   };
   }

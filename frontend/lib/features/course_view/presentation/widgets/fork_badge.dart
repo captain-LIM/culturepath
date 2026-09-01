@@ -10,6 +10,9 @@ class ForkBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final author = forkedFrom.authorDeleted
+        ? 'deleted_user'.tr()
+        : forkedFrom.authorId;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -36,7 +39,9 @@ class ForkBadge extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'forked_from'.tr(namedArgs: {'title': forkedFrom.title, 'author': forkedFrom.authorId}),
+                  'forked_from'.tr(
+                    namedArgs: {'title': forkedFrom.title, 'author': author},
+                  ),
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.accentGold.withValues(alpha: 0.8),
