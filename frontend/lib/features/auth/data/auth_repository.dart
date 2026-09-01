@@ -9,14 +9,26 @@ final authStateProvider = FutureProvider<bool>((ref) async {
   return prefs.getString('auth_token') != null;
 });
 
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(),
+);
+
 class AuthRepository {
   static const _serverClientId =
       '793585667481-59trfjaarlkffp2g3u2nacmac3127uh9.apps.googleusercontent.com';
 
-  final _googleSignIn = GoogleSignIn(serverClientId: _serverClientId);
+  final GoogleSignIn _googleSignIn;
+  final Future<void> Function()? _googleSignOutOverride;
   final ApiClient _client;
 
-  AuthRepository({ApiClient? client}) : _client = client ?? apiClient;
+  AuthRepository({
+    ApiClient? client,
+    GoogleSignIn? googleSignIn,
+    Future<void> Function()? googleSignOut,
+  }) : _client = client ?? apiClient,
+       _googleSignIn =
+           googleSignIn ?? GoogleSignIn(serverClientId: _serverClientId),
+       _googleSignOutOverride = googleSignOut;
 
   Future<String> register({
     required String email,
@@ -54,10 +66,30 @@ class AuthRepository {
       // 서버 세션은 TTL로도 만료된다. 로그아웃 자체는 네트워크 장애로 막지 않는다.
     }
     try {
-      await _googleSignIn.signOut();
+      await _signOutGoogle();
     } finally {
       await clearExpiredSession();
     }
+  }
+
+  Future<void> deleteAccount() async {
+    await _client.delete('/users/me', data: const {'confirmation': 'DELETE'});
+    try {
+      await _signOutGoogle();
+    } catch (_) {
+      // The server deletion is authoritative even if local Google sign-out fails.
+    } finally {
+      await clearExpiredSession();
+    }
+  }
+
+  Future<void> _signOutGoogle() async {
+    final override = _googleSignOutOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
+    await _googleSignIn.signOut();
   }
 
   Future<void> clearExpiredSession() async {

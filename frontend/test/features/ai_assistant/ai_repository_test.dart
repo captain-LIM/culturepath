@@ -14,10 +14,10 @@ class _FakeApiClient extends ApiClient {
   String? lastDeletePath;
 
   _FakeApiClient(this.responseOrError)
-      : super(
-          dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
-          tokenLoader: () async => null,
-        );
+    : super(
+        dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
+        tokenLoader: () async => null,
+      );
 
   @override
   Future<Response<dynamic>> post(
@@ -36,7 +36,10 @@ class _FakeApiClient extends ApiClient {
   }
 
   @override
-  Future<Response<dynamic>> delete(String path) async {
+  Future<Response<dynamic>> delete(
+    String path, {
+    Map<String, dynamic>? data,
+  }) async {
     lastDeletePath = path;
     return Response<dynamic>(
       statusCode: 204,
@@ -46,41 +49,37 @@ class _FakeApiClient extends ApiClient {
 }
 
 CourseItem originalCourse() => CourseItem(
-      id: 1,
-      title: '원본',
-      description: '',
-      tracks: [
-        CourseTrack(
-          trackNumber: 1,
-          places: [
-            const PlaceItem(
-              contentId: '100',
-              title: '장소',
-              address: '',
-              tel: '',
-              openTime: '',
-              category: '문학',
-            ),
-          ],
+  id: 1,
+  title: '원본',
+  description: '',
+  tracks: [
+    CourseTrack(
+      trackNumber: 1,
+      places: [
+        const PlaceItem(
+          contentId: '100',
+          title: '장소',
+          address: '',
+          tel: '',
+          openTime: '',
+          category: '문학',
         ),
       ],
-    );
+    ),
+  ],
+);
 
 Map<String, dynamic> responseBody() => {
-      'course': originalCourse().toJson(),
-      'summary': '원본을 유지했습니다.',
-      'explanation': '원본을 유지했습니다.',
-      'sources': [
-        {'contentId': '100', 'title': '장소'},
-      ],
-      'warnings': ['검증할 수 없습니다.'],
-      'usage': {
-        'model': 'test-model',
-        'inputTokens': 12,
-        'outputTokens': 3,
-      },
-      'mock': true,
-    };
+  'course': originalCourse().toJson(),
+  'summary': '원본을 유지했습니다.',
+  'explanation': '원본을 유지했습니다.',
+  'sources': [
+    {'contentId': '100', 'title': '장소'},
+  ],
+  'warnings': ['검증할 수 없습니다.'],
+  'usage': {'model': 'test-model', 'inputTokens': 12, 'outputTokens': 3},
+  'mock': true,
+};
 
 void main() {
   const sessionId = '123e4567-e89b-42d3-a456-426614174000';
@@ -135,11 +134,7 @@ void main() {
 
     await expectLater(
       repository.chat([
-        ChatMessage(
-          role: 'user',
-          content: '장소 알려줘',
-          timestamp: DateTime(2026),
-        ),
+        ChatMessage(role: 'user', content: '장소 알려줘', timestamp: DateTime(2026)),
       ]),
       throwsA(
         isA<AiChatFailure>().having(
@@ -171,11 +166,7 @@ void main() {
 
     await expectLater(
       repository.chat([
-        ChatMessage(
-          role: 'user',
-          content: '장소 알려줘',
-          timestamp: DateTime(2026),
-        ),
+        ChatMessage(role: 'user', content: '장소 알려줘', timestamp: DateTime(2026)),
       ]),
       throwsA(
         isA<AiChatFailure>()
@@ -184,52 +175,48 @@ void main() {
               'type',
               AiChatFailureType.rateLimited,
             )
-            .having(
-              (failure) => failure.retryAfterSeconds,
-              'retryAfter',
-              12,
-            ),
+            .having((failure) => failure.retryAfterSeconds, 'retryAfter', 12),
       ),
     );
   });
 
-  test('bounds chat history to the server contract and keeps the latest question',
-      () async {
-    final client = _FakeApiClient({
-      'sessionId': sessionId,
-      'action': 'discover_places',
-      'content': '응답',
-      'sources': <dynamic>[],
-      'suggestedCourse': null,
-    });
-    final repository = AiRepository(client: client);
-    final history = List.generate(
-      26,
-      (index) => ChatMessage(
-        role: index.isEven ? 'assistant' : 'user',
-        content: index == 25
-            ? '최신 질문'
-            : '${index.toString().padLeft(2, '0')}:${List.filled(500, '가').join()}',
-        timestamp: DateTime(2026),
-      ),
-    );
+  test(
+    'bounds chat history to the server contract and keeps the latest question',
+    () async {
+      final client = _FakeApiClient({
+        'sessionId': sessionId,
+        'action': 'discover_places',
+        'content': '응답',
+        'sources': <dynamic>[],
+        'suggestedCourse': null,
+      });
+      final repository = AiRepository(client: client);
+      final history = List.generate(
+        26,
+        (index) => ChatMessage(
+          role: index.isEven ? 'assistant' : 'user',
+          content: index == 25
+              ? '최신 질문'
+              : '${index.toString().padLeft(2, '0')}:${List.filled(500, '가').join()}',
+          timestamp: DateTime(2026),
+        ),
+      );
 
-    await repository.chat(history);
+      await repository.chat(history);
 
-    final messages = client.lastPostData!['messages'] as List;
-    expect(messages.length, lessThanOrEqualTo(AiRepository.maxChatMessages));
-    expect(
-      messages.fold<int>(
-        0,
-        (sum, item) => sum + ((item as Map)['content'] as String).length,
-      ),
-      lessThanOrEqualTo(AiRepository.maxChatTotalLength),
-    );
-    expect((messages.last as Map)['content'], '최신 질문');
-    expect(client.lastPostData!['entryContext'], {
-      'type': 'general',
-    });
-  });
+      final messages = client.lastPostData!['messages'] as List;
+      expect(messages.length, lessThanOrEqualTo(AiRepository.maxChatMessages));
+      expect(
+        messages.fold<int>(
+          0,
+          (sum, item) => sum + ((item as Map)['content'] as String).length,
+        ),
+        lessThanOrEqualTo(AiRepository.maxChatTotalLength),
+      );
+      expect((messages.last as Map)['content'], '최신 질문');
+      expect(client.lastPostData!['entryContext'], {'type': 'general'});
+    },
+  );
 
   test('reuses the server session and sends course entry context', () async {
     final client = _FakeApiClient({
@@ -259,37 +246,37 @@ void main() {
     });
   });
 
-  test('updates course context after save and explicitly closes a reset session', () async {
-    final client = _FakeApiClient({
-      'sessionId': sessionId,
-      'action': 'create_course_draft',
-      'content': '초안을 준비했습니다.',
-      'sources': <dynamic>[],
-      'suggestedCourse': null,
-    });
-    final repository = AiRepository(client: client);
-    final history = [
-      ChatMessage(
-        role: 'user',
-        content: '코스 만들어줘',
-        timestamp: DateTime(2026),
-      ),
-    ];
+  test(
+    'updates course context after save and explicitly closes a reset session',
+    () async {
+      final client = _FakeApiClient({
+        'sessionId': sessionId,
+        'action': 'create_course_draft',
+        'content': '초안을 준비했습니다.',
+        'sources': <dynamic>[],
+        'suggestedCourse': null,
+      });
+      final repository = AiRepository(client: client);
+      final history = [
+        ChatMessage(
+          role: 'user',
+          content: '코스 만들어줘',
+          timestamp: DateTime(2026),
+        ),
+      ];
 
-    await repository.chat(history);
-    await repository.markCourseSaved(77);
+      await repository.chat(history);
+      await repository.markCourseSaved(77);
 
-    expect(repository.courseId, 77);
-    expect(
-      client.lastPostPath,
-      '/ai/chat/sessions/$sessionId/course-saved',
-    );
-    expect(client.lastPostData, {'courseId': 77});
+      expect(repository.courseId, 77);
+      expect(client.lastPostPath, '/ai/chat/sessions/$sessionId/course-saved');
+      expect(client.lastPostData, {'courseId': 77});
 
-    await repository.closeSession();
-    expect(client.lastDeletePath, '/ai/chat/sessions/$sessionId');
-    expect(repository.sessionId, isNull);
-  });
+      await repository.closeSession();
+      expect(client.lastDeletePath, '/ai/chat/sessions/$sessionId');
+      expect(repository.sessionId, isNull);
+    },
+  );
 
   test('parses the complete transform response contract', () async {
     final repository = AiRepository(client: _FakeApiClient(responseBody()));
@@ -320,10 +307,15 @@ void main() {
 
     await expectLater(
       repository.editCourse(originalCourse(), '요청'),
-      throwsA(isA<AiTransformFailure>()
-          .having((failure) => failure.type, 'type',
-              AiTransformFailureType.rateLimited)
-          .having((failure) => failure.retryAfterSeconds, 'retryAfter', 27)),
+      throwsA(
+        isA<AiTransformFailure>()
+            .having(
+              (failure) => failure.type,
+              'type',
+              AiTransformFailureType.rateLimited,
+            )
+            .having((failure) => failure.retryAfterSeconds, 'retryAfter', 27),
+      ),
     );
   });
 }

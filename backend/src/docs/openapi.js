@@ -61,6 +61,7 @@ module.exports = Object.freeze({
     { name: 'Regions', description: '문화별 지역 탐색과 지역점수' },
     { name: 'Places', description: '관광 장소 검색과 상세조회' },
     { name: 'AI', description: '인증된 사용자의 RAG 기반 코스 변형' },
+    { name: 'Users', description: '인증된 사용자의 계정 관리' },
   ],
   paths: {
     '/cultures/{id}/regions': {
@@ -384,6 +385,49 @@ module.exports = Object.freeze({
           502: { description: 'OpenRouter 또는 AI 검증 응답 오류' },
           503: { description: 'OpenRouter 설정 누락' },
           504: { description: 'OpenRouter 응답 시간 초과' },
+        },
+      },
+    },
+    '/users/me': {
+      delete: {
+        tags: ['Users'],
+        summary: '내 계정과 관련 데이터 삭제',
+        description:
+          '사용자가 만든 공개·비공개 코스와 관련 기록을 삭제하고, 다른 사용자의 복제본 원작자 표시는 익명화합니다.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['confirmation'],
+                properties: {
+                  confirmation: { type: 'string', enum: ['DELETE'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          204: { description: '계정과 관련 데이터 삭제 완료' },
+          400: {
+            description: '탈퇴 확인 값 오류',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          401: {
+            description: '인증 실패',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          404: {
+            description: '사용자 없음',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
+          500: {
+            description: '계정 삭제 실패',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageError' } } },
+          },
         },
       },
     },

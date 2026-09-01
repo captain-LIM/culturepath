@@ -19,37 +19,47 @@ class ApiClient {
     Dio? dio,
     String baseUrl = defaultBaseUrl,
     Future<String?> Function()? tokenLoader,
-  })  : _dio = dio ?? Dio(BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 30),
-          headers: {'Content-Type': 'application/json'},
-        )),
-        _tokenLoader = tokenLoader ?? _loadStoredToken {
+  }) : _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: baseUrl,
+               connectTimeout: const Duration(seconds: 10),
+               receiveTimeout: const Duration(seconds: 30),
+               headers: {'Content-Type': 'application/json'},
+             ),
+           ),
+       _tokenLoader = tokenLoader ?? _loadStoredToken {
     final uri = Uri.tryParse(_dio.options.baseUrl);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      throw ArgumentError.value(_dio.options.baseUrl, 'baseUrl', '유효한 API 주소가 필요합니다.');
+      throw ArgumentError.value(
+        _dio.options.baseUrl,
+        'baseUrl',
+        '유효한 API 주소가 필요합니다.',
+      );
     }
     if (kReleaseMode && uri.scheme != 'https') {
       throw StateError('Release 빌드는 HTTPS API_BASE_URL이 필요합니다.');
     }
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await _tokenLoader();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        options.headers['Accept-Language'] = appLocaleCode;
-        handler.next(options);
-      },
-      onError: (error, handler) {
-        debugPrint(
-          '[ApiClient] ${error.requestOptions.method} ${error.requestOptions.path} '
-          '=> ${error.response?.statusCode} ${error.response?.data ?? error.message}',
-        );
-        handler.next(error);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _tokenLoader();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          options.headers['Accept-Language'] = appLocaleCode;
+          handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint(
+            '[ApiClient] ${error.requestOptions.method} ${error.requestOptions.path} '
+            '=> ${error.response?.statusCode} ${error.response?.data ?? error.message}',
+          );
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   static Future<String?> _loadStoredToken() async {
@@ -61,17 +71,17 @@ class ApiClient {
     String path,
     Map<String, dynamic> data, {
     Map<String, dynamic>? headers,
-  }) =>
-      _dio.post(
-        path,
-        data: data,
-        options: headers == null ? null : Options(headers: headers),
-      );
+  }) => _dio.post(
+    path,
+    data: data,
+    options: headers == null ? null : Options(headers: headers),
+  );
 
   Future<Response> put(String path, Map<String, dynamic> data) =>
       _dio.put(path, data: data);
 
-  Future<Response> delete(String path) => _dio.delete(path);
+  Future<Response> delete(String path, {Map<String, dynamic>? data}) =>
+      _dio.delete(path, data: data);
 
   Future<Response> get(String path, {Map<String, dynamic>? params}) =>
       _dio.get(path, queryParameters: params);

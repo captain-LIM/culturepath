@@ -1,15 +1,21 @@
 const jwt = require('jsonwebtoken');
+const pool = require('../config/db');
 
-function optionalAuth(req, _res, next) {
+async function optionalAuth(req, _res, next) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     try {
-      req.user = jwt.verify(header.slice('Bearer '.length), process.env.JWT_SECRET);
+      const user = jwt.verify(header.slice('Bearer '.length), process.env.JWT_SECRET);
+      const [rows] = await pool.query(
+        'SELECT id FROM users WHERE id = ? LIMIT 1',
+        [user.id],
+      );
+      if (rows.length > 0) req.user = user;
     } catch {
-      // Public resources remain accessible when an expired or malformed token is sent.
+      // Public resources remain accessible when authentication cannot be established.
     }
   }
-  next();
+  return next();
 }
 
 module.exports = optionalAuth;

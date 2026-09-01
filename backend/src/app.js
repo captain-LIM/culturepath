@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('node:path');
 const swaggerUi = require('swagger-ui-express');
 const openApiDocument = require('./docs/openapi');
 
@@ -26,6 +27,10 @@ app.use(cors({
   ],
 }));
 app.use(express.json());
+
+app.get('/account-deletion', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'index.html'));
+});
 
 app.get('/openapi.json', (req, res) => res.json(openApiDocument));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
