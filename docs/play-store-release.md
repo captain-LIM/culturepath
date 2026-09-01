@@ -16,7 +16,7 @@
   `android/` 아래 두고, `key.properties.example`를 복사해 `android/key.properties` 작성.
 - ⬜ Play Console에서 **Play 앱 서명(Play App Signing)** 등록 (업로드 키 → 구글이 배포 서명 키 관리).
 - ⬜ AAB 빌드: `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab`
-- ⬜ `flutter build appbundle` 후 실제 `targetSdkVersion` 확인. 신규 앱은 **API 35(Android 15) 이상** 필수. 낮으면 Flutter SDK 업그레이드.
+- ✅ **targetSdk 확인 완료**: Flutter 3.41.9(CI 고정) 기준 병합 매니페스트가 `minSdkVersion=24 / targetSdkVersion=36 / compileSdk=36`. Play의 API 35+ 요건 충족. (`flutter build appbundle --release` 검증 통과.)
 - ⬜ 릴리스 빌드 실기기 스모크 테스트: 로그인(이메일/구글), 지도, AI 채팅, 코스 저장/공유, 4개 언어 전환.
 
 ## 2. 앱 내 기능 (Play 정책 대응) — 코드 반영 완료
@@ -37,8 +37,8 @@
   개인정보 항목 = 이메일/비밀번호(해시)/닉네임, 구글 계정 식별자, 코스·완주·좋아요 기록, AI 대화 내용, IP·로그, (선택적) 위치.
   위탁: Google(로그인·지도), 클라우드 호스팅사, AI 모델 제공업체.
 - ⬜ 시행일, 운영자 정보, 각 보관기간, AI 대화 보관기간, 호스팅사/AI 벤더명, 삭제요청 URL 기입.
-- ⬜ 공개 URL로 호스팅 (GitHub Pages / Netlify / 회사 도메인 등). HTTP 아닌 **HTTPS**.
-- ⬜ 이용약관 문서 별도 작성 후 호스팅 (UGC 서비스이므로 금지 행위·콘텐츠 소유권·면책 조항 포함 권장).
+- ✅ 이용약관 초안: `docs/legal/terms-of-service.html` (한/영 토글, UGC 라이선스·금지행위·AI 면책·준거법 포함). `【 】` 항목(시행일, 운영자, 관할 법원, 이메일) 채우기.
+- ⬜ 두 문서 공개 URL로 호스팅 (GitHub Pages / Netlify / 회사 도메인 등). HTTP 아닌 **HTTPS**.
 - ⬜ Play Console → 앱 콘텐츠 → 개인정보처리방침 URL 입력.
 
 ## 4. Play Console — 앱 콘텐츠 / 데이터 안전
@@ -67,12 +67,12 @@
 
 ## 6. 스토어 등록정보 (자산)
 
-- ⬜ 앱 아이콘 512×512 PNG
-- ⬜ 피처 그래픽 1024×500
+- ✅ 등록정보 문안 초안: `docs/store-listing.md` — 앱 이름, 짧은/자세한 설명(ko·en), 출시 노트, 카테고리·태그. `【 】` 이메일·URL 채우기.
+- ⬜ 앱 아이콘 512×512 PNG (디자인 자산 필요)
+- ⬜ 피처 그래픽 1024×500 (디자인 자산 필요)
 - ⬜ 폰 스크린샷 2~8장 (권장: 홈·탐색·코스·AI·지도)
-- ⬜ 짧은 설명(80자), 전체 설명(4000자)
-- ⬜ 한국어 + 영어 등록정보 별도 작성 (앱이 ko/en/ja/zh 지원)
-- ⬜ 카테고리: 여행 및 지역정보 / 연락처 이메일 / 웹사이트(선택)
+- ⬜ 일본어·중국어 등록정보는 선택 (초안엔 ko·en만 작성)
+- ⬜ Console에 카테고리(여행 및 지역정보) / 연락처 이메일 / 웹사이트(선택) 입력
 
 ## 7. 배포 절차
 
