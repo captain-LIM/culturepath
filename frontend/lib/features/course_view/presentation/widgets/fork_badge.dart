@@ -12,7 +12,7 @@ class ForkBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final author = forkedFrom.authorDeleted
         ? 'deleted_user'.tr()
-        : (forkedFrom.authorId ?? 'unknown_author'.tr());
+        : forkedFrom.authorId;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

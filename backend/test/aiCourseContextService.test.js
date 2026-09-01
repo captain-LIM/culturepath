@@ -92,9 +92,9 @@ test('keeps deleted-author fork provenance when the source FK is null', async ()
   const course = await service.loadCourseForTransform(7, 12);
 
   assert.deepEqual(course.forkedFrom, {
-    courseId: null,
+    courseId: 0,
     title: 'Deleted original',
-    authorId: null,
+    authorId: 'deleted-user',
     authorDeleted: true,
   });
 });

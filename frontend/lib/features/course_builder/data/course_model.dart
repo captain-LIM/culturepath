@@ -23,9 +23,9 @@ class CourseTrack {
 }
 
 class ForkedFromInfo {
-  final int? courseId;
+  final int courseId;
   final String title;
-  final String? authorId;
+  final String authorId;
   final bool authorDeleted;
 
   const ForkedFromInfo({
@@ -36,9 +36,9 @@ class ForkedFromInfo {
   });
 
   factory ForkedFromInfo.fromJson(Map<String, dynamic> json) => ForkedFromInfo(
-        courseId: (json['courseId'] as num?)?.toInt(),
+        courseId: json['courseId'] as int,
         title: json['title'] as String,
-        authorId: json['authorId'] as String?,
+        authorId: json['authorId'] as String,
         authorDeleted: (json['authorDeleted'] as bool?) ?? false,
       );
 

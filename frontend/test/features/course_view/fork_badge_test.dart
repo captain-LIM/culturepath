@@ -42,9 +42,9 @@ void main() {
               home: const Scaffold(
                 body: ForkBadge(
                   forkedFrom: ForkedFromInfo(
-                    courseId: null,
+                    courseId: 0,
                     title: 'Deleted original',
-                    authorId: null,
+                    authorId: 'deleted-user',
                     authorDeleted: true,
                   ),
                 ),

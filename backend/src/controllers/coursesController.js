@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const pool = require('../config/db');
+const { buildForkedFrom } = require('../services/courseProvenance');
 
 function idempotencyFingerprint(operation, payload) {
   return crypto
@@ -60,17 +61,7 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
     title: row.title,
     description: row.description || '',
     isPublic: Boolean(row.is_public),
-    forkedFrom: (
-      row.forked_from_course_id != null ||
-      row.forked_from_title != null ||
-      row.forked_from_author_id != null ||
-      Boolean(row.forked_from_author_deleted)
-    ) ? {
-      courseId: row.forked_from_course_id ?? null,
-      title: row.forked_from_title || '',
-      authorId: row.forked_from_author_id ?? null,
-      authorDeleted: Boolean(row.forked_from_author_deleted),
-    } : null,
+    forkedFrom: buildForkedFrom(row),
     tracks: [1, 2, 3].map(n => ({ trackNumber: n, places: byTrack[n] || [] })),
     likeCount,
     forkCount,

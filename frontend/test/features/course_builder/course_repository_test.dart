@@ -266,22 +266,22 @@ void main() {
     expect(fork.isOwner, isTrue);
   });
 
-  test('parses deleted-author fork provenance with a nullable source id', () {
+  test('parses deleted-author provenance through the legacy non-null contract', () {
     final course = CourseItem.fromJson({
       'id': 8,
       'title': 'Surviving fork',
       'description': '',
       'tracks': const <Map<String, dynamic>>[],
       'forkedFrom': {
-        'courseId': null,
+        'courseId': 0,
         'title': 'Deleted original',
-        'authorId': null,
+        'authorId': 'deleted-user',
         'authorDeleted': true,
       },
     });
 
-    expect(course.forkedFrom?.courseId, isNull);
-    expect(course.forkedFrom?.authorId, isNull);
+    expect(course.forkedFrom?.courseId, 0);
+    expect(course.forkedFrom?.authorId, 'deleted-user');
     expect(course.forkedFrom?.authorDeleted, isTrue);
   });
 

@@ -87,11 +87,13 @@ test('keeps fork provenance after the original course FK is set to null', async 
     const res = responseRecorder();
     await getCourse({ params: { id: '7' } }, res);
     assert.deepEqual(res.body.forkedFrom, {
-      courseId: null,
+      courseId: 0,
       title: 'Deleted original',
-      authorId: null,
+      authorId: 'deleted-user',
       authorDeleted: true,
     });
+    assert.equal(typeof res.body.forkedFrom.courseId, 'number');
+    assert.equal(typeof res.body.forkedFrom.authorId, 'string');
   });
 });
 

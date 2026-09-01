@@ -519,7 +519,7 @@ class _AiAssistantEntryCard extends StatelessWidget {
 
 class _ForkBanner extends StatelessWidget {
   final String originalTitle;
-  final String? authorId;
+  final String authorId;
   final bool authorDeleted;
 
   const _ForkBanner({
@@ -532,7 +532,7 @@ class _ForkBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final author = authorDeleted
         ? 'deleted_user'.tr()
-        : (authorId ?? 'unknown_author'.tr());
+        : authorId;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
