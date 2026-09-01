@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/app_info.dart';
+import '../../../core/services/link_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
@@ -250,6 +252,37 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     await _openCourseBuilder(draft);
   }
 
+  /// 부적절한 AI 답변 신고 (Google Play 생성형 AI 정책 요구 사항).
+  Future<void> _reportMessage(ChatMessage message) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('ai_report'.tr()),
+        content: Text('ai_report_confirm'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('cancel'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('ai_report_send'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await LinkLauncher.sendEmail(
+      context,
+      to: AppInfo.supportEmail,
+      subject: 'ai_report_email_subject'.tr(),
+      body: 'ai_report_email_body'.tr(namedArgs: {
+        'content': message.content,
+        'session': _repository.sessionId ?? '-',
+      }),
+    );
+  }
+
   Future<void> _openCourseBuilder(CourseItem draft) async {
     final saved = await Navigator.of(context, rootNavigator: true).push<CourseItem>(
       MaterialPageRoute(
@@ -374,9 +407,25 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                   onRetry: msg.retryContent == null
                       ? null
                       : () => notifier.retry(msg.retryContent!),
+                  onReport: (msg.role == 'assistant' &&
+                          !msg.isLoading &&
+                          msg.content.trim().isNotEmpty &&
+                          msg.retryContent == null)
+                      ? () => _reportMessage(msg)
+                      : null,
                   originalCourse: _courseOriginal,
                 );
               },
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text(
+              'ai_disclaimer'.tr(),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
             ),
           ),
           _InputBar(

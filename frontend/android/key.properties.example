@@ -1,0 +1,13 @@
+# Play 업로드용 릴리스 서명 설정 템플릿.
+# 이 파일을 복사해 android/key.properties 로 만들고 실제 값을 채운다.
+# key.properties 와 키스토어(*.jks) 는 절대 커밋하지 않는다 (.gitignore 에 이미 포함).
+#
+# 키스토어 생성 (한 번만, 안전한 곳에 백업 필수 — 분실 시 앱 업데이트 불가):
+#   keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# storeFile 은 android/ 폴더 기준 상대 경로 또는 절대 경로.
+
+storeFile=upload-keystore.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME

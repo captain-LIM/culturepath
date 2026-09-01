@@ -10,6 +10,7 @@ class ChatBubble extends StatelessWidget {
   final ValueChanged<ChatSource>? onOpenSource;
   final ValueChanged<ChatSource>? onAddSourceToCourse;
   final VoidCallback? onRetry;
+  final VoidCallback? onReport;
   final CourseItem? originalCourse;
 
   const ChatBubble({
@@ -19,6 +20,7 @@ class ChatBubble extends StatelessWidget {
     this.onOpenSource,
     this.onAddSourceToCourse,
     this.onRetry,
+    this.onReport,
     this.originalCourse,
   });
 
@@ -43,34 +45,37 @@ class ChatBubble extends StatelessWidget {
               if (!_isUser) _AssistantAvatar(),
               if (!_isUser) const SizedBox(width: 8),
               Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _isUser ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(_isUser ? 16 : 4),
-                      bottomRight: Radius.circular(_isUser ? 4 : 16),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                child: GestureDetector(
+                  onLongPress: onReport,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _isUser ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(_isUser ? 16 : 4),
+                        bottomRight: Radius.circular(_isUser ? 4 : 16),
                       ),
-                    ],
-                  ),
-                  child: message.isLoading
-                      ? const _LoadingDots()
-                      : Text(
-                          message.content,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _isUser ? Colors.white : AppColors.textDark,
-                            height: 1.5,
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
+                      ],
+                    ),
+                    child: message.isLoading
+                        ? const _LoadingDots()
+                        : Text(
+                            message.content,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _isUser ? Colors.white : AppColors.textDark,
+                              height: 1.5,
+                            ),
+                          ),
+                  ),
                 ),
               ),
             ],
