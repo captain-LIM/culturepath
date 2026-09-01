@@ -166,6 +166,7 @@
   "place_count": "{n} places",
   "fork_suffix": "(Fork)",
   "unknown_author": "Unknown",
+  "deleted_user": "Deleted user",
   "track_no_places": "No places in this track.",
 
   "complete_course": "Mark Complete",

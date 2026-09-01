@@ -71,6 +71,30 @@ test('allows guests to read a public course and filters private courses in SQL',
   assert.deepEqual(queries[0].params, [7]);
 });
 
+test('keeps fork provenance after the original course FK is set to null', async () => {
+  await withQueryStub(async (sql) => {
+    if (sql.includes('FROM courses c')) {
+      return [[courseRow({
+        forked_from_course_id: null,
+        forked_from_title: 'Deleted original',
+        forked_from_author_id: null,
+        forked_from_author_deleted: 1,
+      })]];
+    }
+    if (sql.includes('FROM course_tracks')) return [[]];
+    throw new Error(`Unexpected query: ${sql}`);
+  }, async () => {
+    const res = responseRecorder();
+    await getCourse({ params: { id: '7' } }, res);
+    assert.deepEqual(res.body.forkedFrom, {
+      courseId: null,
+      title: 'Deleted original',
+      authorId: null,
+      authorDeleted: true,
+    });
+  });
+});
+
 test('rejects a stale course revision before replacing any tracks', async () => {
   const originalGetConnection = pool.getConnection;
   let rolledBack = false;

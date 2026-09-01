@@ -82,6 +82,23 @@ test('rehydrates an owner course from trusted TourAPI cache metadata', async () 
   ]);
 });
 
+test('keeps deleted-author fork provenance when the source FK is null', async () => {
+  const service = createService(courseRow({
+    forked_from_course_id: null,
+    forked_from_title: 'Deleted original',
+    forked_from_author_id: null,
+    forked_from_author_deleted: 1,
+  }), [trackRow()], [trustedPlace()]);
+  const course = await service.loadCourseForTransform(7, 12);
+
+  assert.deepEqual(course.forkedFrom, {
+    courseId: null,
+    title: 'Deleted original',
+    authorId: null,
+    authorDeleted: true,
+  });
+});
+
 test('rejects access to another user private course before loading tracks', async () => {
   const service = createService(courseRow(), [], []);
   await assert.rejects(

@@ -266,6 +266,25 @@ void main() {
     expect(fork.isOwner, isTrue);
   });
 
+  test('parses deleted-author fork provenance with a nullable source id', () {
+    final course = CourseItem.fromJson({
+      'id': 8,
+      'title': 'Surviving fork',
+      'description': '',
+      'tracks': const <Map<String, dynamic>>[],
+      'forkedFrom': {
+        'courseId': null,
+        'title': 'Deleted original',
+        'authorId': null,
+        'authorDeleted': true,
+      },
+    });
+
+    expect(course.forkedFrom?.courseId, isNull);
+    expect(course.forkedFrom?.authorId, isNull);
+    expect(course.forkedFrom?.authorDeleted, isTrue);
+  });
+
   test('my courses reload when authentication state changes', () async {
     var loggedIn = false;
     final container = ProviderContainer(

@@ -3,8 +3,6 @@
 const pool = require('../config/db');
 const { defaultStore: aiSessionStore } = require('./aiSessionStore');
 
-const DELETED_AUTHOR_LABEL = '탈퇴한 사용자';
-
 async function deleteAccount(userId, options = {}) {
   const database = options.pool || pool;
   const sessionStore = options.sessionStore || aiSessionStore;
@@ -26,9 +24,10 @@ async function deleteAccount(userId, options = {}) {
       `UPDATE courses AS forked
        INNER JOIN courses AS original
          ON forked.forked_from_course_id = original.id
-       SET forked.forked_from_author_id = ?
+       SET forked.forked_from_author_id = NULL,
+           forked.forked_from_author_deleted = TRUE
        WHERE original.user_id = ?`,
-      [DELETED_AUTHOR_LABEL, userId],
+      [userId],
     );
 
     const [result] = await connection.query(
@@ -55,6 +54,5 @@ async function deleteAccount(userId, options = {}) {
 }
 
 module.exports = {
-  DELETED_AUTHOR_LABEL,
   deleteAccount,
 };

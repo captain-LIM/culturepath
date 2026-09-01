@@ -16,6 +16,7 @@ mysql --host=<host> --user=<user> --password --database=<database> --execute="so
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260824_add_course_tracks_place_images.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260825_add_course_place_usage_index.sql"
 mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260827_add_course_revision.sql"
+mysql --host=<host> --user=<user> --password --database=<database> --execute="source backend/migrations/20260901_add_fork_author_deleted.sql"
 ```
 
 The place translation migrations must stay in `en` → `ja` → `zh` order because

@@ -166,6 +166,7 @@
   "place_count": "{n}个地点",
   "fork_suffix": "（分叉）",
   "unknown_author": "未知",
+  "deleted_user": "已注销用户",
   "track_no_places": "该行程中没有地点。",
 
   "complete_course": "完成认证",

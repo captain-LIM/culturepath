@@ -6,10 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const jwt = require('jsonwebtoken');
 const pool = require('../src/config/db');
-const {
-  DELETED_AUTHOR_LABEL,
-  deleteAccount,
-} = require('../src/services/accountDeletionService');
+const { deleteAccount } = require('../src/services/accountDeletionService');
 const { deleteMyAccount } = require('../src/controllers/usersController');
 const authMiddleware = require('../src/middleware/auth');
 const optionalAuth = require('../src/middleware/optionalAuth');
@@ -60,8 +57,10 @@ test('deletes an account transactionally and anonymizes surviving forks first', 
   assert.equal(state.committed, 1);
   assert.equal(state.rolledBack, 0);
   assert.equal(state.released, 1);
-  assert.deepEqual(queries[1].params, [DELETED_AUTHOR_LABEL, 12]);
+  assert.deepEqual(queries[1].params, [12]);
   assert.match(queries[1].sql, /forked_from_course_id/);
+  assert.match(queries[1].sql, /forked_from_author_id = NULL/);
+  assert.match(queries[1].sql, /forked_from_author_deleted = TRUE/);
   assert.deepEqual(queries[2].params, [12]);
   assert.deepEqual(removedUsers, [12]);
 });

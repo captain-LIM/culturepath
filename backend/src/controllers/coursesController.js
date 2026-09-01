@@ -60,10 +60,16 @@ function buildCourse(row, trackRows, isLikedByMe = false, userId = null) {
     title: row.title,
     description: row.description || '',
     isPublic: Boolean(row.is_public),
-    forkedFrom: row.forked_from_course_id ? {
-      courseId: row.forked_from_course_id,
+    forkedFrom: (
+      row.forked_from_course_id != null ||
+      row.forked_from_title != null ||
+      row.forked_from_author_id != null ||
+      Boolean(row.forked_from_author_deleted)
+    ) ? {
+      courseId: row.forked_from_course_id ?? null,
       title: row.forked_from_title || '',
-      authorId: row.forked_from_author_id || '',
+      authorId: row.forked_from_author_id ?? null,
+      authorDeleted: Boolean(row.forked_from_author_deleted),
     } : null,
     tracks: [1, 2, 3].map(n => ({ trackNumber: n, places: byTrack[n] || [] })),
     likeCount,

@@ -166,6 +166,7 @@
   "place_count": "{n}か所",
   "fork_suffix": "（フォーク）",
   "unknown_author": "不明",
+  "deleted_user": "退会したユーザー",
   "track_no_places": "このトラックには場所がありません。",
 
   "complete_course": "完走認証",

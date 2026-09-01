@@ -22,7 +22,8 @@ function createAiCourseContextService(options = {}) {
   async function loadCourseForTransform(courseId, userId) {
   const [[course]] = await database.query(
     `SELECT id, user_id, title, description, is_public, revision,
-            forked_from_course_id, forked_from_title, forked_from_author_id
+            forked_from_course_id, forked_from_title, forked_from_author_id,
+            forked_from_author_deleted
      FROM courses
      WHERE id = ?`,
     [courseId],
@@ -99,10 +100,20 @@ function createAiCourseContextService(options = {}) {
     isPublic: Boolean(course.is_public),
     isOwner,
     revision: Number(course.revision || 1),
-    forkedFrom: course.forked_from_course_id ? {
-      courseId: Number(course.forked_from_course_id),
+    forkedFrom: (
+      course.forked_from_course_id != null ||
+      course.forked_from_title != null ||
+      course.forked_from_author_id != null ||
+      Boolean(course.forked_from_author_deleted)
+    ) ? {
+      courseId: course.forked_from_course_id == null
+        ? null
+        : Number(course.forked_from_course_id),
       title: String(course.forked_from_title || ''),
-      authorId: String(course.forked_from_author_id || ''),
+      authorId: course.forked_from_author_id == null
+        ? null
+        : String(course.forked_from_author_id),
+      authorDeleted: Boolean(course.forked_from_author_deleted),
     } : null,
     tracks,
   };
