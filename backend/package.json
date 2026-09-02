@@ -32,6 +32,7 @@
     "google-auth-library": "^10.9.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.22.5",
+    "nodemailer": "^9.1.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

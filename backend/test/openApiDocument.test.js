@@ -48,6 +48,21 @@ test('documents the implemented public place routes and compatibility contract',
   assert.doesNotMatch(serialized, /serviceKey|TOUR_API_KEY|OPENROUTER_API_KEY/);
 });
 
+test('documents the email-verified public account deletion flow without a GET mutation', () => {
+  const request = openApiDocument.paths['/account-deletion/requests'].post;
+  const confirmation = openApiDocument.paths['/account-deletion/confirm'].post;
+  assert.ok(request.responses[202]);
+  assert.ok(request.responses[429]);
+  assert.ok(confirmation.responses[200]);
+  assert.ok(confirmation.responses[403]);
+  assert.equal(openApiDocument.paths['/account-deletion/confirm'].get, undefined);
+  assert.equal(
+    openApiDocument.components.schemas.AccountDeletionConfirmation
+      .properties.token.writeOnly,
+    true,
+  );
+});
+
 test('documents the backward-compatible DataLab region score contract', () => {
   const regions = openApiDocument.paths['/cultures/{id}/regions'].get;
   const response = regions.responses[200];

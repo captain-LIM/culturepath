@@ -1,104 +1,34 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="따라가방(CulturePath) 계정 및 관련 데이터 삭제 요청 안내">
-  <title>계정 삭제 안내 | 따라가방 (CulturePath)</title>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="따라가방(CulturePath) 계정 및 관련 데이터 삭제 요청">
+  <title>계정 삭제 요청 | CulturePath</title>
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #24332a;
-      --muted: #5d6b62;
-      --brand: #315c43;
-      --paper: #fffef9;
-      --line: #dce5dc;
-      --warning: #8a3d31;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: #f2f5ef;
-      color: var(--ink);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
-      line-height: 1.65;
-    }
-    main {
-      width: min(720px, calc(100% - 32px));
-      margin: 48px auto;
-      padding: clamp(24px, 6vw, 48px);
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-    }
-    h1, h2 { line-height: 1.3; }
-    h1 { margin-top: 0; font-size: clamp(1.7rem, 6vw, 2.35rem); }
-    h2 { margin-top: 2rem; font-size: 1.15rem; }
-    p, li { color: var(--muted); }
-    .brand { color: var(--brand); font-weight: 700; }
-    .warning { color: var(--warning); font-weight: 650; }
-    .button {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 12px 18px;
-      border-radius: 10px;
-      background: var(--brand);
-      color: white;
-      font-weight: 700;
-      text-decoration: none;
-    }
-    .button:focus-visible { outline: 3px solid #9fc6aa; outline-offset: 3px; }
-    footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); }
-    code { overflow-wrap: anywhere; }
+    :root{--ink:#24332a;--muted:#5d6b62;--brand:#315c43;--paper:#fffef9;--line:#dce5dc;--danger:#8a3d31}*{box-sizing:border-box}body{margin:0;background:#f2f5ef;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;line-height:1.6}main{width:min(720px,calc(100% - 32px));margin:40px auto;padding:clamp(24px,6vw,48px);background:var(--paper);border:1px solid var(--line);border-radius:20px}h1,h2{line-height:1.3}h1{margin-top:0;font-size:clamp(1.7rem,6vw,2.35rem)}h2{margin-top:2rem;font-size:1.15rem}p,li{color:var(--muted)}label{display:block;margin:.9rem 0 .35rem;font-weight:700}input,select,button{font:inherit}input[type=email],select{width:100%;padding:12px;border:1px solid #aebcaf;border-radius:9px;background:white}.check{display:flex;gap:.6rem;align-items:flex-start;font-weight:500}.check input{margin-top:.4rem}button,.button{display:inline-block;margin-top:12px;padding:12px 18px;border:0;border-radius:10px;background:var(--brand);color:white;font-weight:700;text-decoration:none;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.secondary{background:#e5ece6;color:var(--ink)}:focus-visible{outline:3px solid #9fc6aa;outline-offset:3px}.warning{color:var(--danger);font-weight:650}.honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}#status{min-height:1.6em;font-weight:650}footer{margin-top:36px;padding-top:20px;border-top:1px solid var(--line)}code{overflow-wrap:anywhere}
   </style>
 </head>
-<body>
-  <main>
-    <p class="brand">CulturePath 팀</p>
-    <h1>따라가방 계정 삭제 안내</h1>
-    <p>
-      따라가방(CulturePath) 계정과 연결된 데이터를 삭제하려면 앱 안에서 직접 탈퇴하거나,
-      앱을 사용할 수 없는 경우 아래 이메일로 삭제를 요청할 수 있습니다.
-    </p>
-
-    <h2>앱에서 즉시 탈퇴하기</h2>
-    <ol>
-      <li>따라가방 앱에서 로그인합니다.</li>
-      <li><strong>내 정보 → 계정 관리 → 회원 탈퇴</strong>를 선택합니다.</li>
-      <li>삭제 내용을 확인하고 탈퇴를 완료합니다.</li>
-    </ol>
-
-    <h2>이메일로 삭제 요청하기</h2>
-    <p>
-      가입할 때 사용한 이메일 계정으로 요청해 주세요. 이메일 본문에는 가입 이메일,
-      닉네임, 가입 방식(이메일 또는 Google), 그리고 “계정과 관련 데이터 삭제에
-      동의합니다”라는 문구를 적어 주세요. 요청은 확인 후 7일 이내 처리합니다.
-    </p>
-    <p class="warning">비밀번호, Google 인증 토큰, 앱의 인증 토큰은 절대 보내지 마세요.</p>
-    <a class="button"
-       href="mailto:culturepath.support@gmail.com?subject=%5BCulturePath%5D%20계정%20삭제%20요청&amp;body=가입%20이메일%3A%0A닉네임%3A%0A가입%20방식(이메일%2FGoogle)%3A%0A%0A계정과%20관련%20데이터%20삭제에%20동의합니다.">
-      계정 삭제 요청 이메일 보내기
-    </a>
-    <p>문의 이메일: <code>culturepath.support@gmail.com</code></p>
-
-    <h2>삭제되는 데이터</h2>
-    <ul>
-      <li>계정 정보와 로그인 식별 정보</li>
-      <li>사용자가 만든 공개·비공개 코스와 코스 장소</li>
-      <li>좋아요와 코스 완주 기록</li>
-      <li>AI 채팅 세션</li>
-      <li>제출한 AI 답변 신고 내용, 신고 사유와 연결된 세션 식별정보</li>
-    </ul>
-    <p>
-      다른 사용자가 이미 복제한 코스는 유지되지만 원작자 표시는
-      <strong>탈퇴한 사용자</strong>로 익명화됩니다. 회원 탈퇴 시 AI 신고 데이터도 삭제하며,
-      별도로 보존하는 사용자 데이터는 없습니다.
-      삭제가 완료된 계정과 데이터는 복구할 수 없습니다.
-    </p>
-
-    <footer>
-      <p>앱: 따라가방 (CulturePath)<br>개발·운영: CulturePath 팀</p>
-    </footer>
-  </main>
-</body>
-</html>
+<body><main>
+  <label for="locale" data-i="language">언어</label><select id="locale" name="locale" form="deletion-form"><option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option></select>
+  <p><strong>CulturePath</strong></p><h1 data-i="title">따라가방 계정 삭제 요청</h1>
+  <p data-i="intro">앱을 사용할 수 없다면 가입 이메일을 확인한 뒤 계정과 관련 데이터를 직접 삭제할 수 있습니다.</p><p class="warning" data-i="warning">삭제된 계정과 데이터는 복구할 수 없습니다.</p><p data-i="security">비밀번호, Google 인증 토큰 또는 앱 인증 토큰은 입력하거나 보내지 마세요.</p>
+  <form id="deletion-form" action="/account-deletion/requests" method="post">
+    <label for="email" data-i="emailLabel">가입 이메일</label><input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+    <div class="honeypot" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+    <label class="check"><input id="understand" type="checkbox" required><span data-i="consent">확인 링크에서 최종 동의하면 계정과 관련 데이터가 영구 삭제됨을 이해했습니다.</span></label>
+    <button id="submit" type="submit" data-i="submit">확인 메일 보내기</button>
+  </form><p id="status" role="status" aria-live="polite"></p>
+  <h2 data-i="deletedTitle">삭제되는 데이터</h2><ul><li data-i="deleted1">계정과 로그인 식별 정보</li><li data-i="deleted2">코스, 좋아요, 완주 기록과 AI 채팅 세션</li><li data-i="deleted3">제출한 AI 답변 신고 데이터</li></ul><p data-i="forks">다른 사용자가 복제한 코스는 유지되지만 원작자는 탈퇴한 사용자로 표시됩니다.</p>
+  <h2 data-i="fallbackTitle">메일을 받지 못했나요?</h2><p data-i="fallback">스팸함을 확인하거나 잠시 후 다시 시도하세요. 웹 폼을 사용할 수 없다면 지원 주소를 복사해 수동으로 요청할 수 있습니다.</p>
+  <button class="secondary" id="copy-email" type="button" data-i="copy">지원 이메일 복사</button> <a class="button secondary" data-i="mailApp" href="mailto:culturepath.support@gmail.com?subject=%5BCulturePath%5D%20Account%20deletion%20request">메일 앱 열기</a><p><code id="support-email">culturepath.support@gmail.com</code></p>
+  <p><a href="/privacy-policy" data-i="privacy">개인정보처리방침</a></p><footer><p data-i="operator">개발·운영: CulturePath 팀</p></footer>
+</main><script>
+const texts={
+ko:{language:'언어',title:'따라가방 계정 삭제 요청',intro:'앱을 사용할 수 없다면 가입 이메일을 확인한 뒤 계정과 관련 데이터를 직접 삭제할 수 있습니다.',warning:'삭제된 계정과 데이터는 복구할 수 없습니다.',security:'비밀번호, Google 인증 토큰 또는 앱 인증 토큰은 입력하거나 보내지 마세요.',emailLabel:'가입 이메일',consent:'확인 링크에서 최종 동의하면 계정과 관련 데이터가 영구 삭제됨을 이해했습니다.',submit:'확인 메일 보내기',accepted:'해당 계정이 존재하면 확인 메일을 보냈습니다. 받은편지함과 스팸함을 확인해 주세요.',error:'현재 요청을 접수할 수 없습니다. 잠시 후 다시 시도하거나 지원 이메일을 이용해 주세요.',deletedTitle:'삭제되는 데이터',deleted1:'계정과 로그인 식별 정보',deleted2:'코스, 좋아요, 완주 기록과 AI 채팅 세션',deleted3:'제출한 AI 답변 신고 데이터',forks:'다른 사용자가 복제한 코스는 유지되지만 원작자는 탈퇴한 사용자로 표시됩니다.',fallbackTitle:'메일을 받지 못했나요?',fallback:'스팸함을 확인하거나 잠시 후 다시 시도하세요. 웹 폼을 사용할 수 없다면 지원 주소를 복사해 수동으로 요청할 수 있습니다.',copy:'지원 이메일 복사',copied:'이메일 주소를 복사했습니다.',mailApp:'메일 앱 열기',privacy:'개인정보처리방침',operator:'개발·운영: CulturePath 팀'},
+en:{language:'Language',title:'Request account deletion',intro:'If you cannot use the app, verify your sign-up email to delete your account and related data.',warning:'Deleted accounts and data cannot be recovered.',security:'Do not enter or send your password, Google token, or app authentication token.',emailLabel:'Sign-up email',consent:'I understand that final confirmation permanently deletes my account and related data.',submit:'Send confirmation email',accepted:'If the account exists, a confirmation email has been sent. Check your inbox and spam folder.',error:'The request is currently unavailable. Try again later or use the support email.',deletedTitle:'Data deleted',deleted1:'Account and login identifiers',deleted2:'Courses, likes, completion records, and AI chat sessions',deleted3:'AI response reports you submitted',forks:'Courses copied by others remain, but the original author is shown as a deleted user.',fallbackTitle:'Did not receive the email?',fallback:'Check spam or try again later. If the form is unavailable, copy the support address and send a manual request.',copy:'Copy support email',copied:'Email address copied.',mailApp:'Open email app',privacy:'Privacy Policy',operator:'Developed and operated by CulturePath team'},
+ja:{language:'言語',title:'アカウント削除リクエスト',intro:'アプリを利用できない場合、登録メールを確認してアカウントと関連データを削除できます。',warning:'削除したアカウントとデータは復元できません。',security:'パスワード、Google認証トークン、アプリ認証トークンを入力または送信しないでください。',emailLabel:'登録メールアドレス',consent:'最終確認によりアカウントと関連データが完全に削除されることを理解しました。',submit:'確認メールを送信',accepted:'アカウントが存在する場合、確認メールを送信しました。受信トレイと迷惑メールをご確認ください。',error:'現在リクエストを受け付けられません。後でもう一度お試しいただくか、サポートメールをご利用ください。',deletedTitle:'削除されるデータ',deleted1:'アカウントとログイン識別情報',deleted2:'コース、いいね、完了記録、AIチャットセッション',deleted3:'送信したAI回答の報告データ',forks:'他の利用者が複製したコースは残りますが、原作者は退会済みユーザーと表示されます。',fallbackTitle:'メールが届きませんか？',fallback:'迷惑メールを確認するか、後でもう一度お試しください。フォームを利用できない場合はサポートアドレスをコピーして手動で依頼できます。',copy:'サポートメールをコピー',copied:'メールアドレスをコピーしました。',mailApp:'メールアプリを開く',privacy:'プライバシーポリシー',operator:'開発・運営：CulturePathチーム'},
+zh:{language:'语言',title:'申请删除账号',intro:'如果无法使用应用，可验证注册邮箱后删除账号和相关数据。',warning:'账号和数据删除后无法恢复。',security:'请勿输入或发送密码、Google认证令牌或应用认证令牌。',emailLabel:'注册邮箱',consent:'我了解最终确认后，账号和相关数据将被永久删除。',submit:'发送确认邮件',accepted:'如果账号存在，我们已发送确认邮件。请检查收件箱和垃圾邮件。',error:'目前无法受理请求。请稍后重试或使用客服邮箱。',deletedTitle:'将删除的数据',deleted1:'账号和登录标识信息',deleted2:'路线、点赞、完成记录和AI聊天会话',deleted3:'您提交的AI回答举报数据',forks:'其他用户已复制的路线会保留，但原作者将显示为已注销用户。',fallbackTitle:'没有收到邮件？',fallback:'请检查垃圾邮件或稍后重试。如果表单不可用，可复制客服地址并手动发送请求。',copy:'复制客服邮箱',copied:'邮箱地址已复制。',mailApp:'打开邮件应用',privacy:'隐私政策',operator:'开发与运营：CulturePath团队'}};
+const locale=document.querySelector('#locale'),status=document.querySelector('#status'),submit=document.querySelector('#submit');function render(){const t=texts[locale.value];document.documentElement.lang=locale.value;document.querySelectorAll('[data-i]').forEach(el=>el.textContent=t[el.dataset.i]);document.title=t.title+' | CulturePath'}locale.addEventListener('change',render);render();
+document.querySelector('#deletion-form').addEventListener('submit',async event=>{event.preventDefault();status.textContent='';submit.disabled=true;try{const response=await fetch('/account-deletion/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.querySelector('#email').value,locale:locale.value,website:document.querySelector('#website').value})});status.textContent=response.status===202?texts[locale.value].accepted:texts[locale.value].error}catch{status.textContent=texts[locale.value].error}finally{submit.disabled=false}});
+document.querySelector('#copy-email').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.querySelector('#support-email').textContent);status.textContent=texts[locale.value].copied}catch{status.textContent=document.querySelector('#support-email').textContent}});
+</script></body></html>

@@ -12,6 +12,7 @@ const placesRoutes = require('./routes/places');
 const coursesRoutes = require('./routes/courses');
 const aiRoutes = require('./routes/ai');
 const usersRoutes = require('./routes/users');
+const { createAccountDeletionRouter } = require('./routes/accountDeletion');
 
 const app = express();
 
@@ -26,11 +27,24 @@ app.use(cors({
     'X-Total-Count',
   ],
 }));
-app.use(express.json());
+function accountDeletionPageHeaders(_req, res, next) {
+  res.set({
+    'Cache-Control': 'no-store',
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  next();
+}
 
-app.get('/account-deletion', (_req, res) => {
+app.get('/account-deletion', accountDeletionPageHeaders, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'index.html'));
 });
+app.get('/account-deletion/confirm', accountDeletionPageHeaders, (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'confirm.html'));
+});
+app.use('/account-deletion', createAccountDeletionRouter());
+app.use(express.json());
 app.get('/privacy-policy', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy', 'index.html'));
 });

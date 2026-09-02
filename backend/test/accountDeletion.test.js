@@ -201,10 +201,10 @@ test('publishes a branded account-deletion page with a working request pathway',
   const appSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
 
   assert.match(appSource, /app\.get\('\/account-deletion'/);
-  assert.match(html, /따라가방 \(CulturePath\)/);
+  assert.match(html, /따라가방 계정 삭제 요청/);
   assert.match(html, /CulturePath 팀/);
   assert.match(html, /mailto:culturepath\.support@gmail\.com/);
-  assert.match(html, /7일 이내/);
+  assert.match(html, /account-deletion\/requests/);
   assert.match(html, /탈퇴한 사용자/);
-  assert.match(html, /회원 탈퇴 시 AI 신고 데이터도 삭제/);
+  assert.match(html, /제출한 AI 답변 신고 데이터/);
 });

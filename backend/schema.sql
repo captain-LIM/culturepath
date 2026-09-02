@@ -116,6 +116,26 @@ CREATE TABLE IF NOT EXISTS ai_content_reports (
   INDEX idx_ai_content_reports_user_created (user_id, created_at)
 );
 
+-- Short-lived capability tokens used by the public account-deletion web form.
+-- The account email is read from users only; raw tokens are never persisted.
+CREATE TABLE IF NOT EXISTS account_deletion_requests (
+  id                        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id                   INT NOT NULL,
+  token_hash                CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  locale                    ENUM('ko', 'en', 'ja', 'zh') NOT NULL DEFAULT 'ko',
+  token_expires_at          DATETIME NOT NULL,
+  last_sent_at              DATETIME NOT NULL,
+  send_window_started_at    DATETIME NOT NULL,
+  send_count                TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  created_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_account_deletion_request_user (user_id),
+  UNIQUE KEY uq_account_deletion_request_token (token_hash),
+  INDEX idx_account_deletion_request_expiry (token_expires_at),
+  CONSTRAINT fk_account_deletion_request_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS places_cache (
   content_id          VARCHAR(100) PRIMARY KEY,
   content_type_id     VARCHAR(20) DEFAULT NULL,
