@@ -1,70 +1,471 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="따라가방(CulturePath) 개인정보처리방침">
-  <title>개인정보처리방침 | 따라가방</title>
-  <style>
-    :root { color-scheme: light; --brand:#315c43; --ink:#24332a; --muted:#5d6b62; --line:#dce5dc; }
-    * { box-sizing:border-box; } body { margin:0; background:#f2f5ef; color:var(--ink); font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif; line-height:1.7; }
-    main { width:min(820px,calc(100% - 32px)); margin:40px auto; padding:clamp(24px,6vw,52px); background:#fffef9; border:1px solid var(--line); border-radius:20px; }
-    h1,h2 { line-height:1.35; } h1 { margin-top:0; } h2 { margin-top:2.2rem; font-size:1.2rem; color:var(--brand); }
-    p,li,td,th { color:var(--muted); } a { color:var(--brand); } table { width:100%; border-collapse:collapse; } th,td { padding:10px; border:1px solid var(--line); text-align:left; vertical-align:top; }
-    .meta,.notice { padding:14px 16px; border-radius:10px; background:#eef4ed; } .en { margin-top:56px; padding-top:36px; border-top:2px solid var(--line); }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="따라가방(Tara-gabang) 개인정보처리방침 / Privacy Policy">
+<title>개인정보처리방침 | 따라가방 (Tara-gabang)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fffef9;
+    --surface: #ffffff;
+    --ink: #1e1e1e;
+    --heading: #2b2d42;
+    --muted: #6d6e6d;
+    --line: #ddd8ce;
+    --accent: #c05534;
+    --accent-soft: #f3e2da;
+    --focus: #2b2d42;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1b17;
+      --surface: #242320;
+      --ink: #ece7dc;
+      --heading: #f2eee2;
+      --muted: #a89e8c;
+      --line: #3c3a33;
+      --accent: #e08a67;
+      --accent-soft: #3a2b23;
+      --focus: #e08a67;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Malgun Gothic", -apple-system, "Segoe UI", sans-serif;
+    font-size: 15.5px;
+    line-height: 1.75;
+  }
+  /* 언어별로 지역 한자 자형이 맞는 Noto 폰트를 우선한다 (한국어 글꼴로
+     일본어/중국어를 표시하면 자형이 살짝 어색해진다). */
+  :lang(ja) { font-family: "Noto Sans JP", "Noto Sans KR", sans-serif; }
+  :lang(zh) { font-family: "Noto Sans SC", "Noto Sans KR", sans-serif; }
+
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  header.masthead {
+    padding: 40px 20px 28px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .masthead-inner { max-width: 700px; margin: 0 auto; }
+  .brand-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .brand-name {
+    font-family: "Black Han Sans", "Noto Sans KR", sans-serif;
+    font-size: 2rem;
+    color: var(--heading);
+    letter-spacing: 0.01em;
+  }
+  .doc-label { font-size: 0.95rem; color: var(--muted); }
+  .meta { margin-top: 10px; color: var(--muted); font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+
+  .lang-toggle {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .lang-toggle-inner { max-width: 700px; margin: 0 auto; display: flex; gap: 6px; width: 100%; }
+  .lang-toggle button {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .lang-toggle button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff8f2;
+  }
+
+  main { max-width: 700px; margin: 0 auto; padding: 36px 20px 90px; }
+  [hidden] { display: none !important; }
+
+  h1.doc-title { font-size: 1.5rem; margin: 0 0 4px; color: var(--heading); }
+  .lede { color: var(--muted); margin: 0 0 2rem; }
+
+  h2 {
+    font-size: 1.05rem;
+    color: var(--heading);
+    margin: 2.4rem 0 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 0.5em; }
+
+  p { max-width: 65ch; }
+  ul { padding-left: 1.3em; }
+  li { margin: 0.35em 0; max-width: 62ch; }
+
+  .callout {
+    margin: 1rem 0;
+    padding: 0.85rem 1rem;
+    background: var(--accent-soft);
+    border-radius: 10px;
+    font-size: 0.93rem;
+  }
+
+  .table-wrap { overflow-x: auto; margin: 0.9rem 0 1.4rem; }
+  table { border-collapse: collapse; width: 100%; min-width: 480px; }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 9px 12px;
+    text-align: left;
+    vertical-align: top;
+    font-size: 0.93rem;
+  }
+  th { color: var(--heading); background: var(--surface); font-weight: 700; white-space: nowrap; }
+
+  footer.doc-footer {
+    max-width: 700px;
+    margin: 3rem auto 0;
+    padding: 20px 20px 40px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--line);
+  }
+</style>
 </head>
-<body><main>
-  <h1>따라가방(CulturePath) 개인정보처리방침</h1>
-  <p class="meta">시행일: 2026년 9월 2일 · 운영자: CulturePath 팀 · 문의: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
-  <p>CulturePath 팀은 따라가방 앱을 운영하며, 개인정보 보호법과 Google Play 정책에 따라 이용자의 개인정보를 처리합니다.</p>
+<body>
 
-  <h2>1. 처리하는 정보</h2>
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="brand-row">
+      <span class="brand-name">따라가방</span>
+      <span class="doc-label" id="doc-label">개인정보처리방침</span>
+    </div>
+    <div class="meta" id="meta-line">시행일 2026년 9월 2일 · 운영: 개인 개발자 2인 (공동 개발, 별도 사업자 등록 없음)</div>
+  </div>
+</header>
+
+<div class="lang-toggle">
+  <div class="lang-toggle-inner">
+    <button type="button" id="btn-ko" aria-pressed="true" onclick="setLang('ko')">한국어</button>
+    <button type="button" id="btn-en" aria-pressed="false" onclick="setLang('en')">English</button>
+    <button type="button" id="btn-ja" aria-pressed="false" onclick="setLang('ja')">日本語</button>
+    <button type="button" id="btn-zh" aria-pressed="false" onclick="setLang('zh')">中文</button>
+  </div>
+</div>
+
+<main>
+<!-- ═══════════════════════ 한국어 ═══════════════════════ -->
+<section id="ko" lang="ko">
+  <h1 class="doc-title">따라가방 개인정보처리방침</h1>
+  <p class="lede">따라가방(이하 “서비스”)은 이용자의 개인정보를 중요하게 생각하며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 방침은 서비스가 어떤 정보를 수집하고 어떻게 이용·보관·파기하는지 설명합니다.</p>
+
+  <h2><span class="num">1</span>수집하는 개인정보 항목</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>구분</th><th>항목</th><th>수집 방법</th></tr>
+      <tr><td>계정</td><td>이메일 주소, 비밀번호(해시 저장), 닉네임</td><td>회원가입 시 이용자 입력</td></tr>
+      <tr><td>소셜 로그인</td><td>Google 계정 식별자, 이메일, 프로필 이름</td><td>Google 로그인 이용 시</td></tr>
+      <tr><td>서비스 이용 기록</td><td>생성·저장·좋아요한 코스, 코스 완주 기록, AI 어시스턴트에 입력한 대화 내용, AI 답변 신고 내용·사유·연결된 세션 식별정보</td><td>서비스 이용 중 자동 생성</td></tr>
+      <tr><td>기기·접속 정보</td><td>IP 주소, 접속 일시, 오류 로그, 앱 버전, OS 정보, 언어 설정</td><td>서비스 이용 중 자동 수집</td></tr>
+      <tr><td>위치정보</td><td>단말기의 대략적/정밀 위치</td><td>지도 화면에서 이용자가 권한을 허용한 경우에 한함</td></tr>
+    </table>
+  </div>
+  <p><strong>위치정보 처리 방식:</strong> 위치정보는 지도에 현재 위치를 표시하기 위한 목적으로만 단말기에서 사용되며, 서비스 서버로 전송·저장되지 않습니다. 지도 표시를 위해 Google Maps SDK가 위치를 처리할 수 있으며, 이는 Google의 개인정보처리방침을 따릅니다.</p>
+
+  <h2><span class="num">2</span>개인정보의 이용 목적</h2>
   <ul>
-    <li>계정: 이메일, 닉네임, 암호화된 비밀번호 또는 Google 로그인 식별정보</li>
-    <li>서비스 활동: 작성·복제한 코스, 좋아요, 완주 기록</li>
-    <li>AI 기능: 이용자가 보낸 대화와 코스 편집 요청, AI 답변 신고 내용과 선택 입력한 신고 사유</li>
-    <li>운영 정보: 요청 시각, IP 주소, 오류·보안 로그 등 서비스 운영에 필요한 기술정보</li>
-    <li>위치: 지도에서 현재 위치를 보여 주기 위해 기기에서만 사용하며 서버로 전송하거나 저장하지 않습니다.</li>
+    <li>회원 식별 및 로그인 유지, 계정 관리</li>
+    <li>코스 저장·공유·추천 등 핵심 기능 제공</li>
+    <li>AI 어시스턴트의 문화여행 정보 응답 생성</li>
+    <li>AI 답변 신고 검토 및 악용 방지</li>
+    <li>서비스 오류 분석, 부정 이용 방지, 문의 응대</li>
+    <li>서비스 개선을 위한 통계 분석(개인을 식별하지 않는 형태)</li>
   </ul>
 
-  <h2>2. 이용 목적</h2>
-  <p>로그인과 계정 관리, 문화 여행 코스 제공·공유, AI 여행 상담, 오류 대응, 보안과 악용 방지, AI 콘텐츠 신고 검토를 위해 필요한 범위에서 사용합니다.</p>
+  <h2><span class="num">3</span>제3자 제공 및 처리위탁</h2>
+  <p>서비스는 이용자의 개인정보를 외부에 판매하지 않습니다. 서비스 운영에 필요한 범위에서 아래와 같이 처리를 위탁합니다.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>수탁자</th><th>위탁 업무</th></tr>
+      <tr><td>Google LLC</td><td>소셜 로그인(Google Sign-In), 지도 표시(Google Maps Platform)</td></tr>
+      <tr><td>Railway Corporation</td><td>백엔드 서버 및 데이터베이스 인프라 호스팅</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>AI 어시스턴트 응답 생성(대화 내용이 모델 제공사로 전달되어 처리됨)</td></tr>
+    </table>
+  </div>
 
-  <h2>3. 처리 위탁 및 국외 처리</h2>
-  <table><thead><tr><th>제공자</th><th>목적과 처리 정보</th></tr></thead><tbody>
-    <tr><td>Google</td><td>Google 로그인, Google Maps 표시, Gemini 계열 AI 모델 처리</td></tr>
-    <tr><td>Railway</td><td>백엔드·MySQL 인프라 호스팅과 운영 로그 처리</td></tr>
-    <tr><td>OpenRouter</td><td>AI 요청을 모델 제공자에게 전달하고 응답을 반환</td></tr>
-  </tbody></table>
-  <p>AI 기능을 이용하면 입력한 대화 또는 코스 편집 요청이 OpenRouter와 선택된 모델 제공자에게 전송될 수 있습니다.</p>
-
-  <h2>4. 보유 및 삭제</h2>
+  <h2><span class="num">4</span>보유 및 이용 기간</h2>
   <ul>
-    <li>계정과 서비스 활동 정보: 회원 탈퇴 시 삭제합니다.</li>
-    <li>서버 AI 대화 세션: 기본적으로 마지막 사용 후 30분 동안 메모리에 유지하며, 로그아웃·세션 초기화·회원 탈퇴 시 삭제합니다.</li>
-    <li>AI 신고: 계정 유지 중 콘텐츠 검토와 악용 방지를 위해 처리하며, 회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제합니다.</li>
-    <li>오류·보안 로그: 운영 및 보안상 필요한 최소 기간 또는 관계 법령이 요구하는 기간 동안 처리합니다.</li>
+    <li>계정 정보: 회원 탈퇴 시 지체 없이 파기</li>
+    <li>AI 대화 내용: 데이터베이스에 저장하지 않으며, 대화 세션 종료 시 또는 최대 30분간 활동이 없으면 서버 메모리에서 자동 파기</li>
+    <li>AI 신고: 계정 유지 중 신고 검토와 악용 방지를 위해 처리하며, 회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제합니다.</li>
+    <li>접속·오류 로그: 별도로 영구 보관하지 않으며, 호스팅 사업자(Railway)의 표준 운영 로그 정책에 따라 관리</li>
+    <li>관계 법령에서 별도 보관을 요구하는 경우 해당 기간 동안 보관</li>
   </ul>
-  <p>관계 법령에 따른 보관 의무가 있는 경우에는 해당 기간 동안 분리 보관할 수 있습니다.</p>
 
-  <h2>5. 이용자의 권리와 계정 삭제</h2>
-  <p>앱의 <strong>내 정보 → 계정 관리 → 회원 탈퇴</strong>에서 계정과 관련 데이터를 삭제할 수 있습니다. 앱에 접근할 수 없다면 <a href="/account-deletion">외부 계정 삭제 안내</a>를 이용하거나 문의 이메일로 요청할 수 있습니다.</p>
+  <h2><span class="num">5</span>이용자의 권리</h2>
+  <p>이용자는 언제든지 자신의 개인정보를 조회·수정할 수 있으며, 앱 내 “내 정보” 화면에서 회원 탈퇴를 통해 계정과 관련 데이터의 삭제를 요청할 수 있습니다. 앱을 설치하지 않은 상태에서도 아래 웹페이지에서 삭제를 요청할 수 있습니다.</p>
+  <p class="callout">삭제 요청 웹페이지: <a href="/account-deletion">/account-deletion</a></p>
 
-  <h2>6. 보호 조치</h2>
-  <p>전송 구간 HTTPS, 비밀번호 해시, 인증과 접근 통제, 최소 권한 원칙을 적용합니다. 비밀번호나 인증 토큰을 이메일로 보내지 마세요.</p>
+  <h2><span class="num">6</span>만 14세 미만 아동</h2>
+  <p>서비스는 만 14세 미만 아동을 대상으로 하지 않으며, 해당 아동의 개인정보를 알면서 수집하지 않습니다.</p>
 
-  <h2>7. 아동 및 변경 안내</h2>
-  <p>만 14세 미만 이용자는 법정대리인의 동의 없이 계정을 만들 수 없습니다. 방침이 중요하게 변경되면 앱 또는 이 페이지를 통해 시행 전에 알립니다.</p>
+  <h2><span class="num">7</span>개인정보의 안전성 확보 조치</h2>
+  <p>비밀번호는 복호화되지 않는 방식(해시)으로 저장되며, 앱과 서버 간 모든 통신은 HTTPS로 암호화됩니다. 접근 권한 관리 및 접근 통제를 시행합니다.</p>
 
-  <section class="en" lang="en">
-    <h1>Tara-gabang (CulturePath) Privacy Policy</h1>
-    <p class="meta">Effective: September 2, 2026 · Operator: CulturePath Team · Contact: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
-    <p>We process account data (email, nickname, password hash or Google sign-in identifier), courses, likes, completions, AI requests, AI reply reports, and minimal request/security logs to provide and protect the service.</p>
-    <h2>Location</h2><p>Precise location is used only on the device to show your position on the map. It is not transmitted to or stored by our server.</p>
-    <h2>Service providers</h2><p>Google supports sign-in, Maps, and Gemini model processing; Railway hosts the backend and MySQL database; OpenRouter routes AI requests to model providers. AI inputs may be transmitted to these providers when you use AI features.</p>
-    <h2>Retention and deletion</h2><p>Account activity is deleted when you delete your account. In-memory AI sessions expire after 30 minutes of inactivity and are removed on logout, reset, or account deletion. AI reports are processed for moderation and abuse prevention while the account remains active; report content, reasons, and linked session identifiers are deleted when the account is deleted. Operational logs are kept for the minimum period needed for security or law.</p>
-    <h2>Your choices</h2><p>Delete your account in <strong>Profile → Account Management → Delete Account</strong>, or use the <a href="/account-deletion">external deletion page</a>. Contact us for access, correction, deletion, or privacy questions.</p>
-  </section>
-</main></body>
+  <h2><span class="num">8</span>방침의 변경</h2>
+  <p>본 방침이 변경되는 경우 앱 내 공지 또는 본 페이지를 통해 시행일과 함께 안내합니다.</p>
+
+  <h2><span class="num">9</span>문의처</h2>
+  <p>개인정보 관련 문의: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
+
+<!-- ═══════════════════════ English ═══════════════════════ -->
+<section id="en" lang="en" hidden>
+  <h1 class="doc-title">Tara-gabang Privacy Policy</h1>
+  <p class="lede">Tara-gabang (“the Service”) values your privacy and complies with applicable data protection law, including Korea's Personal Information Protection Act. This policy explains what information the Service collects and how it is used, stored, and deleted.</p>
+
+  <h2><span class="num">1</span>Information we collect</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Category</th><th>Data</th><th>Source</th></tr>
+      <tr><td>Account</td><td>Email address, password (stored hashed), nickname</td><td>Entered by you at sign-up</td></tr>
+      <tr><td>Social login</td><td>Google account identifier, email, profile name</td><td>When you sign in with Google</td></tr>
+      <tr><td>Usage records</td><td>Courses you create, save, or like; course completion records; messages you send to the AI assistant; AI reply report content, reasons, and linked session identifiers</td><td>Generated as you use the Service</td></tr>
+      <tr><td>Device &amp; log data</td><td>IP address, access timestamps, error logs, app version, OS info, language setting</td><td>Collected automatically</td></tr>
+      <tr><td>Location</td><td>Approximate / precise device location</td><td>Only if you grant permission on the map screen</td></tr>
+    </table>
+  </div>
+  <p><strong>How location is handled:</strong> Location is used only on your device to show your current position on the map. It is not sent to or stored on the Service's servers. The Google Maps SDK may process location to render the map, subject to Google's privacy policy.</p>
+
+  <h2><span class="num">2</span>How we use information</h2>
+  <ul>
+    <li>Identifying you, keeping you signed in, and managing your account</li>
+    <li>Providing core features such as saving, sharing, and recommending courses</li>
+    <li>Generating AI assistant responses about cultural travel</li>
+    <li>Reviewing AI reply reports and preventing abuse</li>
+    <li>Diagnosing errors, preventing abuse, and responding to inquiries</li>
+    <li>Aggregated, non-identifying analytics to improve the Service</li>
+  </ul>
+
+  <h2><span class="num">3</span>Sharing and processors</h2>
+  <p>We do not sell your personal information. We rely on the following processors to operate the Service:</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Processor</th><th>Purpose</th></tr>
+      <tr><td>Google LLC</td><td>Google Sign-In; map rendering (Google Maps Platform)</td></tr>
+      <tr><td>Railway Corporation</td><td>Backend server and database infrastructure hosting</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>Generating AI assistant responses (your messages are sent to the model provider for processing)</td></tr>
+    </table>
+  </div>
+
+  <h2><span class="num">4</span>Retention</h2>
+  <ul>
+    <li>Account data: deleted without undue delay when you delete your account</li>
+    <li>AI conversation content: never written to a database; automatically discarded from server memory when a session ends or after 30 minutes of inactivity</li>
+    <li>AI reports: processed for report review and abuse prevention while the account remains active; report content, reasons, and linked session identifiers are deleted when the account is deleted.</li>
+    <li>Access and error logs: not permanently retained by us; handled under our hosting provider's (Railway) standard operational log policy</li>
+    <li>Retained longer only where required by applicable law</li>
+  </ul>
+
+  <h2><span class="num">5</span>Your rights</h2>
+  <p>You can view and edit your information at any time, and you can delete your account and associated data from the “Profile” screen in the app. You can also request deletion without installing the app, using the web page below.</p>
+  <p class="callout">Deletion request page: <a href="/account-deletion">/account-deletion</a></p>
+
+  <h2><span class="num">6</span>Children</h2>
+  <p>The Service is not directed to children under 14 and we do not knowingly collect their personal information.</p>
+
+  <h2><span class="num">7</span>Security</h2>
+  <p>Passwords are stored in a non-reversible (hashed) form, and all traffic between the app and our servers is encrypted with HTTPS. We apply access controls and least-privilege permissions.</p>
+
+  <h2><span class="num">8</span>Changes to this policy</h2>
+  <p>If this policy changes, we will post the updated version and its effective date here and/or notify you in the app.</p>
+
+  <h2><span class="num">9</span>Contact</h2>
+  <p>Privacy inquiries: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
+
+<!-- ═══════════════════════ 日本語 ═══════════════════════ -->
+<section id="ja" lang="ja" hidden>
+  <h1 class="doc-title">タラガバン プライバシーポリシー</h1>
+  <p class="lede">タラガバン（以下「本サービス」）は、利用者の個人情報を重要なものと考え、関連法令を遵守します。本ポリシーは、本サービスがどのような情報を収集し、どのように利用・保管・破棄するかを説明します。</p>
+
+  <h2><span class="num">1</span>収集する個人情報の項目</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>区分</th><th>項目</th><th>収集方法</th></tr>
+      <tr><td>アカウント</td><td>メールアドレス、パスワード（ハッシュ化して保存）、ニックネーム</td><td>会員登録時に利用者が入力</td></tr>
+      <tr><td>ソーシャルログイン</td><td>Googleアカウント識別子、メールアドレス、プロフィール名</td><td>Googleログイン利用時</td></tr>
+      <tr><td>サービス利用記録</td><td>作成・保存・「いいね」したコース、コース完走記録、AIアシスタントに入力した会話内容、AI回答の報告内容・理由・関連セッション識別情報</td><td>サービス利用中に自動生成</td></tr>
+      <tr><td>端末・接続情報</td><td>IPアドレス、接続日時、エラーログ、アプリバージョン、OS情報、言語設定</td><td>サービス利用中に自動収集</td></tr>
+      <tr><td>位置情報</td><td>端末のおおよそ/正確な位置</td><td>地図画面で利用者が権限を許可した場合のみ</td></tr>
+    </table>
+  </div>
+  <p><strong>位置情報の処理方法:</strong> 位置情報は地図に現在地を表示する目的でのみ端末上で使用され、サービスのサーバーに送信・保存されません。地図表示のためGoogle Maps SDKが位置情報を処理する場合があり、これはGoogleのプライバシーポリシーに従います。</p>
+
+  <h2><span class="num">2</span>個人情報の利用目的</h2>
+  <ul>
+    <li>会員識別およびログイン維持、アカウント管理</li>
+    <li>コースの保存・共有・推薦などコア機能の提供</li>
+    <li>AIアシスタントによる文化旅行情報の応答生成</li>
+    <li>AI回答の報告確認および不正利用の防止</li>
+    <li>サービスエラーの分析、不正利用の防止、問い合わせ対応</li>
+    <li>サービス改善のための統計分析(個人を特定しない形式)</li>
+  </ul>
+
+  <h2><span class="num">3</span>第三者提供および処理委託</h2>
+  <p>本サービスは利用者の個人情報を外部に販売しません。サービス運営に必要な範囲で以下のとおり処理を委託します。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>受託者</th><th>委託業務</th></tr>
+      <tr><td>Google LLC</td><td>ソーシャルログイン(Google Sign-In)、地図表示(Google Maps Platform)</td></tr>
+      <tr><td>Railway Corporation</td><td>バックエンドサーバーおよびデータベースインフラのホスティング</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>AIアシスタントの応答生成(会話内容がモデル提供元に送信され処理される)</td></tr>
+    </table>
+  </div>
+
+  <h2><span class="num">4</span>保有および利用期間</h2>
+  <ul>
+    <li>アカウント情報: 退会時に遅滞なく破棄</li>
+    <li>AI会話内容: データベースには保存せず、会話セッション終了時または最大30分間操作がない場合、サーバーメモリから自動的に破棄</li>
+    <li>AI報告: アカウント存続中は報告確認と不正利用防止のために処理し、退会時に報告内容・理由・関連セッション識別情報を削除</li>
+    <li>接続・エラーログ: 個別に永続保存せず、ホスティング事業者(Railway)の標準運用ログポリシーに従って管理</li>
+    <li>関連法令が別途保管を求める場合、その期間保管</li>
+  </ul>
+
+  <h2><span class="num">5</span>利用者の権利</h2>
+  <p>利用者はいつでも自身の個人情報を照会・修正でき、アプリ内「マイページ」画面から退会することでアカウントおよび関連データの削除を要求できます。アプリをインストールしていない状態でも、以下のWebページから削除を要求できます。</p>
+  <p class="callout">削除リクエストページ: <a href="/account-deletion">/account-deletion</a></p>
+
+  <h2><span class="num">6</span>満14歳未満の児童</h2>
+  <p>本サービスは満14歳未満の児童を対象としておらず、当該児童の個人情報を認識した上で収集することはありません。</p>
+
+  <h2><span class="num">7</span>個人情報の安全性確保措置</h2>
+  <p>パスワードは復号化できない方式(ハッシュ)で保存され、アプリとサーバー間のすべての通信はHTTPSで暗号化されます。アクセス権限管理およびアクセス制御を実施します。</p>
+
+  <h2><span class="num">8</span>ポリシーの変更</h2>
+  <p>本ポリシーが変更される場合、アプリ内のお知らせまたは本ページを通じて施行日とともにご案内します。</p>
+
+  <h2><span class="num">9</span>お問い合わせ</h2>
+  <p>個人情報に関するお問い合わせ: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
+
+<!-- ═══════════════════════ 中文 ═══════════════════════ -->
+<section id="zh" lang="zh" hidden>
+  <h1 class="doc-title">跟着走 隐私政策</h1>
+  <p class="lede">跟着走（以下简称"本服务"）重视用户的个人信息，并遵守相关法律法规。本政策说明本服务收集哪些信息，以及如何使用、保存和删除这些信息。</p>
+
+  <h2><span class="num">1</span>收集的个人信息项目</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>类别</th><th>项目</th><th>收集方式</th></tr>
+      <tr><td>账户</td><td>电子邮箱地址、密码（以哈希形式存储）、昵称</td><td>注册时由用户输入</td></tr>
+      <tr><td>社交登录</td><td>Google账户标识符、电子邮箱、个人资料姓名</td><td>使用Google登录时</td></tr>
+      <tr><td>服务使用记录</td><td>创建、保存、点赞的路线，路线完成记录，输入AI助手的对话内容，AI回复举报内容、理由及关联会话标识符</td><td>使用服务过程中自动生成</td></tr>
+      <tr><td>设备与接入信息</td><td>IP地址、接入时间、错误日志、应用版本、操作系统信息、语言设置</td><td>使用服务过程中自动收集</td></tr>
+      <tr><td>位置信息</td><td>设备的大致/精确位置</td><td>仅在地图页面用户授权时收集</td></tr>
+    </table>
+  </div>
+  <p><strong>位置信息处理方式：</strong> 位置信息仅在设备端用于在地图上显示当前位置，不会发送或保存到本服务的服务器。为显示地图，Google Maps SDK可能会处理位置信息，此过程遵循Google的隐私政策。</p>
+
+  <h2><span class="num">2</span>个人信息的使用目的</h2>
+  <ul>
+    <li>识别会员身份、维持登录状态、账户管理</li>
+    <li>提供路线保存、分享、推荐等核心功能</li>
+    <li>生成AI助手的文化旅行信息回复</li>
+    <li>审核AI回复举报并防止滥用</li>
+    <li>分析服务错误、防止不当使用、处理咨询</li>
+    <li>用于改进服务的统计分析（不识别个人身份的形式）</li>
+  </ul>
+
+  <h2><span class="num">3</span>第三方提供及处理委托</h2>
+  <p>本服务不会向外部出售用户的个人信息。在运营服务所需范围内，委托以下机构处理：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>受托方</th><th>委托业务</th></tr>
+      <tr><td>Google LLC</td><td>社交登录（Google Sign-In）、地图显示（Google Maps Platform）</td></tr>
+      <tr><td>Railway Corporation</td><td>后端服务器及数据库基础设施托管</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>生成AI助手回复（对话内容将发送给模型提供方进行处理）</td></tr>
+    </table>
+  </div>
+
+  <h2><span class="num">4</span>保留及使用期限</h2>
+  <ul>
+    <li>账户信息：注销账户后立即删除，不作延迟</li>
+    <li>AI对话内容：不存储于数据库，在对话会话结束时或最长30分钟无操作后自动从服务器内存中删除</li>
+    <li>AI举报：账户存续期间用于举报审核和防止滥用；注销账户时删除举报内容、理由及关联会话标识符</li>
+    <li>接入及错误日志：本服务不作长期保存，按托管服务商（Railway）的标准运营日志政策处理</li>
+    <li>相关法律法规另有要求保存的，按该期限保存</li>
+  </ul>
+
+  <h2><span class="num">5</span>用户的权利</h2>
+  <p>用户可随时查询、修改自己的个人信息，也可以在应用内"我的"页面通过注销账户请求删除账户及相关数据。即使未安装应用，也可通过以下网页请求删除。</p>
+  <p class="callout">删除请求页面：<a href="/account-deletion">/account-deletion</a></p>
+
+  <h2><span class="num">6</span>未满14周岁儿童</h2>
+  <p>本服务不面向未满14周岁的儿童，也不会在知情的情况下收集其个人信息。</p>
+
+  <h2><span class="num">7</span>个人信息安全保障措施</h2>
+  <p>密码以不可逆（哈希）方式存储，应用与服务器之间的所有通信均使用HTTPS加密。本服务实施访问权限管理及访问控制。</p>
+
+  <h2><span class="num">8</span>政策的变更</h2>
+  <p>本政策如有变更，将通过应用内公告或本页面公布变更内容及生效日期。</p>
+
+  <h2><span class="num">9</span>联系方式</h2>
+  <p>个人信息相关咨询：<a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
+</main>
+
+<footer class="doc-footer">
+  <span id="footer-line">따라가방 · 개인 개발자 2인 공동 개발 · 문의 culturepath.support@gmail.com</span>
+</footer>
+
+<script>
+  var LANGS = ['ko', 'en', 'ja', 'zh'];
+  var BRAND_NAME = { ko: '따라가방', en: 'Tara-gabang', ja: 'タラガバン', zh: '跟着走' };
+  var DOC_LABEL = {
+    ko: '개인정보처리방침', en: 'Privacy Policy',
+    ja: 'プライバシーポリシー', zh: '隐私政策',
+  };
+  var META_LINE = {
+    ko: '시행일 2026년 9월 2일 · 운영: 개인 개발자 2인 (공동 개발, 별도 사업자 등록 없음)',
+    en: 'Effective September 2, 2026 · Operated by two independent developers (no registered business entity)',
+    ja: '施行日 2026年9月2日 · 運営: 個人開発者2名（共同開発、事業者登録なし）',
+    zh: '生效日期 2026年9月2日 · 运营方：两名个人开发者（联合开发，未注册企业实体）',
+  };
+  var FOOTER_LINE = {
+    ko: '따라가방 · 개인 개발자 2인 공동 개발 · 문의 culturepath.support@gmail.com',
+    en: 'Tara-gabang · Built by two independent developers · Contact culturepath.support@gmail.com',
+    ja: 'タラガバン · 個人開発者2名による共同開発 · お問い合わせ culturepath.support@gmail.com',
+    zh: '跟着走 · 由两名个人开发者联合开发 · 联系方式 culturepath.support@gmail.com',
+  };
+
+  function setLang(l) {
+    if (LANGS.indexOf(l) === -1) l = 'ko';
+    LANGS.forEach(function (code) {
+      document.getElementById(code).hidden = code !== l;
+      document.getElementById('btn-' + code).setAttribute('aria-pressed', String(code === l));
+    });
+    document.documentElement.lang = l;
+    document.querySelector('.brand-name').textContent = BRAND_NAME[l];
+    document.getElementById('doc-label').textContent = DOC_LABEL[l];
+    document.getElementById('meta-line').textContent = META_LINE[l];
+    document.getElementById('footer-line').textContent = FOOTER_LINE[l];
+    try { localStorage.setItem('cp-privacy-lang', l); } catch (e) {}
+  }
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('cp-privacy-lang'); } catch (e) {}
+    if (saved && LANGS.indexOf(saved) !== -1 && saved !== 'ko') setLang(saved);
+  })();
+</script>
+</body>
 </html>
