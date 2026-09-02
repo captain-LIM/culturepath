@@ -463,7 +463,22 @@ function createAiIntentService(options = {}) {
         temperature: 0,
       },
     );
-    return normalizeIntent(parseJsonObject(response.content), state, fallback);
+    const parsed = parseJsonObject(response.content);
+    const normalized = normalizeIntent(parsed, state, fallback);
+
+    // 모델이 이번 메시지의 지역·문화를 놓치고 needsClarification으로 응답하는
+    // 경우가 실제로 발생한다(예: "전주에서 전통주 관광지 추천해줘"에 지역을
+    // 다시 물어봄). 결정론적 키워드 매칭이 같은 메시지에서 지역·문화를 이미
+    // 찾아냈는데 모델은 빈 배열을 내놓고 clarify로 갔다면, 모델의 판단보다
+    // 검증된 키워드 추출 결과(fallback)를 신뢰한다.
+    if (normalized.needsClarification) {
+      const missedRegion = extractRegions(lastUser).length > 0 &&
+        (parsed?.regions || []).length === 0;
+      const missedCulture = extractCultures(lastUser).length > 0 &&
+        (parsed?.cultures || []).length === 0;
+      if (missedRegion || missedCulture) return fallback;
+    }
+    return normalized;
   }
 
   return Object.freeze({ parse });

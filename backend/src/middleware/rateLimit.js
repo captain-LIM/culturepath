@@ -10,6 +10,7 @@ function createRateLimit(options = {}) {
   const max = positiveInteger(options.max, 3);
   const now = options.now || Date.now;
   const maxBuckets = positiveInteger(options.maxBuckets, 10000);
+  const message = options.message || 'AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
   const buckets = new Map();
   let requestsSinceCleanup = 0;
 
@@ -39,7 +40,7 @@ function createRateLimit(options = {}) {
 
     if (bucket.count > max) {
       res.set?.('Retry-After', String(Math.max(1, Math.ceil((bucket.resetAt - currentTime) / 1000))));
-      return res.status(429).json({ message: 'AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' });
+      return res.status(429).json({ message });
     }
     return next();
   };
