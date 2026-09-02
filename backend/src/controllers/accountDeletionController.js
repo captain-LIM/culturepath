@@ -4,8 +4,9 @@ const {
   requestAccountDeletion,
   confirmAccountDeletion,
 } = require('../services/accountDeletionRequestService');
+const { safeErrorCode } = require('../utils/safeErrorCode');
 
-const ACCEPTED_MESSAGE = 'If the account exists, a confirmation email will be sent.';
+const ACCEPTED_MESSAGE = 'If the account exists, a confirmation email is being sent.';
 const INVALID_CONFIRMATION_MESSAGE = 'The confirmation link is invalid or expired.';
 
 function wait(ms) {
@@ -14,7 +15,6 @@ function wait(ms) {
 
 function createAccountDeletionController(options = {}) {
   const config = options.config;
-  const mailer = options.mailer;
   const requestDeletion = options.requestDeletion || requestAccountDeletion;
   const confirmDeletion = options.confirmDeletion || confirmAccountDeletion;
   const clock = options.clock || Date.now;
@@ -37,18 +37,12 @@ function createAccountDeletionController(options = {}) {
     }
 
     try {
-      const result = await requestDeletion(req.body.email, req.body.locale, { config, mailer });
-      if (result.deliveryErrorCode) {
-        logger.error('Account deletion confirmation delivery failed', {
-          code: result.deliveryErrorCode,
-        });
-      }
+      await requestDeletion(req.body.email, req.body.locale, { config });
       await padResponse(startedAt);
       return res.status(202).json({ accepted: true, message: ACCEPTED_MESSAGE });
     } catch (error) {
       logger.error('Account deletion request failed', {
-        name: error?.name,
-        code: error?.code,
+        code: safeErrorCode(error),
       });
       await padResponse(startedAt);
       return res.status(503).json({ message: 'Account deletion requests are temporarily unavailable.' });
@@ -67,8 +61,7 @@ function createAccountDeletionController(options = {}) {
       return res.json({ deleted: true, message: 'Your account has been deleted.' });
     } catch (error) {
       logger.error('Account deletion confirmation failed', {
-        name: error?.name,
-        code: error?.code,
+        code: safeErrorCode(error),
       });
       return res.status(503).json({ message: 'Account deletion is temporarily unavailable.' });
     }

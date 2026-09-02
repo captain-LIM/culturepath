@@ -66,6 +66,9 @@ function createAccountDeletionMailer(config, options = {}) {
     port: config.smtp.port,
     secure: config.smtp.secure,
     requireTLS: !config.smtp.secure,
+    connectionTimeout: 30_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 45_000,
     auth: {
       user: config.smtp.user,
       pass: config.smtp.password,

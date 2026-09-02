@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const {
+  DEFAULTS,
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
 } = require('../src/config/accountDeletion');
@@ -32,7 +33,23 @@ test('web form is disabled by default and enabled configuration fails fast when 
   const enabled = readAccountDeletionConfig({ ACCOUNT_DELETION_WEB_FORM_ENABLED: 'true' });
   const errors = validateAccountDeletionConfig(enabled, { production: true });
   assert.ok(errors.some(message => message.includes('PUBLIC_BASE_URL')));
+  assert.ok(errors.some(message => message.includes('TOKEN_SECRET')));
   assert.ok(errors.some(message => message.includes('SMTP_HOST')));
+});
+
+test('worker configuration accepts only positive values within operational bounds', () => {
+  const config = readAccountDeletionConfig({
+    ACCOUNT_DELETION_WORKER_POLL_MS: '0',
+    ACCOUNT_DELETION_WORKER_BATCH_SIZE: '101',
+    ACCOUNT_DELETION_WORKER_LEASE_SECONDS: '-1',
+    ACCOUNT_DELETION_EMAIL_MAX_ATTEMPTS: '999',
+    ACCOUNT_DELETION_CLEANUP_INTERVAL_MS: 'not-a-number',
+  });
+  assert.equal(config.workerPollMs, DEFAULTS.workerPollMs);
+  assert.equal(config.workerBatchSize, DEFAULTS.workerBatchSize);
+  assert.equal(config.workerLeaseSeconds, DEFAULTS.workerLeaseSeconds);
+  assert.equal(config.emailMaxAttempts, DEFAULTS.emailMaxAttempts);
+  assert.equal(config.cleanupIntervalMs, DEFAULTS.cleanupIntervalMs);
 });
 
 test('request response is generic for existing and missing accounts and observes minimum delay', async () => {
@@ -55,17 +72,19 @@ test('request response is generic for existing and missing accounts and observes
   }
 });
 
-test('SMTP failure logging excludes the submitted email and token', async () => {
+test('request failure logging excludes the submitted email and token', async () => {
   const logs = [];
   const controller = createAccountDeletionController({
     config: { enabled: true, minimumResponseMs: 0 }, mailer: {},
-    requestDeletion: async () => ({ accepted: true, deliveryErrorCode: 'ECONNECTION' }),
+    requestDeletion: async () => {
+      throw Object.assign(new Error('private@example.com token-value'), { code: 'ER_LOCK_WAIT_TIMEOUT' });
+    },
     logger: { error: (...items) => logs.push(items) },
   });
   const res = responseRecorder();
   await controller.request({ body: { email: 'private@example.com', locale: 'ko' } }, res);
   const serialized = JSON.stringify(logs);
-  assert.match(serialized, /ECONNECTION/);
+  assert.match(serialized, /ER_LOCK_WAIT_TIMEOUT/);
   assert.doesNotMatch(serialized, /private@example\.com|token/i);
 });
 

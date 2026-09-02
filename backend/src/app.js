@@ -13,8 +13,23 @@ const coursesRoutes = require('./routes/courses');
 const aiRoutes = require('./routes/ai');
 const usersRoutes = require('./routes/users');
 const { createAccountDeletionRouter } = require('./routes/accountDeletion');
+const {
+  readAccountDeletionConfig,
+  validateAccountDeletionConfig,
+} = require('./config/accountDeletion');
+const { createAccountDeletionMailer } = require('./services/accountDeletionEmailService');
+const {
+  startAccountDeletionEmailWorker,
+} = require('./services/accountDeletionEmailWorker');
 
 const app = express();
+const accountDeletionConfig = readAccountDeletionConfig();
+const accountDeletionConfigErrors = validateAccountDeletionConfig(accountDeletionConfig);
+if (accountDeletionConfigErrors.length > 0) {
+  throw new Error(
+    `Invalid account deletion web form configuration: ${accountDeletionConfigErrors.join('; ')}`,
+  );
+}
 
 app.use(cors({
   exposedHeaders: [
@@ -43,7 +58,7 @@ app.get('/account-deletion', accountDeletionPageHeaders, (_req, res) => {
 app.get('/account-deletion/confirm', accountDeletionPageHeaders, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'confirm.html'));
 });
-app.use('/account-deletion', createAccountDeletionRouter());
+app.use('/account-deletion', createAccountDeletionRouter({ config: accountDeletionConfig }));
 app.use(express.json());
 app.get('/privacy-policy', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy', 'index.html'));
@@ -68,6 +83,21 @@ app.use('/ai', aiRoutes);
 app.use('/users', usersRoutes);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);
 });
+
+const accountDeletionWorker = accountDeletionConfig.enabled
+  ? startAccountDeletionEmailWorker({
+    config: accountDeletionConfig,
+    mailer: createAccountDeletionMailer(accountDeletionConfig),
+  })
+  : null;
+
+async function shutdown() {
+  await accountDeletionWorker?.stop();
+  server.close();
+}
+
+process.once('SIGTERM', shutdown);
+process.once('SIGINT', shutdown);

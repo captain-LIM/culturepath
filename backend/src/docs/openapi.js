@@ -424,15 +424,15 @@ module.exports = Object.freeze({
       post: {
         tags: ['Account deletion'],
         summary: '계정 삭제 확인 메일 요청',
-        description: '계정 존재 여부를 노출하지 않는 동일한 202 응답을 반환합니다. 이메일 확인 전에는 계정이 삭제되지 않습니다. 비밀번호, Google 토큰 또는 앱 인증 토큰은 받지 않습니다.',
+        description: '계정 존재 여부를 노출하지 않는 동일한 202 응답을 메일 아웃박스 기록 직후 반환합니다. SMTP 발송은 백그라운드 워커가 처리하며 이메일 확인 전에는 계정이 삭제되지 않습니다. 비밀번호, Google 토큰 또는 앱 인증 토큰은 받지 않습니다.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/AccountDeletionRequest' } } },
         },
         responses: {
-          202: { description: '요청 접수(계정 존재 여부와 메일 발송 여부를 공개하지 않음)' },
+          202: { description: '메일 아웃박스 요청 접수(계정 존재 여부와 실제 메일 발송 여부를 공개하지 않음)' },
           400: { description: '입력 형식 오류' },
-          429: { description: 'IP 요청 제한 초과' },
+          429: { description: '계정 삭제 메일 요청 전용 IP 제한 초과' },
           503: { description: '기능 비활성화 또는 일시적 서비스 불가' },
         },
       },
@@ -441,7 +441,7 @@ module.exports = Object.freeze({
       post: {
         tags: ['Account deletion'],
         summary: '확인된 계정 영구 삭제',
-        description: '이메일로 받은 일회용 토큰과 명시적 확인 값을 검증한 후 기존 앱 내 탈퇴와 동일한 트랜잭션으로 계정 및 관련 데이터를 삭제합니다.',
+        description: '백그라운드 워커가 발송 완료로 표시한 일회용 이메일 토큰과 명시적 확인 값을 검증한 후 기존 앱 내 탈퇴와 동일한 트랜잭션으로 계정 및 관련 데이터를 삭제합니다. 토큰은 한 번만 사용할 수 있습니다.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/AccountDeletionConfirmation' } } },
@@ -450,7 +450,7 @@ module.exports = Object.freeze({
           200: { description: '계정과 관련 데이터 삭제 완료' },
           400: { description: '토큰 또는 확인 값이 잘못되었거나 토큰이 만료됨' },
           403: { description: '교차 사이트 브라우저 요청 거부' },
-          429: { description: 'IP 요청 제한 초과' },
+          429: { description: '확인 요청 전용 IP 제한 초과(메일 요청 제한과 별도 버킷)' },
           503: { description: '기능 비활성화 또는 일시적 서비스 불가' },
         },
       },

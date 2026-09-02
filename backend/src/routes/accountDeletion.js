@@ -8,7 +8,6 @@ const {
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
 } = require('../config/accountDeletion');
-const { createAccountDeletionMailer } = require('../services/accountDeletionEmailService');
 const { createAccountDeletionController } = require('../controllers/accountDeletionController');
 
 function validate(req, res, next) {
@@ -42,8 +41,7 @@ function createAccountDeletionRouter(options = {}) {
   if (errors.length > 0) {
     throw new Error(`Invalid account deletion web form configuration: ${errors.join('; ')}`);
   }
-  const mailer = options.mailer || (config.enabled ? createAccountDeletionMailer(config) : null);
-  const controller = options.controller || createAccountDeletionController({ config, mailer });
+  const controller = options.controller || createAccountDeletionController({ config });
   const router = express.Router();
   const keyGenerator = options.keyGenerator || (req => resolveClientIp(req));
   const requestLimiter = createRateLimit({

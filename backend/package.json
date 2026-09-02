@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js",
     "migrate": "node scripts/migrate.js",
     "migrate:list": "node scripts/migrate.js --list",
+    "account-deletion:cleanup": "node scripts/cleanupAccountDeletionRequests.js",
     "rag:audit-live-fixture": "node scripts/auditRagLiveFixture.js",
     "rag:seed-live-fixture": "node scripts/seedRagLiveFixture.js",
     "rag:evaluate": "node scripts/evaluateRag.js",

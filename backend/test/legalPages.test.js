@@ -36,9 +36,13 @@ test('publishes complete privacy and terms pages at stable HTTPS app paths', () 
   assert.match(privacy, /회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제/);
   assert.match(privacy, /report content, reasons, and linked session identifiers are deleted/);
   assert.match(privacy, /계정 삭제 확인 기록/);
-  assert.match(privacy, /확인 링크는 발급 후 30분간 유효/);
+  assert.match(privacy, /확인 링크는 메일 발송 완료 후 30분간 유효/);
+  assert.match(privacy, /요청 후 24시간이 지나면 정기 정리/);
+  assert.match(privacy, /무작위 값은 발송 성공 또는 최종 실패 시 삭제/);
   assert.match(privacy, /Account deletion verification/);
-  assert.match(privacy, /confirmation links are valid for 30 minutes/);
+  assert.match(privacy, /confirmation links remain valid for 30 minutes after email delivery succeeds/);
+  assert.match(privacy, /periodically removed after 24 hours from the request/);
+  assert.match(privacy, /random delivery value is removed after successful delivery or final delivery failure/);
   assert.match(privacy, /アカウント削除確認記録/);
   assert.match(privacy, /账号删除验证记录/);
   assert.match(privacy, /계정 삭제 확인 메일 발송\(Gmail SMTP\)/);

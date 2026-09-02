@@ -9,11 +9,29 @@ const DEFAULTS = Object.freeze({
   confirmRateLimitWindowMs: 900000,
   confirmRateLimitMaxRequests: 10,
   minimumResponseMs: 600,
+  workerPollMs: 5000,
+  workerBatchSize: 10,
+  workerLeaseSeconds: 60,
+  emailMaxAttempts: 3,
+  cleanupIntervalMs: 300000,
+});
+
+const UPPER_LIMITS = Object.freeze({
+  workerPollMs: 3_600_000,
+  workerBatchSize: 100,
+  workerLeaseSeconds: 3_600,
+  emailMaxAttempts: 10,
+  cleanupIntervalMs: 86_400_000,
 });
 
 function positiveInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function boundedPositiveInteger(value, fallback, maximum) {
+  const parsed = positiveInteger(value, fallback);
+  return parsed <= maximum ? parsed : fallback;
 }
 
 function enabled(value) {
@@ -56,6 +74,32 @@ function readAccountDeletionConfig(env = process.env) {
       env.ACCOUNT_DELETION_MINIMUM_RESPONSE_MS,
       DEFAULTS.minimumResponseMs,
     ),
+    tokenSecret: String(env.ACCOUNT_DELETION_TOKEN_SECRET || ''),
+    workerPollMs: boundedPositiveInteger(
+      env.ACCOUNT_DELETION_WORKER_POLL_MS,
+      DEFAULTS.workerPollMs,
+      UPPER_LIMITS.workerPollMs,
+    ),
+    workerBatchSize: boundedPositiveInteger(
+      env.ACCOUNT_DELETION_WORKER_BATCH_SIZE,
+      DEFAULTS.workerBatchSize,
+      UPPER_LIMITS.workerBatchSize,
+    ),
+    workerLeaseSeconds: boundedPositiveInteger(
+      env.ACCOUNT_DELETION_WORKER_LEASE_SECONDS,
+      DEFAULTS.workerLeaseSeconds,
+      UPPER_LIMITS.workerLeaseSeconds,
+    ),
+    emailMaxAttempts: boundedPositiveInteger(
+      env.ACCOUNT_DELETION_EMAIL_MAX_ATTEMPTS,
+      DEFAULTS.emailMaxAttempts,
+      UPPER_LIMITS.emailMaxAttempts,
+    ),
+    cleanupIntervalMs: boundedPositiveInteger(
+      env.ACCOUNT_DELETION_CLEANUP_INTERVAL_MS,
+      DEFAULTS.cleanupIntervalMs,
+      UPPER_LIMITS.cleanupIntervalMs,
+    ),
     smtp: {
       host: String(env.ACCOUNT_DELETION_SMTP_HOST || '').trim(),
       port: positiveInteger(env.ACCOUNT_DELETION_SMTP_PORT, 587),
@@ -81,6 +125,9 @@ function validateAccountDeletionConfig(config, options = {}) {
   if (baseUrl && production && baseUrl.protocol !== 'https:') {
     errors.push('ACCOUNT_DELETION_PUBLIC_BASE_URL must use HTTPS in production');
   }
+  if (Buffer.byteLength(config.tokenSecret || '', 'utf8') < 32) {
+    errors.push('ACCOUNT_DELETION_TOKEN_SECRET must be at least 32 bytes');
+  }
   for (const [name, value] of [
     ['ACCOUNT_DELETION_SMTP_HOST', config.smtp.host],
     ['ACCOUNT_DELETION_SMTP_USER', config.smtp.user],
@@ -94,6 +141,7 @@ function validateAccountDeletionConfig(config, options = {}) {
 
 module.exports = {
   DEFAULTS,
+  UPPER_LIMITS,
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
 };

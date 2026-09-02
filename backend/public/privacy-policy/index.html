@@ -175,7 +175,7 @@
       <tr><td>계정</td><td>이메일 주소, 비밀번호(해시 저장), 닉네임</td><td>회원가입 시 이용자 입력</td></tr>
       <tr><td>소셜 로그인</td><td>Google 계정 식별자, 이메일, 프로필 이름</td><td>Google 로그인 이용 시</td></tr>
       <tr><td>서비스 이용 기록</td><td>생성·저장·좋아요한 코스, 코스 완주 기록, AI 어시스턴트에 입력한 대화 내용, AI 답변 신고 내용·사유·연결된 세션 식별정보</td><td>서비스 이용 중 자동 생성</td></tr>
-      <tr><td>계정 삭제 확인 기록</td><td>계정 식별자, 일회용 확인 토큰의 해시, 요청 언어·요청 및 만료 시각·발송 횟수</td><td>외부 계정 삭제 웹페이지 이용 시 생성</td></tr>
+      <tr><td>계정 삭제 확인 기록</td><td>계정 식별자, 일회용 확인 토큰의 해시, 메일 발송 전까지 보관하는 무작위 값, 요청 언어·요청 및 만료 시각·발송 횟수·발송 상태</td><td>외부 계정 삭제 웹페이지 이용 시 생성</td></tr>
       <tr><td>기기·접속 정보</td><td>IP 주소, 접속 일시, 오류 로그, 앱 버전, OS 정보, 언어 설정</td><td>서비스 이용 중 자동 수집</td></tr>
       <tr><td>위치정보</td><td>단말기의 대략적/정밀 위치</td><td>지도 화면에서 이용자가 권한을 허용한 경우에 한함</td></tr>
     </table>
@@ -208,7 +208,7 @@
     <li>계정 정보: 회원 탈퇴 시 지체 없이 파기</li>
     <li>AI 대화 내용: 데이터베이스에 저장하지 않으며, 대화 세션 종료 시 또는 최대 30분간 활동이 없으면 서버 메모리에서 자동 파기</li>
     <li>AI 신고: 계정 유지 중 신고 검토와 악용 방지를 위해 처리하며, 회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제합니다.</li>
-    <li>계정 삭제 확인 기록: 확인 링크는 발급 후 30분간 유효하며, 기록은 재발송 제한과 악용 방지를 위해 최대 24시간 처리됩니다. 계정 삭제 시에는 즉시 함께 삭제됩니다. 원문 토큰은 저장하지 않습니다.</li>
+    <li>계정 삭제 확인 기록: 확인 링크는 메일 발송 완료 후 30분간 유효합니다. 기록은 재발송 제한과 악용 방지를 위해 요청 후 24시간이 지나면 정기 정리되며, 계정 삭제 시에는 즉시 함께 삭제됩니다. 메일 발송용 무작위 값은 발송 성공 또는 최종 실패 시 삭제하고 원문 토큰은 저장하지 않습니다.</li>
     <li>접속·오류 로그: 별도로 영구 보관하지 않으며, 호스팅 사업자(Railway)의 표준 운영 로그 정책에 따라 관리</li>
     <li>관계 법령에서 별도 보관을 요구하는 경우 해당 기간 동안 보관</li>
   </ul>
@@ -242,7 +242,7 @@
       <tr><td>Account</td><td>Email address, password (stored hashed), nickname</td><td>Entered by you at sign-up</td></tr>
       <tr><td>Social login</td><td>Google account identifier, email, profile name</td><td>When you sign in with Google</td></tr>
       <tr><td>Usage records</td><td>Courses you create, save, or like; course completion records; messages you send to the AI assistant; AI reply report content, reasons, and linked session identifiers</td><td>Generated as you use the Service</td></tr>
-      <tr><td>Account deletion verification</td><td>Account identifier, hash of a one-time confirmation token, request language, request/expiry timestamps, and send count</td><td>Generated when you use the external account deletion page</td></tr>
+      <tr><td>Account deletion verification</td><td>Account identifier, hash of a one-time confirmation token, a random value retained until email delivery, request language, request/expiry timestamps, send count, and delivery status</td><td>Generated when you use the external account deletion page</td></tr>
       <tr><td>Device &amp; log data</td><td>IP address, access timestamps, error logs, app version, OS info, language setting</td><td>Collected automatically</td></tr>
       <tr><td>Location</td><td>Approximate / precise device location</td><td>Only if you grant permission on the map screen</td></tr>
     </table>
@@ -275,7 +275,7 @@
     <li>Account data: deleted without undue delay when you delete your account</li>
     <li>AI conversation content: never written to a database; automatically discarded from server memory when a session ends or after 30 minutes of inactivity</li>
     <li>AI reports: processed for report review and abuse prevention while the account remains active; report content, reasons, and linked session identifiers are deleted when the account is deleted.</li>
-    <li>Account deletion verification: confirmation links are valid for 30 minutes. Records are processed for resend limits and abuse prevention for up to 24 hours, and are deleted immediately with the account. Raw tokens are never stored.</li>
+    <li>Account deletion verification: confirmation links remain valid for 30 minutes after email delivery succeeds. Records are periodically removed after 24 hours from the request for resend limits and abuse prevention, and are deleted immediately with the account. The random delivery value is removed after successful delivery or final delivery failure, and raw tokens are never stored.</li>
     <li>Access and error logs: not permanently retained by us; handled under our hosting provider's (Railway) standard operational log policy</li>
     <li>Retained longer only where required by applicable law</li>
   </ul>
@@ -309,7 +309,7 @@
       <tr><td>アカウント</td><td>メールアドレス、パスワード（ハッシュ化して保存）、ニックネーム</td><td>会員登録時に利用者が入力</td></tr>
       <tr><td>ソーシャルログイン</td><td>Googleアカウント識別子、メールアドレス、プロフィール名</td><td>Googleログイン利用時</td></tr>
       <tr><td>サービス利用記録</td><td>作成・保存・「いいね」したコース、コース完走記録、AIアシスタントに入力した会話内容、AI回答の報告内容・理由・関連セッション識別情報</td><td>サービス利用中に自動生成</td></tr>
-      <tr><td>アカウント削除確認記録</td><td>アカウント識別子、ワンタイム確認トークンのハッシュ、リクエスト言語、リクエスト・有効期限、送信回数</td><td>外部アカウント削除ページ利用時に生成</td></tr>
+      <tr><td>アカウント削除確認記録</td><td>アカウント識別子、ワンタイム確認トークンのハッシュ、メール送信まで保持するランダム値、リクエスト言語、リクエスト・有効期限、送信回数・送信状態</td><td>外部アカウント削除ページ利用時に生成</td></tr>
       <tr><td>端末・接続情報</td><td>IPアドレス、接続日時、エラーログ、アプリバージョン、OS情報、言語設定</td><td>サービス利用中に自動収集</td></tr>
       <tr><td>位置情報</td><td>端末のおおよそ/正確な位置</td><td>地図画面で利用者が権限を許可した場合のみ</td></tr>
     </table>
@@ -342,7 +342,7 @@
     <li>アカウント情報: 退会時に遅滞なく破棄</li>
     <li>AI会話内容: データベースには保存せず、会話セッション終了時または最大30分間操作がない場合、サーバーメモリから自動的に破棄</li>
     <li>AI報告: アカウント存続中は報告確認と不正利用防止のために処理し、退会時に報告内容・理由・関連セッション識別情報を削除</li>
-    <li>アカウント削除確認記録: 確認リンクは発行後30分間有効です。再送制限と不正利用防止のため記録を最大24時間処理し、アカウント削除時には直ちに併せて削除します。元のトークンは保存しません。</li>
+    <li>アカウント削除確認記録: 確認リンクはメール送信完了後30分間有効です。再送制限と不正利用防止のため、記録はリクエストから24時間経過後に定期削除し、アカウント削除時には直ちに併せて削除します。送信用ランダム値は送信成功または最終失敗時に削除し、元のトークンは保存しません。</li>
     <li>接続・エラーログ: 個別に永続保存せず、ホスティング事業者(Railway)の標準運用ログポリシーに従って管理</li>
     <li>関連法令が別途保管を求める場合、その期間保管</li>
   </ul>
@@ -376,7 +376,7 @@
       <tr><td>账户</td><td>电子邮箱地址、密码（以哈希形式存储）、昵称</td><td>注册时由用户输入</td></tr>
       <tr><td>社交登录</td><td>Google账户标识符、电子邮箱、个人资料姓名</td><td>使用Google登录时</td></tr>
       <tr><td>服务使用记录</td><td>创建、保存、点赞的路线，路线完成记录，输入AI助手的对话内容，AI回复举报内容、理由及关联会话标识符</td><td>使用服务过程中自动生成</td></tr>
-      <tr><td>账号删除验证记录</td><td>账号标识符、一次性确认令牌的哈希、请求语言、请求及到期时间、发送次数</td><td>使用外部账号删除页面时生成</td></tr>
+      <tr><td>账号删除验证记录</td><td>账号标识符、一次性确认令牌的哈希、邮件发送前保留的随机值、请求语言、请求及到期时间、发送次数和发送状态</td><td>使用外部账号删除页面时生成</td></tr>
       <tr><td>设备与接入信息</td><td>IP地址、接入时间、错误日志、应用版本、操作系统信息、语言设置</td><td>使用服务过程中自动收集</td></tr>
       <tr><td>位置信息</td><td>设备的大致/精确位置</td><td>仅在地图页面用户授权时收集</td></tr>
     </table>
@@ -409,7 +409,7 @@
     <li>账户信息：注销账户后立即删除，不作延迟</li>
     <li>AI对话内容：不存储于数据库，在对话会话结束时或最长30分钟无操作后自动从服务器内存中删除</li>
     <li>AI举报：账户存续期间用于举报审核和防止滥用；注销账户时删除举报内容、理由及关联会话标识符</li>
-    <li>账号删除验证记录：确认链接发出后30分钟内有效。记录为限制重复发送和防止滥用最多处理24小时，并在删除账号时立即一并删除。不会存储原始令牌。</li>
+    <li>账号删除验证记录：确认链接在邮件发送成功后30分钟内有效。为限制重复发送和防止滥用，记录会在请求满24小时后定期清理，并在删除账号时立即一并删除。发送成功或最终失败后会删除用于发送的随机值，且不会存储原始令牌。</li>
     <li>接入及错误日志：本服务不作长期保存，按托管服务商（Railway）的标准运营日志政策处理</li>
     <li>相关法律法规另有要求保存的，按该期限保存</li>
   </ul>
