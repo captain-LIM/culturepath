@@ -13,6 +13,8 @@ const {
   createAccountDeletionController,
 } = require('../src/controllers/accountDeletionController');
 const { requireSameOrigin } = require('../src/routes/accountDeletion');
+const { resolveClientIp } = require('../src/middleware/clientIp');
+const { createRateLimit } = require('../src/middleware/rateLimit');
 
 function responseRecorder() {
   return {
@@ -105,6 +107,38 @@ test('confirmation rejects cross-site browser requests', () => {
   }
 });
 
+test('uses Railway X-Real-IP only in Railway and ignores forged forwarding chains', () => {
+  const railwayRequest = {
+    headers: {
+      'x-real-ip': '203.0.113.7',
+      'x-forwarded-for': '198.51.100.1',
+    },
+    socket: { remoteAddress: '10.0.0.2' },
+  };
+  assert.equal(
+    resolveClientIp(railwayRequest, { RAILWAY_ENVIRONMENT_ID: 'production-id' }),
+    '203.0.113.7',
+  );
+  assert.equal(resolveClientIp(railwayRequest, {}), '10.0.0.2');
+  assert.equal(resolveClientIp({
+    headers: { 'x-real-ip': '203.0.113.7, 198.51.100.1' },
+    socket: { remoteAddress: '::ffff:192.0.2.8' },
+  }, { RAILWAY_ENVIRONMENT_ID: 'production-id' }), '192.0.2.8');
+});
+
+test('request and confirmation rate limits use independent buckets', () => {
+  const keyGenerator = () => '203.0.113.7';
+  const requestLimit = createRateLimit({ max: 1, keyGenerator });
+  const confirmLimit = createRateLimit({ max: 1, keyGenerator });
+  let requests = 0;
+  let confirmations = 0;
+  requestLimit({}, responseRecorder(), () => { requests += 1; });
+  requestLimit({}, responseRecorder(), () => { requests += 1; });
+  confirmLimit({}, responseRecorder(), () => { confirmations += 1; });
+  assert.equal(requests, 1);
+  assert.equal(confirmations, 1);
+});
+
 test('public pages implement a two-step form with mail fallback and no GET mutation', () => {
   const root = path.join(__dirname, '..');
   const requestPage = fs.readFileSync(path.join(root, 'public', 'account-deletion', 'index.html'), 'utf8');
@@ -123,4 +157,6 @@ test('public pages implement a two-step form with mail fallback and no GET mutat
   assert.doesNotMatch(app, /app\.get\([^\n]*delete/i);
   assert.match(route, /body\('email'\)\.isEmail/);
   assert.match(route, /body\('confirmation'\)\.equals\('DELETE'\)/);
+  assert.match(route, /const requestLimiter = createRateLimit/);
+  assert.match(route, /const confirmLimiter = createRateLimit/);
 });

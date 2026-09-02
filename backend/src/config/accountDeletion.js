@@ -6,6 +6,8 @@ const DEFAULTS = Object.freeze({
   maxSendsPerDay: 3,
   rateLimitWindowMs: 900000,
   rateLimitMaxRequests: 5,
+  confirmRateLimitWindowMs: 900000,
+  confirmRateLimitMaxRequests: 10,
   minimumResponseMs: 600,
 });
 
@@ -41,6 +43,14 @@ function readAccountDeletionConfig(env = process.env) {
     rateLimitMaxRequests: positiveInteger(
       env.ACCOUNT_DELETION_RATE_LIMIT_MAX_REQUESTS,
       DEFAULTS.rateLimitMaxRequests,
+    ),
+    confirmRateLimitWindowMs: positiveInteger(
+      env.ACCOUNT_DELETION_CONFIRM_RATE_LIMIT_WINDOW_MS,
+      DEFAULTS.confirmRateLimitWindowMs,
+    ),
+    confirmRateLimitMaxRequests: positiveInteger(
+      env.ACCOUNT_DELETION_CONFIRM_RATE_LIMIT_MAX_REQUESTS,
+      DEFAULTS.confirmRateLimitMaxRequests,
     ),
     minimumResponseMs: positiveInteger(
       env.ACCOUNT_DELETION_MINIMUM_RESPONSE_MS,

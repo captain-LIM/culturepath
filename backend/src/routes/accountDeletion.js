@@ -3,6 +3,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { createRateLimit } = require('../middleware/rateLimit');
+const { resolveClientIp } = require('../middleware/clientIp');
 const {
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
@@ -44,10 +45,18 @@ function createAccountDeletionRouter(options = {}) {
   const mailer = options.mailer || (config.enabled ? createAccountDeletionMailer(config) : null);
   const controller = options.controller || createAccountDeletionController({ config, mailer });
   const router = express.Router();
-  const limiter = createRateLimit({
+  const keyGenerator = options.keyGenerator || (req => resolveClientIp(req));
+  const requestLimiter = createRateLimit({
     windowMs: config.rateLimitWindowMs,
     max: config.rateLimitMaxRequests,
+    keyGenerator,
     message: 'Too many account deletion requests. Please try again later.',
+  });
+  const confirmLimiter = createRateLimit({
+    windowMs: config.confirmRateLimitWindowMs,
+    max: config.confirmRateLimitMaxRequests,
+    keyGenerator,
+    message: 'Too many account deletion confirmations. Please try again later.',
   });
   const sameOrigin = requireSameOrigin(config.publicBaseUrl);
 
@@ -60,7 +69,7 @@ function createAccountDeletionRouter(options = {}) {
   router.use(express.urlencoded({ extended: false, limit: '10kb' }));
   router.post(
     '/requests',
-    limiter,
+    requestLimiter,
     [
       body('email').isEmail().isLength({ max: 254 }),
       body('locale').optional().isIn(['ko', 'en', 'ja', 'zh']),
@@ -72,7 +81,7 @@ function createAccountDeletionRouter(options = {}) {
   router.post(
     '/confirm',
     sameOrigin,
-    limiter,
+    confirmLimiter,
     [
       body('token').isString().matches(/^[A-Za-z0-9_-]{43}$/),
       body('confirmation').equals('DELETE'),
