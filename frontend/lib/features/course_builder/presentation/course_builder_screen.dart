@@ -353,7 +353,9 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 100),
                     itemCount: course.tracks[_activeTrack].places.length,
-                    onReorderItem: (o, n) =>
+                    // Flutter 3.41 CI still exposes only onReorder.
+                    // ignore: deprecated_member_use
+                    onReorder: (o, n) =>
                         notifier.reorder(_activeTrack, o, n),
                     itemBuilder: (_, i) {
                       final place = course.tracks[_activeTrack].places[i];
