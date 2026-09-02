@@ -290,6 +290,37 @@ module.exports = Object.freeze({
         },
       },
     },
+    '/ai/reports': {
+      post: {
+        tags: ['AI'],
+        summary: 'Report an AI-generated reply without leaving the app',
+        description:
+          'Stores an authenticated user report for developer moderation. The reporter reference is anonymized if the account is later deleted.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AiContentReportRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Report accepted for moderation',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AiContentReportResponse' },
+              },
+            },
+          },
+          400: { description: 'Invalid report payload' },
+          401: { description: 'Authentication required' },
+          429: { description: 'Report rate limit exceeded' },
+          500: { description: 'Report persistence failed' },
+        },
+      },
+    },
     '/ai/chat/sessions': {
       delete: {
         tags: ['AI'],
@@ -814,6 +845,25 @@ module.exports = Object.freeze({
             maxItems: 20,
             items: { $ref: '#/components/schemas/AiChatMessage' },
           },
+        },
+      },
+      AiContentReportRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['content'],
+        properties: {
+          sessionId: { type: 'string', format: 'uuid', nullable: true },
+          content: { type: 'string', minLength: 1, maxLength: 10000 },
+          reason: { type: 'string', maxLength: 500, nullable: true },
+        },
+      },
+      AiContentReportResponse: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'status'],
+        properties: {
+          id: { type: 'integer', minimum: 1 },
+          status: { type: 'string', enum: ['received'] },
         },
       },
       AiChatResponse: {

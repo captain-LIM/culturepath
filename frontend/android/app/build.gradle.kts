@@ -15,16 +15,44 @@ val localProperties = Properties().apply {
     }
 }
 
-// 릴리스 서명 설정. android/key.properties 가 있으면 그 키스토어로 서명하고,
-// 없으면(로컬 개발·CI 기본) debug 키로 서명해 `flutter run --release` 가 계속 동작한다.
-// key.properties 와 *.jks 는 .gitignore 로 저장소에서 제외한다.
+// Play release builds must use an upload keystore. CI can explicitly opt into
+// debug signing only for compile verification; that artifact must never be uploaded.
 val keystoreProperties = Properties().apply {
-    val file = rootProject.file("key.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
+    val propertiesFile = rootProject.file("key.properties")
+    if (propertiesFile.exists()) {
+        propertiesFile.inputStream().use { load(it) }
     }
 }
-val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val missingReleaseSigningKeys = releaseSigningKeys.filter {
+    keystoreProperties.getProperty(it).isNullOrBlank()
+}
+val releaseKeystore = keystoreProperties.getProperty("storeFile")
+    ?.takeIf { it.isNotBlank() }
+    ?.let(rootProject::file)
+val hasReleaseKeystore = missingReleaseSigningKeys.isEmpty() && releaseKeystore?.isFile == true
+val allowDebugReleaseSigning = providers.gradleProperty("allowDebugReleaseSigning")
+    .orNull
+    ?.toBooleanStrictOrNull() == true
+
+gradle.taskGraph.whenReady {
+    val releaseRequested = allTasks.any {
+        it.name == "assembleRelease" || it.name == "bundleRelease"
+    }
+    if (releaseRequested && !hasReleaseKeystore && !allowDebugReleaseSigning) {
+        val detail = when {
+            missingReleaseSigningKeys.isNotEmpty() ->
+                "Missing key.properties values: ${missingReleaseSigningKeys.joinToString()}"
+            else -> "Keystore file does not exist: ${releaseKeystore?.path ?: "storeFile is missing"}"
+        }
+        throw org.gradle.api.GradleException(
+            "Release signing is not configured. $detail. " +
+                "Configure android/key.properties for Play uploads. " +
+                "For CI compile verification only, set " +
+                "ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true."
+        )
+    }
+}
 
 android {
     namespace = "com.culturepath.frontend"
@@ -64,11 +92,14 @@ android {
         release {
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
-            } else {
-                // key.properties 가 없을 때만 debug 키로 폴백한다. Play 업로드용 AAB 는
-                // 반드시 key.properties 를 설정한 상태에서 빌드해야 한다.
-                logger.warn("⚠️  android/key.properties 가 없어 release 빌드를 debug 키로 서명합니다. Play 업로드용이 아닙니다.")
+            } else if (allowDebugReleaseSigning) {
+                logger.warn(
+                    "CI-only debug signing is enabled for a release compile check. " +
+                        "Do not upload this artifact to Google Play."
+                )
                 signingConfigs.getByName("debug")
+            } else {
+                null
             }
         }
     }

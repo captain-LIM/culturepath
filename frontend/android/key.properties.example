@@ -11,3 +11,7 @@ storeFile=upload-keystore.jks
 storePassword=CHANGE_ME
 keyAlias=upload
 keyPassword=CHANGE_ME
+
+# Release builds fail when these values or the keystore are missing.
+# CI may explicitly set ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true only
+# for a compile check; that debug-signed artifact cannot be uploaded to Play.

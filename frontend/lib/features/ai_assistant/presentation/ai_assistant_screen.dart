@@ -2,8 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/app_info.dart';
-import '../../../core/services/link_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../course_builder/data/course_model.dart';
 import '../../course_builder/data/course_repository.dart';
@@ -19,13 +17,13 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
   final AiRepository _repository;
 
   _ChatNotifier(this._repository)
-      : super([
-          ChatMessage(
-            role: 'assistant',
-            content: tr('ai_welcome'),
-            timestamp: DateTime.now(),
-          ),
-        ]);
+    : super([
+        ChatMessage(
+          role: 'assistant',
+          content: tr('ai_welcome'),
+          timestamp: DateTime.now(),
+        ),
+      ]);
 
   bool _loading = false;
   bool get loading => _loading;
@@ -42,13 +40,20 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   Future<void> _request(String content, {required bool appendUser}) async {
-    final retained = state.where((message) => message.retryContent == null).toList();
+    final retained = state
+        .where((message) => message.retryContent == null)
+        .toList();
 
     state = [
       ...retained,
       if (appendUser)
         ChatMessage(role: 'user', content: content, timestamp: DateTime.now()),
-      ChatMessage(role: 'assistant', content: '', timestamp: DateTime.now(), isLoading: true),
+      ChatMessage(
+        role: 'assistant',
+        content: '',
+        timestamp: DateTime.now(),
+        isLoading: true,
+      ),
     ];
     _loading = true;
 
@@ -97,7 +102,10 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
         final seconds = failure.retryAfterSeconds;
         return seconds == null
             ? tr('ai_error_rate_limited')
-            : tr('ai_error_rate_limited_seconds', namedArgs: {'seconds': '$seconds'});
+            : tr(
+                'ai_error_rate_limited_seconds',
+                namedArgs: {'seconds': '$seconds'},
+              );
       case AiChatFailureType.serviceUnavailable:
         return tr('ai_error_service');
       case AiChatFailureType.network:
@@ -122,8 +130,8 @@ class _ChatNotifier extends StateNotifier<List<ChatMessage>> {
 
 final _chatProvider = StateNotifierProvider.autoDispose
     .family<_ChatNotifier, List<ChatMessage>, AiRepository>(
-  (ref, repository) => _ChatNotifier(repository),
-);
+      (ref, repository) => _ChatNotifier(repository),
+    );
 
 // ─── 빠른 질문 목록 ──────────────────────────────────────────────────────────
 
@@ -203,14 +211,14 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       await _openCourseBuilder(suggested);
     } on FormatException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ai_error'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ai_error'.tr())));
     } on TypeError {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ai_error'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ai_error'.tr())));
     }
   }
 
@@ -230,21 +238,26 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       draft = CourseItem(
         title: '${source.region} ${source.category} 코스'.trim(),
         description: '',
-        tracks: [CourseTrack(trackNumber: 1, places: [place])],
+        tracks: [
+          CourseTrack(trackNumber: 1, places: [place]),
+        ],
       );
     } else {
       final alreadyIncluded = original.tracks.any(
-        (track) => track.places.any((item) => item.contentId == source.contentId),
+        (track) =>
+            track.places.any((item) => item.contentId == source.contentId),
       );
       if (alreadyIncluded) {
         await _openCourseBuilder(original);
         return;
       }
       final tracks = original.tracks
-          .map((track) => CourseTrack(
-                trackNumber: track.trackNumber,
-                places: [...track.places],
-              ))
+          .map(
+            (track) => CourseTrack(
+              trackNumber: track.trackNumber,
+              places: [...track.places],
+            ),
+          )
           .toList(growable: false);
       tracks[0] = tracks[0].copyWith(places: [...tracks[0].places, place]);
       draft = original.copyWith(tracks: tracks);
@@ -254,11 +267,30 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   /// 부적절한 AI 답변 신고 (Google Play 생성형 AI 정책 요구 사항).
   Future<void> _reportMessage(ChatMessage message) async {
+    var reason = '';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('ai_report'.tr()),
-        content: Text('ai_report_confirm'.tr()),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('ai_report_confirm'.tr()),
+              const SizedBox(height: 16),
+              TextField(
+                key: const Key('ai-report-reason-field'),
+                onChanged: (value) => reason = value,
+                maxLength: AiRepository.maxReportReasonLength,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'ai_report_reason_hint'.tr(),
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -272,26 +304,32 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await LinkLauncher.sendEmail(
-      context,
-      to: AppInfo.supportEmail,
-      subject: 'ai_report_email_subject'.tr(),
-      body: 'ai_report_email_body'.tr(namedArgs: {
-        'content': message.content,
-        'session': _repository.sessionId ?? '-',
-      }),
-    );
+    try {
+      await _repository.reportContent(message.content, reason: reason);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ai_report_success'.tr())));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ai_report_failed'.tr())));
+      }
+    }
   }
 
   Future<void> _openCourseBuilder(CourseItem draft) async {
-    final saved = await Navigator.of(context, rootNavigator: true).push<CourseItem>(
-      MaterialPageRoute(
-        builder: (_) => CourseBuilderScreen(
-          initialCourse: draft,
-          aiOriginalCourse: _courseOriginal,
-        ),
-      ),
-    );
+    final saved = await Navigator.of(context, rootNavigator: true)
+        .push<CourseItem>(
+          MaterialPageRoute(
+            builder: (_) => CourseBuilderScreen(
+              initialCourse: draft,
+              aiOriginalCourse: _courseOriginal,
+            ),
+          ),
+        );
     if (saved?.id != null) {
       await _repository.markCourseSaved(saved!.id!);
       if (mounted) setState(() => _courseOriginal = saved);
@@ -333,17 +371,32 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                child: Text('AI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent)),
+                child: Text(
+                  'AI',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accent,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ai_title'.tr(),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                Text('ai_subtitle'.tr(),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(
+                  'ai_title'.tr(),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  'ai_subtitle'.tr(),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
           ],
@@ -366,7 +419,11 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.route_outlined, color: AppColors.accent, size: 18),
+                  const Icon(
+                    Icons.route_outlined,
+                    color: AppColors.accent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -407,7 +464,8 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                   onRetry: msg.retryContent == null
                       ? null
                       : () => notifier.retry(msg.retryContent!),
-                  onReport: (msg.role == 'assistant' &&
+                  onReport:
+                      (msg.role == 'assistant' &&
                           !msg.isLoading &&
                           msg.content.trim().isNotEmpty &&
                           msg.retryContent == null)
@@ -428,11 +486,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
             ),
           ),
-          _InputBar(
-            controller: _inputCtrl,
-            onSend: _send,
-            enabled: !loading,
-          ),
+          _InputBar(controller: _inputCtrl, onSend: _send, enabled: !loading),
         ],
       ),
     );
@@ -454,36 +508,53 @@ class _QuickPromptChips extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ai_quick_prompts'.tr(),
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+          Text(
+            'ai_quick_prompts'.tr(),
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: prompts.map((p) => GestureDetector(
-              onTap: () => onTap(p),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
+            children: prompts
+                .map(
+                  (p) => GestureDetector(
+                    onTap: () => onTap(p),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        p,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: Text(p,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    )),
-              ),
-            )).toList(),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -508,7 +579,12 @@ class _InputBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).viewInsets.bottom + 12),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        10,
+        16,
+        MediaQuery.of(context).viewInsets.bottom + 12,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -528,7 +604,10 @@ class _InputBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
             ),
           ),
@@ -540,14 +619,18 @@ class _InputBar extends StatelessWidget {
               onTap: enabled ? () => onSend(controller.text) : null,
               customBorder: const CircleBorder(),
               child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: enabled ? AppColors.primary : Colors.grey.shade300,
-                shape: BoxShape.circle,
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: enabled ? AppColors.primary : Colors.grey.shade300,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-            ),
             ),
           ),
         ],

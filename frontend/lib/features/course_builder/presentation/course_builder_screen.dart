@@ -353,7 +353,7 @@ class _CourseBuilderScreenState extends ConsumerState<CourseBuilderScreen> {
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 100),
                     itemCount: course.tracks[_activeTrack].places.length,
-                    onReorder: (o, n) =>
+                    onReorderItem: (o, n) =>
                         notifier.reorder(_activeTrack, o, n),
                     itemBuilder: (_, i) {
                       final place = course.tracks[_activeTrack].places[i];

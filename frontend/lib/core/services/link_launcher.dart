@@ -9,7 +9,8 @@ class LinkLauncher {
   /// https 링크를 외부 브라우저로 연다.
   static Future<void> openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
-    final ok = uri != null &&
+    final ok =
+        uri != null &&
         await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
       _notify(context, 'open_link_failed'.tr());
@@ -26,20 +27,26 @@ class LinkLauncher {
     final uri = Uri(
       scheme: 'mailto',
       path: to,
-      query: _encodeQuery({'subject': subject, if (body.isNotEmpty) 'body': body}),
+      query: _encodeQuery({
+        'subject': subject,
+        if (body.isNotEmpty) 'body': body,
+      }),
     );
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
-      _notify(context, 'ai_report_no_email'.tr(namedArgs: {'email': to}));
+      _notify(context, 'email_open_failed'.tr(namedArgs: {'email': to}));
     }
   }
 
   static String _encodeQuery(Map<String, String> params) => params.entries
-      .map((e) =>
-          '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+      .map(
+        (e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
+      )
       .join('&');
 
   static void _notify(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

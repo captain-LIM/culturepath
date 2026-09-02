@@ -11,9 +11,9 @@ Play Console → 스토어 설정 / 기본 스토어 등록정보에 입력할 �
 |---|---|
 | 카테고리 | 여행 및 지역정보 (Travel & Local) |
 | 태그 | 여행 계획, 문화, 지역 탐방, 코스 |
-| 개발자 연락처 이메일 | 【support@culturepath.app 등 실제 값】 |
-| 웹사이트 | 【선택: https://culturepath.app】 |
-| 개인정보처리방침 URL | 【docs/legal/privacy-policy.html 호스팅 주소】 |
+| 개발자 연락처 이메일 | culturepath.support@gmail.com |
+| 웹사이트 | 미입력 (공식 웹사이트 확정 전, 선택 항목) |
+| 개인정보처리방침 URL | https://culturepath-backend-production.up.railway.app/privacy-policy |
 
 ---
 

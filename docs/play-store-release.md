@@ -7,7 +7,7 @@
 
 ## 1. 빌드 · 서명
 
-- ✅ `android/app/build.gradle.kts`에 release signingConfig 추가. `android/key.properties`가 있으면 그 키로, 없으면 debug 키로 폴백(경고 출력).
+- ✅ `android/app/build.gradle.kts`에 release signingConfig 추가. 업로드 키가 없거나 불완전하면 release 빌드는 실패. CI 컴파일 검증만 `ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true`로 명시적 debug 서명 허용.
 - ✅ `android/key.properties.example` 템플릿 추가. `.gitignore`에 `key.properties`, `*.jks` 이미 포함.
 - ⬜ **업로드 키스토어 생성 후 안전한 곳에 백업** (분실 시 앱 업데이트 영구 불가):
   ```
@@ -21,24 +21,18 @@
 
 ## 2. 앱 내 기능 (Play 정책 대응) — 코드 반영 완료
 
-- ✅ **개인정보처리방침 · 이용약관 · 문의 링크**: `내 정보` 화면(게스트/로그인 모두)에 노출. `lib/core/app_info.dart`의 URL·이메일 상수를 **실제 값으로 교체 필요**.
-- ✅ **AI 답변 신고 수단** (생성형 AI 정책): AI 어시스턴트 말풍선 길게 누르면 신고 → 메일 발송. 신고 수신 주소는 `AppInfo.supportEmail`.
+- ✅ **개인정보처리방침 · 이용약관 · 문의 링크**: `내 정보` 화면(게스트/로그인 모두)에 노출. Railway 운영 URL과 `culturepath.support@gmail.com` 반영.
+- ✅ **AI 답변 신고 수단** (생성형 AI 정책): AI 어시스턴트 말풍선을 길게 눌러 사유를 입력하면 앱 내부 API로 접수되고 moderation DB에 저장.
 - ✅ **AI 부정확성 고지**: AI 화면 입력창 위 상시 문구.
 - ✅ **위치 권한 사전 안내**: 지도 화면에서 시스템 권한 팝업 전에 사용 목적 설명 다이얼로그, 거부해도 지도는 동작.
-- ⬜ **계정 삭제** (팀원 진행 중): 앱 내 회원 탈퇴 + 서버 데이터 삭제 + 웹 삭제 URL. Play 필수.
-- ⬜ `lib/core/app_info.dart` 값 교체:
-  - `privacyPolicyUrl` — 아래 3번에서 호스팅한 주소
-  - `termsOfServiceUrl` — 이용약관 호스팅 주소
-  - `supportEmail` — 실제 지원 이메일 (Console 개발자 연락처와 통일 권장)
+- ✅ **계정 삭제**: 앱 내 회원 탈퇴 + 서버 데이터 삭제 + `/account-deletion` 외부 안내 페이지 구현.
+- ✅ `lib/core/app_info.dart`에 운영 개인정보처리방침·약관 URL과 지원 이메일 반영.
 
 ## 3. 개인정보처리방침 · 약관
 
-- ✅ 초안: `docs/legal/privacy-policy.html` (한/영 토글). `【 】` 표시 항목 채우기:
-  개인정보 항목 = 이메일/비밀번호(해시)/닉네임, 구글 계정 식별자, 코스·완주·좋아요 기록, AI 대화 내용, IP·로그, (선택적) 위치.
-  위탁: Google(로그인·지도), 클라우드 호스팅사, AI 모델 제공업체.
-- ⬜ 시행일, 운영자 정보, 각 보관기간, AI 대화 보관기간, 호스팅사/AI 벤더명, 삭제요청 URL 기입.
-- ✅ 이용약관 초안: `docs/legal/terms-of-service.html` (한/영 토글, UGC 라이선스·금지행위·AI 면책·준거법 포함). `【 】` 항목(시행일, 운영자, 관할 법원, 이메일) 채우기.
-- ⬜ 두 문서 공개 URL로 호스팅 (GitHub Pages / Netlify / 회사 도메인 등). HTTP 아닌 **HTTPS**.
+- ✅ 개인정보처리방침: `backend/public/privacy-policy/index.html`. 계정·활동·AI 신고·기술정보, 위치의 기기 내 처리, Google/Railway/OpenRouter, 보유·삭제 기준과 외부 삭제 경로를 한/영으로 명시.
+- ✅ 이용약관: `backend/public/terms/index.html`. UGC 라이선스·금지행위·AI 면책·준거법을 한/영으로 명시.
+- ✅ Railway 운영 HTTPS 경로 `/privacy-policy`, `/terms`에서 공개하도록 백엔드 라우트 추가.
 - ⬜ Play Console → 앱 콘텐츠 → 개인정보처리방침 URL 입력.
 
 ## 4. Play Console — 앱 콘텐츠 / 데이터 안전
@@ -67,7 +61,7 @@
 
 ## 6. 스토어 등록정보 (자산)
 
-- ✅ 등록정보 문안 초안: `docs/store-listing.md` — 앱 이름, 짧은/자세한 설명(ko·en), 출시 노트, 카테고리·태그. `【 】` 이메일·URL 채우기.
+- ✅ 등록정보 문안 초안: `docs/store-listing.md` — 앱 이름, 짧은/자세한 설명(ko·en), 출시 노트, 카테고리·태그, 실제 이메일·개인정보처리방침 URL 반영.
 - ⬜ 앱 아이콘 512×512 PNG (디자인 자산 필요)
 - ⬜ 피처 그래픽 1024×500 (디자인 자산 필요)
 - ⬜ 폰 스크린샷 2~8장 (권장: 홈·탐색·코스·AI·지도)

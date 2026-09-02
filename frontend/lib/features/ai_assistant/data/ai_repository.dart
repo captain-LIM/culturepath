@@ -8,14 +8,16 @@ class AiRepository {
   static const maxChatMessages = 20;
   static const maxChatMessageLength = 2000;
   static const maxChatTotalLength = 8000;
+  static const maxReportContentLength = 10000;
+  static const maxReportReasonLength = 500;
 
   final ApiClient _client;
   int? _courseId;
   String? _sessionId;
 
   AiRepository({ApiClient? client, int? courseId})
-      : _client = client ?? apiClient,
-        _courseId = courseId;
+    : _client = client ?? apiClient,
+      _courseId = courseId;
 
   int? get courseId => _courseId;
   String? get sessionId => _sessionId;
@@ -32,24 +34,29 @@ class AiRepository {
         },
       });
       final data = res.data;
-      if (data is! Map<String, dynamic> || data['content'] is! String ||
-          (data['content'] as String).trim().isEmpty || data['sources'] is! List ||
-          data['sessionId'] is! String || data['action'] is! String) {
+      if (data is! Map<String, dynamic> ||
+          data['content'] is! String ||
+          (data['content'] as String).trim().isEmpty ||
+          data['sources'] is! List ||
+          data['sessionId'] is! String ||
+          data['action'] is! String) {
         throw const AiChatFailure(AiChatFailureType.invalidResponse);
       }
       final responseSessionId = (data['sessionId'] as String).trim();
       final action = (data['action'] as String).trim();
       if (!RegExp(
-              r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-              caseSensitive: false)
-              .hasMatch(responseSessionId) ||
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+            caseSensitive: false,
+          ).hasMatch(responseSessionId) ||
           action.isEmpty ||
           (_sessionId != null && _sessionId != responseSessionId)) {
         throw const AiChatFailure(AiChatFailureType.invalidResponse);
       }
       final sources = (data['sources'] as List)
           .map((item) {
-            if (item is! Map) throw const FormatException('Invalid chat source');
+            if (item is! Map) {
+              throw const FormatException('Invalid chat source');
+            }
             return ChatSource.fromJson(item.cast<String, dynamic>());
           })
           .toList(growable: false);
@@ -104,6 +111,31 @@ class AiRepository {
     }
   }
 
+  Future<void> reportContent(String content, {String reason = ''}) async {
+    final normalizedContent = content.trim();
+    final normalizedReason = reason.trim();
+    if (normalizedContent.isEmpty ||
+        normalizedContent.length > maxReportContentLength) {
+      throw ArgumentError.value(content, 'content', 'Invalid report content');
+    }
+    if (normalizedReason.length > maxReportReasonLength) {
+      throw ArgumentError.value(reason, 'reason', 'Report reason is too long');
+    }
+
+    final response = await _client.post('/ai/reports', {
+      if (_sessionId != null) 'sessionId': _sessionId,
+      'content': normalizedContent,
+      if (normalizedReason.isNotEmpty) 'reason': normalizedReason,
+    });
+    final data = response.data;
+    if (data is! Map ||
+        data['id'] is! num ||
+        (data['id'] as num).toInt() <= 0 ||
+        data['status'] != 'received') {
+      throw const FormatException('Invalid AI report response');
+    }
+  }
+
   List<Map<String, dynamic>> _boundedChatMessages(List<ChatMessage> history) {
     final selected = <Map<String, dynamic>>[];
     var totalLength = 0;
@@ -152,7 +184,10 @@ class AiRepository {
     return const AiChatFailure(AiChatFailureType.unknown);
   }
 
-  Future<CourseEditResult> editCourse(CourseItem course, String userRequest) async {
+  Future<CourseEditResult> editCourse(
+    CourseItem course,
+    String userRequest,
+  ) async {
     try {
       final res = await _client.post('/ai/transform', {
         'courseId': course.id,
@@ -191,7 +226,9 @@ class AiRepository {
       );
     }
     if (status == 502 || status == 503 || status == 504) {
-      return const AiTransformFailure(AiTransformFailureType.serviceUnavailable);
+      return const AiTransformFailure(
+        AiTransformFailureType.serviceUnavailable,
+      );
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||

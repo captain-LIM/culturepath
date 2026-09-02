@@ -31,6 +31,12 @@ app.use(express.json());
 app.get('/account-deletion', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'index.html'));
 });
+app.get('/privacy-policy', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy', 'index.html'));
+});
+app.get('/terms', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'terms', 'index.html'));
+});
 
 app.get('/openapi.json', (req, res) => res.json(openApiDocument));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));

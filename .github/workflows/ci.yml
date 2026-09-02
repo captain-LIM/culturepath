@@ -49,5 +49,8 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --release
+      - name: Compile release APK with explicit non-uploadable CI signing
+        run: flutter build apk --release
+        env:
+          ORG_GRADLE_PROJECT_allowDebugReleaseSigning: "true"
         if: ${{ !cancelled() }}

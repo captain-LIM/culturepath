@@ -218,3 +218,25 @@ test('documents authenticated account deletion and explicit confirmation', () =>
   assert.ok(deletion.responses[404]);
   assert.ok(deletion.responses[500]);
 });
+
+test('documents in-app AI content reporting for moderation', () => {
+  const report = openApiDocument.paths['/ai/reports'].post;
+  assert.deepEqual(report.security, [{ bearerAuth: [] }]);
+  assert.equal(
+    report.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/AiContentReportRequest',
+  );
+  assert.equal(
+    report.responses[201].content['application/json'].schema.$ref,
+    '#/components/schemas/AiContentReportResponse',
+  );
+  assert.equal(
+    openApiDocument.components.schemas.AiContentReportRequest
+      .properties.content.maxLength,
+    10000,
+  );
+  assert.ok(report.responses[400]);
+  assert.ok(report.responses[401]);
+  assert.ok(report.responses[429]);
+  assert.ok(report.responses[500]);
+});
