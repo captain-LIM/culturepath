@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="따라가방(Tara-gabang) 개인정보처리방침 / Privacy Policy">
 <title>개인정보처리방침 | 따라가방 (Tara-gabang)</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
   :root {
     color-scheme: light dark;
@@ -42,6 +42,10 @@
     font-size: 15.5px;
     line-height: 1.75;
   }
+  /* 언어별로 지역 한자 자형이 맞는 Noto 폰트를 우선한다 (한국어 글꼴로
+     일본어/중국어를 표시하면 자형이 살짝 어색해진다). */
+  :lang(ja) { font-family: "Noto Sans JP", "Noto Sans KR", sans-serif; }
+  :lang(zh) { font-family: "Noto Sans SC", "Noto Sans KR", sans-serif; }
 
   a { color: var(--accent); }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -153,6 +157,8 @@
   <div class="lang-toggle-inner">
     <button type="button" id="btn-ko" aria-pressed="true" onclick="setLang('ko')">한국어</button>
     <button type="button" id="btn-en" aria-pressed="false" onclick="setLang('en')">English</button>
+    <button type="button" id="btn-ja" aria-pressed="false" onclick="setLang('ja')">日本語</button>
+    <button type="button" id="btn-zh" aria-pressed="false" onclick="setLang('zh')">中文</button>
   </div>
 </div>
 
@@ -282,6 +288,132 @@
   <h2><span class="num">9</span>Contact</h2>
   <p>Privacy inquiries: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
 </section>
+
+<!-- ═══════════════════════ 日本語 ═══════════════════════ -->
+<section id="ja" lang="ja" hidden>
+  <h1 class="doc-title">タラガバン プライバシーポリシー</h1>
+  <p class="lede">タラガバン（以下「本サービス」）は、利用者の個人情報を重要なものと考え、関連法令を遵守します。本ポリシーは、本サービスがどのような情報を収集し、どのように利用・保管・破棄するかを説明します。</p>
+
+  <h2><span class="num">1</span>収集する個人情報の項目</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>区分</th><th>項目</th><th>収集方法</th></tr>
+      <tr><td>アカウント</td><td>メールアドレス、パスワード（ハッシュ化して保存）、ニックネーム</td><td>会員登録時に利用者が入力</td></tr>
+      <tr><td>ソーシャルログイン</td><td>Googleアカウント識別子、メールアドレス、プロフィール名</td><td>Googleログイン利用時</td></tr>
+      <tr><td>サービス利用記録</td><td>作成・保存・「いいね」したコース、コース完走記録、AIアシスタントに入力した会話内容</td><td>サービス利用中に自動生成</td></tr>
+      <tr><td>端末・接続情報</td><td>IPアドレス、接続日時、エラーログ、アプリバージョン、OS情報、言語設定</td><td>サービス利用中に自動収集</td></tr>
+      <tr><td>位置情報</td><td>端末のおおよそ/正確な位置</td><td>地図画面で利用者が権限を許可した場合のみ</td></tr>
+    </table>
+  </div>
+  <p><strong>位置情報の処理方法:</strong> 位置情報は地図に現在地を表示する目的でのみ端末上で使用され、サービスのサーバーに送信・保存されません。地図表示のためGoogle Maps SDKが位置情報を処理する場合があり、これはGoogleのプライバシーポリシーに従います。</p>
+
+  <h2><span class="num">2</span>個人情報の利用目的</h2>
+  <ul>
+    <li>会員識別およびログイン維持、アカウント管理</li>
+    <li>コースの保存・共有・推薦などコア機能の提供</li>
+    <li>AIアシスタントによる文化旅行情報の応答生成</li>
+    <li>サービスエラーの分析、不正利用の防止、問い合わせ対応</li>
+    <li>サービス改善のための統計分析(個人を特定しない形式)</li>
+  </ul>
+
+  <h2><span class="num">3</span>第三者提供および処理委託</h2>
+  <p>本サービスは利用者の個人情報を外部に販売しません。サービス運営に必要な範囲で以下のとおり処理を委託します。</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>受託者</th><th>委託業務</th></tr>
+      <tr><td>Google LLC</td><td>ソーシャルログイン(Google Sign-In)、地図表示(Google Maps Platform)</td></tr>
+      <tr><td>Railway Corporation</td><td>バックエンドサーバーおよびデータベースインフラのホスティング</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>AIアシスタントの応答生成(会話内容がモデル提供元に送信され処理される)</td></tr>
+    </table>
+  </div>
+
+  <h2><span class="num">4</span>保有および利用期間</h2>
+  <ul>
+    <li>アカウント情報: 退会時に遅滞なく破棄</li>
+    <li>AI会話内容: データベースには保存せず、会話セッション終了時または最大30分間操作がない場合、サーバーメモリから自動的に破棄</li>
+    <li>接続・エラーログ: 個別に永続保存せず、ホスティング事業者(Railway)の標準運用ログポリシーに従って管理</li>
+    <li>関連法令が別途保管を求める場合、その期間保管</li>
+  </ul>
+
+  <h2><span class="num">5</span>利用者の権利</h2>
+  <p>利用者はいつでも自身の個人情報を照会・修正でき、アプリ内「マイページ」画面から退会することでアカウントおよび関連データの削除を要求できます。アプリをインストールしていない状態でも、以下のWebページから削除を要求できます。</p>
+  <p class="callout">削除リクエストページ: <a href="/account-deletion">/account-deletion</a></p>
+
+  <h2><span class="num">6</span>満14歳未満の児童</h2>
+  <p>本サービスは満14歳未満の児童を対象としておらず、当該児童の個人情報を認識した上で収集することはありません。</p>
+
+  <h2><span class="num">7</span>個人情報の安全性確保措置</h2>
+  <p>パスワードは復号化できない方式(ハッシュ)で保存され、アプリとサーバー間のすべての通信はHTTPSで暗号化されます。アクセス権限管理およびアクセス制御を実施します。</p>
+
+  <h2><span class="num">8</span>ポリシーの変更</h2>
+  <p>本ポリシーが変更される場合、アプリ内のお知らせまたは本ページを通じて施行日とともにご案内します。</p>
+
+  <h2><span class="num">9</span>お問い合わせ</h2>
+  <p>個人情報に関するお問い合わせ: <a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
+
+<!-- ═══════════════════════ 中文 ═══════════════════════ -->
+<section id="zh" lang="zh" hidden>
+  <h1 class="doc-title">跟着走 隐私政策</h1>
+  <p class="lede">跟着走（以下简称"本服务"）重视用户的个人信息，并遵守相关法律法规。本政策说明本服务收集哪些信息，以及如何使用、保存和删除这些信息。</p>
+
+  <h2><span class="num">1</span>收集的个人信息项目</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>类别</th><th>项目</th><th>收集方式</th></tr>
+      <tr><td>账户</td><td>电子邮箱地址、密码（以哈希形式存储）、昵称</td><td>注册时由用户输入</td></tr>
+      <tr><td>社交登录</td><td>Google账户标识符、电子邮箱、个人资料姓名</td><td>使用Google登录时</td></tr>
+      <tr><td>服务使用记录</td><td>创建、保存、点赞的路线，路线完成记录，输入AI助手的对话内容</td><td>使用服务过程中自动生成</td></tr>
+      <tr><td>设备与接入信息</td><td>IP地址、接入时间、错误日志、应用版本、操作系统信息、语言设置</td><td>使用服务过程中自动收集</td></tr>
+      <tr><td>位置信息</td><td>设备的大致/精确位置</td><td>仅在地图页面用户授权时收集</td></tr>
+    </table>
+  </div>
+  <p><strong>位置信息处理方式：</strong> 位置信息仅在设备端用于在地图上显示当前位置，不会发送或保存到本服务的服务器。为显示地图，Google Maps SDK可能会处理位置信息，此过程遵循Google的隐私政策。</p>
+
+  <h2><span class="num">2</span>个人信息的使用目的</h2>
+  <ul>
+    <li>识别会员身份、维持登录状态、账户管理</li>
+    <li>提供路线保存、分享、推荐等核心功能</li>
+    <li>生成AI助手的文化旅行信息回复</li>
+    <li>分析服务错误、防止不当使用、处理咨询</li>
+    <li>用于改进服务的统计分析（不识别个人身份的形式）</li>
+  </ul>
+
+  <h2><span class="num">3</span>第三方提供及处理委托</h2>
+  <p>本服务不会向外部出售用户的个人信息。在运营服务所需范围内，委托以下机构处理：</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>受托方</th><th>委托业务</th></tr>
+      <tr><td>Google LLC</td><td>社交登录（Google Sign-In）、地图显示（Google Maps Platform）</td></tr>
+      <tr><td>Railway Corporation</td><td>后端服务器及数据库基础设施托管</td></tr>
+      <tr><td>OpenRouter, Inc.</td><td>生成AI助手回复（对话内容将发送给模型提供方进行处理）</td></tr>
+    </table>
+  </div>
+
+  <h2><span class="num">4</span>保留及使用期限</h2>
+  <ul>
+    <li>账户信息：注销账户后立即删除，不作延迟</li>
+    <li>AI对话内容：不存储于数据库，在对话会话结束时或最长30分钟无操作后自动从服务器内存中删除</li>
+    <li>接入及错误日志：本服务不作长期保存，按托管服务商（Railway）的标准运营日志政策处理</li>
+    <li>相关法律法规另有要求保存的，按该期限保存</li>
+  </ul>
+
+  <h2><span class="num">5</span>用户的权利</h2>
+  <p>用户可随时查询、修改自己的个人信息，也可以在应用内"我的"页面通过注销账户请求删除账户及相关数据。即使未安装应用，也可通过以下网页请求删除。</p>
+  <p class="callout">删除请求页面：<a href="/account-deletion">/account-deletion</a></p>
+
+  <h2><span class="num">6</span>未满14周岁儿童</h2>
+  <p>本服务不面向未满14周岁的儿童，也不会在知情的情况下收集其个人信息。</p>
+
+  <h2><span class="num">7</span>个人信息安全保障措施</h2>
+  <p>密码以不可逆（哈希）方式存储，应用与服务器之间的所有通信均使用HTTPS加密。本服务实施访问权限管理及访问控制。</p>
+
+  <h2><span class="num">8</span>政策的变更</h2>
+  <p>本政策如有变更，将通过应用内公告或本页面公布变更内容及生效日期。</p>
+
+  <h2><span class="num">9</span>联系方式</h2>
+  <p>个人信息相关咨询：<a href="mailto:culturepath.support@gmail.com">culturepath.support@gmail.com</a></p>
+</section>
 </main>
 
 <footer class="doc-footer">
@@ -289,26 +421,42 @@
 </footer>
 
 <script>
+  var LANGS = ['ko', 'en', 'ja', 'zh'];
+  var BRAND_NAME = { ko: '따라가방', en: 'Tara-gabang', ja: 'タラガバン', zh: '跟着走' };
+  var DOC_LABEL = {
+    ko: '개인정보처리방침', en: 'Privacy Policy',
+    ja: 'プライバシーポリシー', zh: '隐私政策',
+  };
+  var META_LINE = {
+    ko: '시행일 2026년 9월 2일 · 운영: 개인 개발자 2인 (공동 개발, 별도 사업자 등록 없음)',
+    en: 'Effective September 2, 2026 · Operated by two independent developers (no registered business entity)',
+    ja: '施行日 2026年9月2日 · 運営: 個人開発者2名（共同開発、事業者登録なし）',
+    zh: '生效日期 2026年9月2日 · 运营方：两名个人开发者（联合开发，未注册企业实体）',
+  };
+  var FOOTER_LINE = {
+    ko: '따라가방 · 개인 개발자 2인 공동 개발 · 문의 culturepath.support@gmail.com',
+    en: 'Tara-gabang · Built by two independent developers · Contact culturepath.support@gmail.com',
+    ja: 'タラガバン · 個人開発者2名による共同開発 · お問い合わせ culturepath.support@gmail.com',
+    zh: '跟着走 · 由两名个人开发者联合开发 · 联系方式 culturepath.support@gmail.com',
+  };
+
   function setLang(l) {
-    var isKo = l === 'ko';
-    document.getElementById('ko').hidden = !isKo;
-    document.getElementById('en').hidden = isKo;
+    if (LANGS.indexOf(l) === -1) l = 'ko';
+    LANGS.forEach(function (code) {
+      document.getElementById(code).hidden = code !== l;
+      document.getElementById('btn-' + code).setAttribute('aria-pressed', String(code === l));
+    });
     document.documentElement.lang = l;
-    document.getElementById('btn-ko').setAttribute('aria-pressed', String(isKo));
-    document.getElementById('btn-en').setAttribute('aria-pressed', String(!isKo));
-    document.getElementById('doc-label').textContent = isKo ? '개인정보처리방침' : 'Privacy Policy';
-    document.getElementById('meta-line').textContent = isKo
-      ? '시행일 2026년 9월 2일 · 운영: 개인 개발자 2인 (공동 개발, 별도 사업자 등록 없음)'
-      : 'Effective September 2, 2026 · Operated by two independent developers (no registered business entity)';
-    document.getElementById('footer-line').textContent = isKo
-      ? '따라가방 · 개인 개발자 2인 공동 개발 · 문의 culturepath.support@gmail.com'
-      : 'Tara-gabang · Built by two independent developers · Contact culturepath.support@gmail.com';
+    document.querySelector('.brand-name').textContent = BRAND_NAME[l];
+    document.getElementById('doc-label').textContent = DOC_LABEL[l];
+    document.getElementById('meta-line').textContent = META_LINE[l];
+    document.getElementById('footer-line').textContent = FOOTER_LINE[l];
     try { localStorage.setItem('cp-privacy-lang', l); } catch (e) {}
   }
   (function () {
     var saved = null;
     try { saved = localStorage.getItem('cp-privacy-lang'); } catch (e) {}
-    if (saved === 'en') setLang('en');
+    if (saved && LANGS.indexOf(saved) !== -1 && saved !== 'ko') setLang(saved);
   })();
 </script>
 </body>
