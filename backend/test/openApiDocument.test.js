@@ -202,3 +202,19 @@ test('documents the authenticated structured AI transform contract', () => {
     '#/components/schemas/TransformConstraints',
   );
 });
+
+test('documents authenticated account deletion and explicit confirmation', () => {
+  const deletion = openApiDocument.paths['/users/me'].delete;
+
+  assert.deepEqual(deletion.security, [{ bearerAuth: [] }]);
+  assert.deepEqual(
+    deletion.requestBody.content['application/json']
+      .schema.properties.confirmation.enum,
+    ['DELETE'],
+  );
+  assert.ok(deletion.responses[204]);
+  assert.ok(deletion.responses[400]);
+  assert.ok(deletion.responses[401]);
+  assert.ok(deletion.responses[404]);
+  assert.ok(deletion.responses[500]);
+});

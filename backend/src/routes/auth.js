@@ -11,10 +11,12 @@ const router = express.Router();
 const loginRateLimit = createRateLimit({
   windowMs: process.env.AUTH_LOGIN_RATE_LIMIT_WINDOW_MS,
   max: process.env.AUTH_LOGIN_RATE_LIMIT_MAX_REQUESTS,
+  message: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 const registerRateLimit = createRateLimit({
   windowMs: process.env.AUTH_REGISTER_RATE_LIMIT_WINDOW_MS,
   max: process.env.AUTH_REGISTER_RATE_LIMIT_MAX_REQUESTS,
+  message: '회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 
 function validate(req, res, next) {

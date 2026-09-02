@@ -144,6 +144,107 @@ test('uses strict structured generation in live mode', async () => {
   assert.equal(intent.action, 'discover_places');
 });
 
+test('overrides a model clarify response when it misses a region the message clearly states', async () => {
+  const service = createAiIntentService({
+    llmService: {
+      isMockMode: () => false,
+      async generate() {
+        // 모델이 "전주"를 놓치고 지역을 다시 물어보는 상황을 재현한다.
+        return {
+          content: JSON.stringify({
+            action: 'clarify',
+            regions: [],
+            cultures: ['전통주·양조장'],
+            preferenceTags: [],
+            companions: [],
+            dayCount: null,
+            referencedSourceIds: [],
+            referencedCoursePlaceIds: [],
+            courseEditOperation: 'none',
+            courseEditDestinationDay: null,
+            courseEditDestinationPosition: 'none',
+            needsClarification: true,
+            clarificationQuestion: '먼저 여행할 지역을 알려주세요.',
+          }),
+        };
+      },
+    },
+  });
+  const intent = await service.parse([
+    { role: 'user', content: '전주에서 전통주 관련 관광지 3곳 추천해줘' },
+  ], {}, { env: { USE_MOCK_AI: 'false' } });
+  assert.equal(intent.action, 'discover_places');
+  assert.deepEqual(intent.regions, ['jeonju']);
+  assert.deepEqual(intent.cultures, ['전통주·양조장']);
+  assert.equal(intent.needsClarification, false);
+});
+
+test('overrides a model clarify response when it misses a culture the message clearly states', async () => {
+  const service = createAiIntentService({
+    llmService: {
+      isMockMode: () => false,
+      async generate() {
+        return {
+          content: JSON.stringify({
+            action: 'clarify',
+            regions: ['jeonju'],
+            cultures: [],
+            preferenceTags: [],
+            companions: [],
+            dayCount: null,
+            referencedSourceIds: [],
+            referencedCoursePlaceIds: [],
+            courseEditOperation: 'none',
+            courseEditDestinationDay: null,
+            courseEditDestinationPosition: 'none',
+            needsClarification: true,
+            clarificationQuestion: '어떤 문화 주제를 찾으시나요?',
+          }),
+        };
+      },
+    },
+  });
+  const intent = await service.parse([
+    { role: 'user', content: '전주 커피 카페 추천해줘' },
+  ], {}, { env: { USE_MOCK_AI: 'false' } });
+  assert.equal(intent.action, 'discover_places');
+  assert.deepEqual(intent.regions, ['jeonju']);
+  assert.deepEqual(intent.cultures, ['커피·카페']);
+  assert.equal(intent.needsClarification, false);
+});
+
+test('keeps a genuine model clarification when the deterministic layer also finds nothing new', async () => {
+  const service = createAiIntentService({
+    llmService: {
+      isMockMode: () => false,
+      async generate() {
+        return {
+          content: JSON.stringify({
+            action: 'clarify',
+            regions: [],
+            cultures: [],
+            preferenceTags: [],
+            companions: [],
+            dayCount: null,
+            referencedSourceIds: [],
+            referencedCoursePlaceIds: [],
+            courseEditOperation: 'none',
+            courseEditDestinationDay: null,
+            courseEditDestinationPosition: 'none',
+            needsClarification: true,
+            clarificationQuestion: '원하는 지역이나 문화 주제를 조금 더 알려주세요.',
+          }),
+        };
+      },
+    },
+  });
+  const intent = await service.parse([
+    { role: 'user', content: '아무데나 추천해줘' },
+  ], {}, { env: { USE_MOCK_AI: 'false' } });
+  assert.equal(intent.action, 'clarify');
+  assert.equal(intent.needsClarification, true);
+});
+
 test('extracts an explicit course edit plan and clarifies an ambiguous target', () => {
   const state = {
     courseId: 42,

@@ -266,6 +266,25 @@ void main() {
     expect(fork.isOwner, isTrue);
   });
 
+  test('parses deleted-author provenance through the legacy non-null contract', () {
+    final course = CourseItem.fromJson({
+      'id': 8,
+      'title': 'Surviving fork',
+      'description': '',
+      'tracks': const <Map<String, dynamic>>[],
+      'forkedFrom': {
+        'courseId': 0,
+        'title': 'Deleted original',
+        'authorId': 'deleted-user',
+        'authorDeleted': true,
+      },
+    });
+
+    expect(course.forkedFrom?.courseId, 0);
+    expect(course.forkedFrom?.authorId, 'deleted-user');
+    expect(course.forkedFrom?.authorDeleted, isTrue);
+  });
+
   test('my courses reload when authentication state changes', () async {
     var loggedIn = false;
     final container = ProviderContainer(

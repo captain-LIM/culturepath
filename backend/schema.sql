@@ -4,6 +4,17 @@
 CREATE DATABASE IF NOT EXISTS culturepath CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE culturepath;
 
+-- ─── 마이그레이션 원장 ───────────────────────────────────────────────────────
+-- scripts/migrate.js 가 적용한 migrations/*.sql 을 기록한다. 신규 DB는 이 표가
+-- 비어 있고, 첫 `npm run migrate` 실행 시 기존 마이그레이션이 멱등하게 no-op
+-- 처리되며 적용된 것으로 기록된다. (러너가 없어도 CREATE 는 자동으로 수행됨)
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  filename   VARCHAR(255) NOT NULL PRIMARY KEY,
+  checksum   CHAR(64) NOT NULL,
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ─── 유저 ─────────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS users (
@@ -25,6 +36,7 @@ CREATE TABLE IF NOT EXISTS courses (
   forked_from_course_id  INT DEFAULT NULL,
   forked_from_title      VARCHAR(255) DEFAULT NULL,
     forked_from_author_id  VARCHAR(100) DEFAULT NULL,
+    forked_from_author_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     idempotency_key        VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     idempotency_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     area_code              VARCHAR(50) DEFAULT NULL,
