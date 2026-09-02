@@ -207,6 +207,7 @@ test('documents authenticated account deletion and explicit confirmation', () =>
   const deletion = openApiDocument.paths['/users/me'].delete;
 
   assert.deepEqual(deletion.security, [{ bearerAuth: [] }]);
+  assert.match(deletion.description, /AI 신고를 삭제/);
   assert.deepEqual(
     deletion.requestBody.content['application/json']
       .schema.properties.confirmation.enum,
@@ -217,4 +218,28 @@ test('documents authenticated account deletion and explicit confirmation', () =>
   assert.ok(deletion.responses[401]);
   assert.ok(deletion.responses[404]);
   assert.ok(deletion.responses[500]);
+});
+
+test('documents in-app AI content reporting for moderation', () => {
+  const report = openApiDocument.paths['/ai/reports'].post;
+  assert.deepEqual(report.security, [{ bearerAuth: [] }]);
+  assert.match(report.description, /report is deleted when the account is deleted/);
+  assert.doesNotMatch(report.description, /anonymized/);
+  assert.equal(
+    report.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/AiContentReportRequest',
+  );
+  assert.equal(
+    report.responses[201].content['application/json'].schema.$ref,
+    '#/components/schemas/AiContentReportResponse',
+  );
+  assert.equal(
+    openApiDocument.components.schemas.AiContentReportRequest
+      .properties.content.maxLength,
+    10000,
+  );
+  assert.ok(report.responses[400]);
+  assert.ok(report.responses[401]);
+  assert.ok(report.responses[429]);
+  assert.ok(report.responses[500]);
 });

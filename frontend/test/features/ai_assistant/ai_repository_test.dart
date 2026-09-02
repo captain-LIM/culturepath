@@ -278,6 +278,22 @@ void main() {
     },
   );
 
+  test('submits an AI content report through the in-app API', () async {
+    final client = _FakeApiClient({'id': 7, 'status': 'received'});
+    final repository = AiRepository(client: client);
+
+    await repository.reportContent(
+      '  reported answer  ',
+      reason: '  offensive  ',
+    );
+
+    expect(client.lastPostPath, '/ai/reports');
+    expect(client.lastPostData, {
+      'content': 'reported answer',
+      'reason': 'offensive',
+    });
+  });
+
   test('parses the complete transform response contract', () async {
     final repository = AiRepository(client: _FakeApiClient(responseBody()));
     final result = await repository.editCourse(originalCourse(), '요청');

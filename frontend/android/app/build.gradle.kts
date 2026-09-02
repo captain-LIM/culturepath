@@ -15,6 +15,45 @@ val localProperties = Properties().apply {
     }
 }
 
+// Play release builds must use an upload keystore. CI can explicitly opt into
+// debug signing only for compile verification; that artifact must never be uploaded.
+val keystoreProperties = Properties().apply {
+    val propertiesFile = rootProject.file("key.properties")
+    if (propertiesFile.exists()) {
+        propertiesFile.inputStream().use { load(it) }
+    }
+}
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val missingReleaseSigningKeys = releaseSigningKeys.filter {
+    keystoreProperties.getProperty(it).isNullOrBlank()
+}
+val releaseKeystore = keystoreProperties.getProperty("storeFile")
+    ?.takeIf { it.isNotBlank() }
+    ?.let(rootProject::file)
+val hasReleaseKeystore = missingReleaseSigningKeys.isEmpty() && releaseKeystore?.isFile == true
+val allowDebugReleaseSigning = providers.gradleProperty("allowDebugReleaseSigning")
+    .orNull
+    ?.toBooleanStrictOrNull() == true
+
+gradle.taskGraph.whenReady {
+    val releaseRequested = allTasks.any {
+        it.name == "assembleRelease" || it.name == "bundleRelease"
+    }
+    if (releaseRequested && !hasReleaseKeystore && !allowDebugReleaseSigning) {
+        val detail = when {
+            missingReleaseSigningKeys.isNotEmpty() ->
+                "Missing key.properties values: ${missingReleaseSigningKeys.joinToString()}"
+            else -> "Keystore file does not exist: ${releaseKeystore?.path ?: "storeFile is missing"}"
+        }
+        throw org.gradle.api.GradleException(
+            "Release signing is not configured. $detail. " +
+                "Configure android/key.properties for Play uploads. " +
+                "For CI compile verification only, set " +
+                "ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true."
+        )
+    }
+}
+
 android {
     namespace = "com.culturepath.frontend"
     compileSdk = flutter.compileSdkVersion
@@ -30,10 +69,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.culturepath.frontend"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -41,11 +77,30 @@ android {
         manifestPlaceholders["mapsApiKey"] = localProperties.getProperty("maps.apiKey", "")
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else if (allowDebugReleaseSigning) {
+                logger.warn(
+                    "CI-only debug signing is enabled for a release compile check. " +
+                        "Do not upload this artifact to Google Play."
+                )
+                signingConfigs.getByName("debug")
+            } else {
+                null
+            }
         }
     }
 }

@@ -38,6 +38,34 @@ class _CourseMapScreenState extends State<CourseMapScreen>
   }
 
   Future<void> _requestLocationPermission() async {
+    // 이미 결정된 상태면 조용히 반영하고, 아직 물어본 적 없을 때만 사전 안내를 띄운다.
+    final current = await Permission.locationWhenInUse.status;
+    if (current.isGranted) {
+      if (mounted) setState(() => _locationEnabled = true);
+      return;
+    }
+    if (current.isPermanentlyDenied || current.isRestricted) return;
+
+    if (!mounted) return;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('location_permission_title'.tr()),
+        content: Text('location_permission_rationale'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('location_permission_skip'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('location_permission_allow'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true) return;
+
     final status = await Permission.locationWhenInUse.request();
     if (mounted) {
       setState(() => _locationEnabled = status.isGranted);

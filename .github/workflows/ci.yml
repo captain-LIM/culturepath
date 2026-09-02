@@ -49,5 +49,31 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --release
+      - name: Generate ephemeral CI upload keystore
+        if: ${{ !cancelled() }}
+        env:
+          CI_KEYSTORE_PASSWORD: culturepath-ci-only
+        run: |
+          keytool -genkeypair -noprompt \
+            -keystore android/ci-upload-keystore.jks \
+            -storepass "$CI_KEYSTORE_PASSWORD" \
+            -keypass "$CI_KEYSTORE_PASSWORD" \
+            -alias ci-upload \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 1 \
+            -dname "CN=CulturePath CI, OU=CI, O=CulturePath, C=KR"
+          printf '%s\n' \
+            'storeFile=ci-upload-keystore.jks' \
+            "storePassword=$CI_KEYSTORE_PASSWORD" \
+            'keyAlias=ci-upload' \
+            "keyPassword=$CI_KEYSTORE_PASSWORD" \
+            > android/key.properties
+      - name: Build and verify release AAB with ephemeral upload signing
+        run: |
+          flutter build appbundle --release
+          jarsigner -verify build/app/outputs/bundle/release/app-release.aab
+          jarsigner -verify -verbose -certs \
+            build/app/outputs/bundle/release/app-release.aab \
+            | grep -F 'CN=CulturePath CI'
         if: ${{ !cancelled() }}

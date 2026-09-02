@@ -7,6 +7,7 @@ const { createAiIntentService } = require('../services/aiIntentService');
 const { loadCourseForTransform } = require('../services/aiCourseContextService');
 const { normalizedCourseShape } = require('../services/courseTransformContract');
 const { publicPlaceError } = require('../utils/publicPlaceError');
+const { createAiContentReport } = require('../services/aiContentReportService');
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 2000;
@@ -274,6 +275,27 @@ async function markChatCourseSaved(req, res) {
   }
 }
 
+async function reportAiContent(req, res) {
+  try {
+    const report = await createAiContentReport({
+      userId: req.user.id,
+      sessionId: req.body?.sessionId,
+      content: req.body?.content,
+      reason: req.body?.reason,
+    });
+    return res.status(201).json(report);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error('AI content report failed:', {
+      errorName: error?.name || 'Error',
+      code: error?.code || null,
+    });
+    return res.status(500).json({ message: 'Could not submit the AI content report.' });
+  }
+}
+
 module.exports = {
   chat,
   deleteChatSession,
@@ -283,6 +305,7 @@ module.exports = {
   normalizeSessionId,
   normalizeConstraints,
   providerStatus,
+  reportAiContent,
   transformCourse,
   validateCourse,
   validateMessages,

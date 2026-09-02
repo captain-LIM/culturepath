@@ -30,6 +30,11 @@ async function deleteAccount(userId, options = {}) {
       [userId],
     );
 
+    await connection.query(
+      'DELETE FROM ai_content_reports WHERE user_id = ?',
+      [userId],
+    );
+
     const [result] = await connection.query(
       'DELETE FROM users WHERE id = ?',
       [userId],

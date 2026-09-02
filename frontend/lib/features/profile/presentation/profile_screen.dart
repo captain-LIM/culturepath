@@ -3,6 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/app_info.dart';
+import '../../../core/services/link_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../course_builder/data/my_courses_provider.dart';
@@ -48,7 +50,7 @@ class _GuestView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -95,6 +97,8 @@ class _GuestView extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _LanguageSelector(),
+              const SizedBox(height: 24),
+              const _LegalLinks(),
             ],
           ),
         ),
@@ -189,6 +193,12 @@ class _LoggedInView extends ConsumerWidget {
               _buildStats(profile.stats, context),
               _sectionTitle('my_badges'.tr()),
               _buildBadgeGrid(profile.badges, context),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 28, 20, 0),
+                  child: _LegalLinks(),
+                ),
+              ),
               const _AccountManagementSection(),
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
@@ -625,6 +635,69 @@ class _LanguageSelector extends StatelessWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+// ─── 약관 및 정책 링크 ───────────────────────────────────────────────────────
+
+class _LegalLinks extends StatelessWidget {
+  const _LegalLinks();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'legal_section'.tr(),
+          style: TextStyle(
+              fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 4),
+        _LegalLinkTile(
+          label: 'privacy_policy'.tr(),
+          onTap: () => LinkLauncher.openUrl(context, AppInfo.privacyPolicyUrl),
+        ),
+        _LegalLinkTile(
+          label: 'terms_of_service'.tr(),
+          onTap: () => LinkLauncher.openUrl(context, AppInfo.termsOfServiceUrl),
+        ),
+        _LegalLinkTile(
+          label: 'contact_support'.tr(),
+          onTap: () => LinkLauncher.sendEmail(
+            context,
+            to: AppInfo.supportEmail,
+            subject: 'contact_email_subject'.tr(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegalLinkTile extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _LegalLinkTile({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label,
+                  style: const TextStyle(fontSize: 13, color: AppColors.textDark)),
+            ),
+            Icon(Icons.open_in_new, size: 14, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -63,6 +63,9 @@ dependencies:
   google_maps_flutter: ^2.10.0
   permission_handler: 11.3.1
 
+  # 외부 링크 (개인정보처리방침·이용약관·문의 메일)
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

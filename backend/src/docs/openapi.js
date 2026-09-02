@@ -290,6 +290,37 @@ module.exports = Object.freeze({
         },
       },
     },
+    '/ai/reports': {
+      post: {
+        tags: ['AI'],
+        summary: 'Report an AI-generated reply without leaving the app',
+        description:
+          'Stores an authenticated user report for developer moderation. The report is deleted when the account is deleted.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AiContentReportRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Report accepted for moderation',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AiContentReportResponse' },
+              },
+            },
+          },
+          400: { description: 'Invalid report payload' },
+          401: { description: 'Authentication required' },
+          429: { description: 'Report rate limit exceeded' },
+          500: { description: 'Report persistence failed' },
+        },
+      },
+    },
     '/ai/chat/sessions': {
       delete: {
         tags: ['AI'],
@@ -393,7 +424,7 @@ module.exports = Object.freeze({
         tags: ['Users'],
         summary: '내 계정과 관련 데이터 삭제',
         description:
-          '사용자가 만든 공개·비공개 코스와 관련 기록을 삭제하고, 다른 사용자의 복제본 원작자 표시는 익명화합니다.',
+          '사용자가 만든 공개·비공개 코스, 관련 기록, 제출한 AI 신고를 삭제하고, 다른 사용자의 복제본 원작자 표시는 익명화합니다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -814,6 +845,25 @@ module.exports = Object.freeze({
             maxItems: 20,
             items: { $ref: '#/components/schemas/AiChatMessage' },
           },
+        },
+      },
+      AiContentReportRequest: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['content'],
+        properties: {
+          sessionId: { type: 'string', format: 'uuid', nullable: true },
+          content: { type: 'string', minLength: 1, maxLength: 10000 },
+          reason: { type: 'string', maxLength: 500, nullable: true },
+        },
+      },
+      AiContentReportResponse: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'status'],
+        properties: {
+          id: { type: 'integer', minimum: 1 },
+          status: { type: 'string', enum: ['received'] },
         },
       },
       AiChatResponse: {
