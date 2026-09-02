@@ -295,7 +295,7 @@ module.exports = Object.freeze({
         tags: ['AI'],
         summary: 'Report an AI-generated reply without leaving the app',
         description:
-          'Stores an authenticated user report for developer moderation. The reporter reference is anonymized if the account is later deleted.',
+          'Stores an authenticated user report for developer moderation. The report is deleted when the account is deleted.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,

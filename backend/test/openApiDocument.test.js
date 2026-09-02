@@ -223,6 +223,8 @@ test('documents authenticated account deletion and explicit confirmation', () =>
 test('documents in-app AI content reporting for moderation', () => {
   const report = openApiDocument.paths['/ai/reports'].post;
   assert.deepEqual(report.security, [{ bearerAuth: [] }]);
+  assert.match(report.description, /report is deleted when the account is deleted/);
+  assert.doesNotMatch(report.description, /anonymized/);
   assert.equal(
     report.requestBody.content['application/json'].schema.$ref,
     '#/components/schemas/AiContentReportRequest',
