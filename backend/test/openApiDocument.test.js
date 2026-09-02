@@ -207,6 +207,7 @@ test('documents authenticated account deletion and explicit confirmation', () =>
   const deletion = openApiDocument.paths['/users/me'].delete;
 
   assert.deepEqual(deletion.security, [{ bearerAuth: [] }]);
+  assert.match(deletion.description, /AI 신고를 삭제/);
   assert.deepEqual(
     deletion.requestBody.content['application/json']
       .schema.properties.confirmation.enum,

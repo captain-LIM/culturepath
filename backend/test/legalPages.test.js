@@ -32,5 +32,7 @@ test('publishes complete privacy and terms pages at stable HTTPS app paths', () 
   assert.match(privacy, /Railway/);
   assert.match(privacy, /OpenRouter/);
   assert.match(privacy, /\/account-deletion/);
+  assert.match(privacy, /회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제/);
+  assert.match(privacy, /report content, reasons, and linked session identifiers are deleted/);
   assert.match(terms, /앱 안의 신고 기능/);
 });

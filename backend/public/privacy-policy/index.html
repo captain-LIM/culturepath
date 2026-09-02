@@ -43,7 +43,7 @@
   <ul>
     <li>계정과 서비스 활동 정보: 회원 탈퇴 시 삭제합니다.</li>
     <li>서버 AI 대화 세션: 기본적으로 마지막 사용 후 30분 동안 메모리에 유지하며, 로그아웃·세션 초기화·회원 탈퇴 시 삭제합니다.</li>
-    <li>AI 신고: 콘텐츠 검토와 악용 방지 목적이 끝날 때까지 보관하며, 회원 탈퇴 시 신고자 계정 연결을 제거합니다.</li>
+    <li>AI 신고: 계정 유지 중 콘텐츠 검토와 악용 방지를 위해 처리하며, 회원 탈퇴 시 신고 내용·사유·연결된 세션 식별정보를 삭제합니다.</li>
     <li>오류·보안 로그: 운영 및 보안상 필요한 최소 기간 또는 관계 법령이 요구하는 기간 동안 처리합니다.</li>
   </ul>
   <p>관계 법령에 따른 보관 의무가 있는 경우에는 해당 기간 동안 분리 보관할 수 있습니다.</p>
@@ -63,7 +63,7 @@
     <p>We process account data (email, nickname, password hash or Google sign-in identifier), courses, likes, completions, AI requests, AI reply reports, and minimal request/security logs to provide and protect the service.</p>
     <h2>Location</h2><p>Precise location is used only on the device to show your position on the map. It is not transmitted to or stored by our server.</p>
     <h2>Service providers</h2><p>Google supports sign-in, Maps, and Gemini model processing; Railway hosts the backend and MySQL database; OpenRouter routes AI requests to model providers. AI inputs may be transmitted to these providers when you use AI features.</p>
-    <h2>Retention and deletion</h2><p>Account activity is deleted when you delete your account. In-memory AI sessions expire after 30 minutes of inactivity and are removed on logout, reset, or account deletion. AI reports are retained only while needed for moderation and abuse prevention; the account link is anonymized after account deletion. Operational logs are kept for the minimum period needed for security or law.</p>
+    <h2>Retention and deletion</h2><p>Account activity is deleted when you delete your account. In-memory AI sessions expire after 30 minutes of inactivity and are removed on logout, reset, or account deletion. AI reports are processed for moderation and abuse prevention while the account remains active; report content, reasons, and linked session identifiers are deleted when the account is deleted. Operational logs are kept for the minimum period needed for security or law.</p>
     <h2>Your choices</h2><p>Delete your account in <strong>Profile → Account Management → Delete Account</strong>, or use the <a href="/account-deletion">external deletion page</a>. Contact us for access, correction, deletion, or privacy questions.</p>
   </section>
 </main></body>

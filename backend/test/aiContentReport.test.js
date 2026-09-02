@@ -90,16 +90,34 @@ test('controller accepts a valid report without launching an external app', asyn
   }
 });
 
-test('schema and migration retain reports while anonymizing deleted reporters', () => {
+test('schema and forward migration cascade reports when the reporter is deleted', () => {
   const root = path.join(__dirname, '..');
   const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
-  const migration = fs.readFileSync(
+  const initialMigration = fs.readFileSync(
     path.join(root, 'migrations', '20260902_add_ai_content_reports.sql'),
     'utf8',
   );
-  for (const sql of [schema, migration]) {
-    assert.match(sql, /CREATE TABLE IF NOT EXISTS ai_content_reports/);
-    assert.match(sql, /FOREIGN KEY \(user_id\) REFERENCES users\(id\) ON DELETE SET NULL/);
-    assert.match(sql, /status.*DEFAULT '{1,2}pending'{1,2}/s);
-  }
+  const forwardMigration = fs.readFileSync(
+    path.join(
+      root,
+      'migrations',
+      '20260902_change_ai_content_reports_fk_to_cascade.sql',
+    ),
+    'utf8',
+  );
+
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS ai_content_reports/);
+  assert.match(
+    schema,
+    /FOREIGN KEY \(user_id\) REFERENCES users\(id\) ON DELETE CASCADE/,
+  );
+  assert.match(schema, /status.*DEFAULT 'pending'/s);
+
+  // The original migration may already be recorded in production and must not
+  // be rewritten; the new migration replaces its SET NULL constraint forward.
+  assert.match(initialMigration, /ON DELETE SET NULL/);
+  assert.match(forwardMigration, /DROP FOREIGN KEY/);
+  assert.match(forwardMigration, /ON DELETE CASCADE/);
+  assert.match(forwardMigration, /@ai_reports_user_fk_name IS NULL/);
+  assert.doesNotMatch(forwardMigration, /DELETE FROM ai_content_reports/);
 });

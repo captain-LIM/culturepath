@@ -75,7 +75,7 @@
   "stat_count": "{n}件",
   "logout": "ログアウト",
   "account_management": "アカウント管理",
-  "account_delete_summary": "退会すると、作成したコース、いいね、完了記録、AIチャットが完全に削除され、復元できません。",
+  "account_delete_summary": "退会すると、作成したコース、いいね、完了記録、AIチャット、送信したAI報告が完全に削除され、復元できません。",
   "account_delete_title": "アカウントを削除",
   "account_delete_description": "公開・非公開コースを含むアカウント関連データがすべて削除されます。他のユーザーが複製したコースは残り、原作者は「退会したユーザー」と表示されます。",
   "account_delete_continue": "続ける",

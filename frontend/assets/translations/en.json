@@ -75,7 +75,7 @@
   "stat_count": "{n}",
   "logout": "Log Out",
   "account_management": "Account Management",
-  "account_delete_summary": "Deleting your account permanently removes your courses, likes, completions, and AI chats.",
+  "account_delete_summary": "Deleting your account permanently removes your courses, likes, completions, AI chats, and submitted AI reports.",
   "account_delete_title": "Delete Account",
   "account_delete_description": "All account data, including public and private courses, will be deleted. Courses copied by other users will remain, with the original author shown as ‘Deleted user.’",
   "account_delete_continue": "Continue",

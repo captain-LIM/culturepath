@@ -424,7 +424,7 @@ module.exports = Object.freeze({
         tags: ['Users'],
         summary: '내 계정과 관련 데이터 삭제',
         description:
-          '사용자가 만든 공개·비공개 코스와 관련 기록을 삭제하고, 다른 사용자의 복제본 원작자 표시는 익명화합니다.',
+          '사용자가 만든 공개·비공개 코스, 관련 기록, 제출한 AI 신고를 삭제하고, 다른 사용자의 복제본 원작자 표시는 익명화합니다.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,

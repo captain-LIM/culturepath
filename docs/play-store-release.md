@@ -7,7 +7,8 @@
 
 ## 1. 빌드 · 서명
 
-- ✅ `android/app/build.gradle.kts`에 release signingConfig 추가. 업로드 키가 없거나 불완전하면 release 빌드는 실패. CI 컴파일 검증만 `ORG_GRADLE_PROJECT_allowDebugReleaseSigning=true`로 명시적 debug 서명 허용.
+- ✅ `android/app/build.gradle.kts`에 release signingConfig 추가. 업로드 키가 없거나 불완전하면 release 빌드는 실패.
+- ✅ CI가 매 실행마다 폐기용 JKS와 `key.properties`를 만들고 `bundleRelease` AAB를 빌드한 뒤 `jarsigner`로 서명과 `CulturePath CI` 인증서를 검증. debug 서명 폴백을 사용하지 않음.
 - ✅ `android/key.properties.example` 템플릿 추가. `.gitignore`에 `key.properties`, `*.jks` 이미 포함.
 - ⬜ **업로드 키스토어 생성 후 안전한 곳에 백업** (분실 시 앱 업데이트 영구 불가):
   ```
@@ -15,11 +16,12 @@
   ```
   `android/` 아래 두고, `key.properties.example`를 복사해 `android/key.properties` 작성.
 - ⬜ Play Console에서 **Play 앱 서명(Play App Signing)** 등록 (업로드 키 → 구글이 배포 서명 키 관리).
-- ⬜ AAB 빌드: `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab`
+- ✅ 임시 CI 업로드 키를 사용하는 AAB 빌드 경로 검증: `flutter build appbundle --release` → `build/app/outputs/bundle/release/app-release.aab`.
+- ⬜ 실제 운영 업로드 키와 로컬 `key.properties`를 사용하는 최종 AAB 수동 빌드·서명 인증서 확인.
 - ✅ **targetSdk 확인 완료**: Flutter 3.41.9(CI 고정) 기준 병합 매니페스트가 `minSdkVersion=24 / targetSdkVersion=36 / compileSdk=36`. Play의 API 35+ 요건 충족. (`flutter build appbundle --release` 검증 통과.)
 - ⬜ 릴리스 빌드 실기기 스모크 테스트: 로그인(이메일/구글), 지도, AI 채팅, 코스 저장/공유, 4개 언어 전환.
 
-## 2. 앱 내 기능 (Play 정책 대응) — 코드 반영 완료
+## 2. 앱 내 기능 및 Play 정책 대응
 
 - ✅ **개인정보처리방침 · 이용약관 · 문의 링크**: `내 정보` 화면(게스트/로그인 모두)에 노출. Railway 운영 URL과 `culturepath.support@gmail.com` 반영.
 - ✅ **AI 답변 신고 수단** (생성형 AI 정책): AI 어시스턴트 말풍선을 길게 눌러 사유를 입력하면 앱 내부 API로 접수되고 moderation DB에 저장.
@@ -27,6 +29,7 @@
 - ✅ **위치 권한 사전 안내**: 지도 화면에서 시스템 권한 팝업 전에 사용 목적 설명 다이얼로그, 거부해도 지도는 동작.
 - ✅ **계정 삭제**: 앱 내 회원 탈퇴 + 서버 데이터 삭제 + `/account-deletion` 외부 안내 페이지 구현.
 - ✅ `lib/core/app_info.dart`에 운영 개인정보처리방침·약관 URL과 지원 이메일 반영.
+- ⬜ **공개 코스 UGC 출시 차단 항목(별도 후속 PR)**: 공개 콘텐츠 생성 전 이용약관 동의, 공개 코스·작성자 신고, 사용자 차단 기능. PR #27 범위에서는 구현하지 않으며 Play 제출 전 완료해야 함.
 
 ## 3. 개인정보처리방침 · 약관
 
@@ -69,6 +72,11 @@
 - ⬜ Console에 카테고리(여행 및 지역정보) / 연락처 이메일 / 웹사이트(선택) 입력
 
 ## 7. 배포 절차
+
+- ✅ PR #28의 `backend/scripts/migrate.js`가 `migrations/*.sql`을 파일명 순으로 적용하고 `schema_migrations`에 체크섬과 적용 이력을 기록. `--strict`는 이미 적용된 파일이 수정됐으면 배포를 실패시킴.
+- ✅ Railway production의 저장소 외부 **Pre-deploy Command**가 `npm run migrate -- --strict`로 설정되어 있으며 최근 배포 로그에서 앱 시작 전에 실행됨을 확인. 다른 Railway 환경을 추가하면 동일 설정을 별도로 확인해야 함.
+- ✅ PR #27의 계정 삭제 정책 변경은 기존 마이그레이션을 수정하지 않고 새 forward migration으로 FK를 `ON DELETE CASCADE`로 교체.
+- ⚠️ 과거 `ON DELETE SET NULL`로 이미 익명화된 AI 신고는 원래 사용자를 신뢰성 있게 식별할 수 없어 자동 삭제하지 않음. 임의 일괄 삭제 금지.
 
 - ⬜ 개인 개발자 계정(2023-11 이후 생성)이면 **비공개 테스트 12명 이상 · 14일 연속** 후 프로덕션 액세스 신청 가능 — 일정에 선반영.
 - ⬜ 내부 테스트 → 비공개 테스트 → 프로덕션 트랙 순서로 올리며 검증.

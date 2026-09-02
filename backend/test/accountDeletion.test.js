@@ -36,12 +36,15 @@ function connectionStub(query) {
   };
 }
 
-test('deletes an account transactionally and anonymizes surviving forks first', async () => {
+test('deletes an account and its AI reports transactionally while preserving anonymized forks', async () => {
   const queries = [];
   const { connection, state } = connectionStub(async (sql, params) => {
     queries.push({ sql, params });
     if (sql.startsWith('SELECT id FROM users')) return [[{ id: 12 }]];
     if (sql.startsWith('UPDATE courses')) return [{ affectedRows: 2 }];
+    if (sql.startsWith('DELETE FROM ai_content_reports')) {
+      return [{ affectedRows: 3 }];
+    }
     if (sql.startsWith('DELETE FROM users')) return [{ affectedRows: 1 }];
     throw new Error(`Unexpected query: ${sql}`);
   });
@@ -61,7 +64,10 @@ test('deletes an account transactionally and anonymizes surviving forks first', 
   assert.match(queries[1].sql, /forked_from_course_id/);
   assert.match(queries[1].sql, /forked_from_author_id = NULL/);
   assert.match(queries[1].sql, /forked_from_author_deleted = TRUE/);
+  assert.match(queries[2].sql, /DELETE FROM ai_content_reports/);
   assert.deepEqual(queries[2].params, [12]);
+  assert.match(queries[3].sql, /DELETE FROM users/);
+  assert.deepEqual(queries[3].params, [12]);
   assert.deepEqual(removedUsers, [12]);
 });
 
@@ -85,8 +91,16 @@ test('returns not found without deleting data or AI sessions', async () => {
 });
 
 test('rolls back the whole deletion when a database mutation fails', async () => {
+  const queries = [];
   const { connection, state } = connectionStub(async (sql) => {
+    queries.push(sql);
     if (sql.startsWith('SELECT id FROM users')) return [[{ id: 12 }]];
+    if (sql.startsWith('UPDATE courses')) return [{ affectedRows: 0 }];
+    if (sql.startsWith('DELETE FROM ai_content_reports')) {
+      throw Object.assign(new Error('database unavailable'), {
+        code: 'ER_LOCK_WAIT_TIMEOUT',
+      });
+    }
     throw Object.assign(new Error('database unavailable'), { code: 'ER_LOCK_WAIT_TIMEOUT' });
   });
   let removed = false;
@@ -103,6 +117,7 @@ test('rolls back the whole deletion when a database mutation fails', async () =>
   assert.equal(state.rolledBack, 1);
   assert.equal(state.released, 1);
   assert.equal(removed, false);
+  assert.equal(queries.some(sql => sql.startsWith('DELETE FROM users')), false);
 });
 
 test('rejects account deletion without the explicit confirmation value', async () => {
@@ -123,6 +138,9 @@ test('deletion controller returns 204 after a committed account deletion', async
   const { connection } = connectionStub(async (sql) => {
     if (sql.startsWith('SELECT id FROM users')) return [[{ id: 12 }]];
     if (sql.startsWith('UPDATE courses')) return [{ affectedRows: 0 }];
+    if (sql.startsWith('DELETE FROM ai_content_reports')) {
+      return [{ affectedRows: 0 }];
+    }
     if (sql.startsWith('DELETE FROM users')) return [{ affectedRows: 1 }];
     throw new Error(`Unexpected query: ${sql}`);
   });
@@ -188,4 +206,5 @@ test('publishes a branded account-deletion page with a working request pathway',
   assert.match(html, /mailto:culturepath\.support@gmail\.com/);
   assert.match(html, /7일 이내/);
   assert.match(html, /탈퇴한 사용자/);
+  assert.match(html, /회원 탈퇴 시 AI 신고 데이터도 삭제/);
 });
