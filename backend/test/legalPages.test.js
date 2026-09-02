@@ -23,8 +23,9 @@ test('publishes complete privacy and terms pages at stable HTTPS app paths', () 
 
   assert.match(appSource, /app\.get\('\/privacy-policy'/);
   assert.match(appSource, /app\.get\('\/terms'/);
+  assert.match(privacy, /개인 개발자 2인/);
+  assert.match(terms, /CulturePath 팀/);
   for (const html of [privacy, terms]) {
-    assert.match(html, /CulturePath 팀/);
     assert.match(html, /culturepath\.support@gmail\.com/);
     assert.match(html, /2026년 9월 2일/);
     assert.doesNotMatch(html, /【|support@culturepath\.app|culturepath\.app/);
