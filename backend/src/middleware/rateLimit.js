@@ -9,6 +9,8 @@ function createRateLimit(options = {}) {
   const windowMs = positiveInteger(options.windowMs, 60000);
   const max = positiveInteger(options.max, 3);
   const now = options.now || Date.now;
+  const keyGenerator = options.keyGenerator
+    || (req => req.user?.id || req.ip || 'anonymous');
   const maxBuckets = positiveInteger(options.maxBuckets, 10000);
   const message = options.message || 'AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
   const buckets = new Map();
@@ -24,7 +26,7 @@ function createRateLimit(options = {}) {
   }
 
   return function rateLimit(req, res, next) {
-    const key = String(req.user?.id || req.ip || 'anonymous');
+    const key = String(keyGenerator(req));
     const currentTime = now();
     requestsSinceCleanup += 1;
     if (requestsSinceCleanup >= 100 || buckets.size >= maxBuckets) {

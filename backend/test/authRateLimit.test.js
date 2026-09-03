@@ -66,3 +66,17 @@ test('wires rate limiting onto the register and login routes before validation',
     'loginRateLimit must run on POST /login',
   );
 });
+
+test('supports a custom key generator without changing the default limiter contract', () => {
+  const middleware = createRateLimit({
+    max: 1,
+    keyGenerator: request => request.clientKey,
+  });
+  let passed = 0;
+  middleware({ clientKey: 'one' }, fakeRes(), () => { passed += 1; });
+  middleware({ clientKey: 'two' }, fakeRes(), () => { passed += 1; });
+  const limited = fakeRes();
+  middleware({ clientKey: 'one' }, limited, () => { passed += 1; });
+  assert.equal(passed, 2);
+  assert.equal(limited.statusCode, 429);
+});

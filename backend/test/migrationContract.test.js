@@ -51,3 +51,34 @@ test('defines a repeatable course revision for optimistic concurrency', () => {
   assert.match(migration, /ADD COLUMN revision BIGINT UNSIGNED NOT NULL DEFAULT 1/);
   assert.match(migration, /RELEASE_LOCK\(/);
 });
+
+test('defines short-lived account deletion requests without raw email or token storage', () => {
+  const schema = read('schema.sql');
+  const migration = read('migrations/20260902_add_account_deletion_requests.sql');
+  for (const sql of [schema, migration]) {
+    assert.match(sql, /account_deletion_requests/);
+    assert.match(sql, /token_hash\s+CHAR\(64\).*ascii_bin/s);
+    assert.match(sql, /FOREIGN KEY \(user_id\) REFERENCES users\(id\) ON DELETE CASCADE/);
+  }
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS/);
+  assert.match(migration, /GET_LOCK\(/);
+  assert.doesNotMatch(migration, /\bemail\s+(?:VARCHAR|TEXT)/i);
+  assert.doesNotMatch(migration, /\btoken\s+(?:VARCHAR|TEXT|CHAR)/i);
+});
+
+test('adds a repeatable persistent account deletion delivery outbox as a forward migration', () => {
+  const schema = read('schema.sql');
+  const migration = read('migrations/20260903_add_account_deletion_outbox.sql');
+  for (const sql of [schema, migration]) {
+    assert.match(sql, /token_nonce\s+VARBINARY\(32\)/i);
+    assert.match(sql, /delivery_status\s+ENUM\(''?pending''?,\s*''?processing''?,\s*''?sent''?,\s*''?failed''?\)/i);
+    assert.match(sql, /delivery_claim_id\s+CHAR\(36\).*ascii_bin/is);
+    assert.match(sql, /idx_account_deletion_delivery/);
+  }
+  assert.match(migration, /GET_LOCK\(/);
+  assert.match(migration, /information_schema\.COLUMNS/);
+  assert.match(migration, /information_schema\.STATISTICS/);
+  assert.match(migration, /RELEASE_LOCK\(/);
+  assert.doesNotMatch(migration, /\bemail\s+(?:VARCHAR|TEXT)/i);
+  assert.doesNotMatch(migration, /\btoken\s+(?:VARCHAR|TEXT|CHAR)/i);
+});

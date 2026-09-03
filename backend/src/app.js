@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('node:path');
 const swaggerUi = require('swagger-ui-express');
 const openApiDocument = require('./docs/openapi');
+const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const culturesRoutes = require('./routes/cultures');
@@ -12,8 +13,22 @@ const placesRoutes = require('./routes/places');
 const coursesRoutes = require('./routes/courses');
 const aiRoutes = require('./routes/ai');
 const usersRoutes = require('./routes/users');
+const { createAccountDeletionRouter } = require('./routes/accountDeletion');
+const {
+  readAccountDeletionConfig,
+  validateAccountDeletionConfig,
+} = require('./config/accountDeletion');
+const { startAccountDeletionJobs } = require('./services/accountDeletionJobs');
+const { createGracefulShutdown } = require('./utils/gracefulShutdown');
 
 const app = express();
+const accountDeletionConfig = readAccountDeletionConfig();
+const accountDeletionConfigErrors = validateAccountDeletionConfig(accountDeletionConfig);
+if (accountDeletionConfigErrors.length > 0) {
+  throw new Error(
+    `Invalid account deletion web form configuration: ${accountDeletionConfigErrors.join('; ')}`,
+  );
+}
 
 app.use(cors({
   exposedHeaders: [
@@ -26,11 +41,24 @@ app.use(cors({
     'X-Total-Count',
   ],
 }));
-app.use(express.json());
+function accountDeletionPageHeaders(_req, res, next) {
+  res.set({
+    'Cache-Control': 'no-store',
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  next();
+}
 
-app.get('/account-deletion', (_req, res) => {
+app.get('/account-deletion', accountDeletionPageHeaders, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'index.html'));
 });
+app.get('/account-deletion/confirm', accountDeletionPageHeaders, (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'confirm.html'));
+});
+app.use('/account-deletion', createAccountDeletionRouter({ config: accountDeletionConfig }));
+app.use(express.json());
 app.get('/privacy-policy', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy', 'index.html'));
 });
@@ -54,6 +82,29 @@ app.use('/ai', aiRoutes);
 app.use('/users', usersRoutes);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);
 });
+
+const {
+  emailWorker: accountDeletionWorker,
+  cleanupScheduler: accountDeletionCleanupScheduler,
+} = startAccountDeletionJobs({
+  config: accountDeletionConfig,
+  pool,
+});
+
+const shutdown = createGracefulShutdown({
+  server,
+  backgroundJobs: [accountDeletionWorker, accountDeletionCleanupScheduler],
+  pool,
+});
+
+function handleSignal(signal) {
+  void shutdown(signal).catch(() => {
+    process.exitCode = 1;
+  });
+}
+
+process.once('SIGTERM', handleSignal);
+process.once('SIGINT', handleSignal);
