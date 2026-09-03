@@ -52,11 +52,13 @@ test('documents the email-verified public account deletion flow without a GET mu
   const request = openApiDocument.paths['/account-deletion/requests'].post;
   const confirmation = openApiDocument.paths['/account-deletion/confirm'].post;
   assert.ok(request.responses[202]);
+  assert.ok(request.responses[403]);
   assert.ok(request.responses[429]);
   assert.ok(confirmation.responses[200]);
   assert.ok(confirmation.responses[403]);
   assert.match(request.description, /아웃박스/);
   assert.match(request.description, /백그라운드 워커/);
+  assert.match(request.description, /같은 origin/);
   assert.match(confirmation.description, /한 번만/);
   assert.match(confirmation.responses[429].description, /별도 버킷/);
   assert.equal(openApiDocument.paths['/account-deletion/confirm'].get, undefined);

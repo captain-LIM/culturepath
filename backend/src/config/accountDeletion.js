@@ -24,6 +24,10 @@ const UPPER_LIMITS = Object.freeze({
   cleanupIntervalMs: 86_400_000,
 });
 
+const UNSAFE_TOKEN_SECRETS = new Set([
+  'replace_with_at_least_32_random_bytes',
+]);
+
 function positiveInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
@@ -125,8 +129,14 @@ function validateAccountDeletionConfig(config, options = {}) {
   if (baseUrl && production && baseUrl.protocol !== 'https:') {
     errors.push('ACCOUNT_DELETION_PUBLIC_BASE_URL must use HTTPS in production');
   }
-  if (Buffer.byteLength(config.tokenSecret || '', 'utf8') < 32) {
-    errors.push('ACCOUNT_DELETION_TOKEN_SECRET must be at least 32 bytes');
+  const trimmedTokenSecret = String(config.tokenSecret || '').trim();
+  if (
+    Buffer.byteLength(trimmedTokenSecret, 'utf8') < 32
+    || UNSAFE_TOKEN_SECRETS.has(trimmedTokenSecret)
+  ) {
+    errors.push(
+      'ACCOUNT_DELETION_TOKEN_SECRET must be a non-placeholder value of at least 32 bytes',
+    );
   }
   for (const [name, value] of [
     ['ACCOUNT_DELETION_SMTP_HOST', config.smtp.host],
@@ -142,6 +152,7 @@ function validateAccountDeletionConfig(config, options = {}) {
 module.exports = {
   DEFAULTS,
   UPPER_LIMITS,
+  UNSAFE_TOKEN_SECRETS,
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
 };

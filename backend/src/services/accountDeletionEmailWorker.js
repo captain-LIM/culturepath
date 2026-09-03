@@ -5,7 +5,6 @@ const pool = require('../config/db');
 const { deriveToken } = require('./accountDeletionRequestService');
 const { safeErrorCode } = require('../utils/safeErrorCode');
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const RETRY_DELAYS_MS = Object.freeze([60_000, 300_000, 900_000]);
 
 function safeLog(logger, message, metadata) {
@@ -16,27 +15,8 @@ function safeLog(logger, message, metadata) {
   }
 }
 
-function safeInfo(logger, message, metadata) {
-  try {
-    logger.info?.(message, metadata);
-  } catch {
-    // Operational logging must not stop worker progress.
-  }
-}
-
 function retryDelayMs(attempt) {
   return RETRY_DELAYS_MS[Math.min(Math.max(attempt - 1, 0), RETRY_DELAYS_MS.length - 1)];
-}
-
-async function cleanupExpiredAccountDeletionRequests(options = {}) {
-  const database = options.pool || pool;
-  const clock = options.clock || Date.now;
-  const cutoff = new Date(clock() - DAY_MS);
-  const [result] = await database.query(
-    'DELETE FROM account_deletion_requests WHERE send_window_started_at <= ?',
-    [cutoff],
-  );
-  return { deletedCount: Number(result.affectedRows || 0) };
 }
 
 async function claimDeliveryJobs(options = {}) {
@@ -185,22 +165,11 @@ function startAccountDeletionEmailWorker(options = {}) {
   let stopped = false;
   let running = false;
   let active = Promise.resolve();
-  let lastCleanupAt = 0;
 
   async function execute() {
     if (stopped || running) return;
     running = true;
     try {
-      const now = clock();
-      if (lastCleanupAt === 0 || now - lastCleanupAt >= config.cleanupIntervalMs) {
-        const cleanup = await cleanupExpiredAccountDeletionRequests({ ...options, clock });
-        if (cleanup.deletedCount > 0) {
-          safeInfo(logger, 'Expired account deletion requests removed', {
-            deletedCount: cleanup.deletedCount,
-          });
-        }
-        lastCleanupAt = now;
-      }
       await runAccountDeletionWorkerTick({ ...options, clock });
     } catch (error) {
       safeLog(logger, 'Account deletion email worker tick failed', {
@@ -230,11 +199,9 @@ function startAccountDeletionEmailWorker(options = {}) {
 }
 
 module.exports = {
-  DAY_MS,
   RETRY_DELAYS_MS,
   safeErrorCode,
   retryDelayMs,
-  cleanupExpiredAccountDeletionRequests,
   claimDeliveryJobs,
   markDeliverySucceeded,
   markDeliveryFailed,

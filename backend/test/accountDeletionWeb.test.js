@@ -13,7 +13,10 @@ const {
   ACCEPTED_MESSAGE,
   createAccountDeletionController,
 } = require('../src/controllers/accountDeletionController');
-const { requireSameOrigin } = require('../src/routes/accountDeletion');
+const {
+  createRequestGuards,
+  requireSameOrigin,
+} = require('../src/routes/accountDeletion');
 const { resolveClientIp } = require('../src/middleware/clientIp');
 const { createRateLimit } = require('../src/middleware/rateLimit');
 
@@ -23,6 +26,19 @@ function responseRecorder() {
     body: null,
     status(code) { this.statusCode = code; return this; },
     json(body) { this.body = body; return this; },
+  };
+}
+
+function validEnabledEnvironment(overrides = {}) {
+  return {
+    ACCOUNT_DELETION_WEB_FORM_ENABLED: 'true',
+    ACCOUNT_DELETION_PUBLIC_BASE_URL: 'https://api.example.com',
+    ACCOUNT_DELETION_TOKEN_SECRET: 'test-only-account-deletion-secret-32-bytes',
+    ACCOUNT_DELETION_SMTP_HOST: 'smtp.example.com',
+    ACCOUNT_DELETION_SMTP_USER: 'smtp-user',
+    ACCOUNT_DELETION_SMTP_PASSWORD: 'smtp-password',
+    ACCOUNT_DELETION_EMAIL_FROM: 'support@example.com',
+    ...overrides,
   };
 }
 
@@ -50,6 +66,30 @@ test('worker configuration accepts only positive values within operational bound
   assert.equal(config.workerLeaseSeconds, DEFAULTS.workerLeaseSeconds);
   assert.equal(config.emailMaxAttempts, DEFAULTS.emailMaxAttempts);
   assert.equal(config.cleanupIntervalMs, DEFAULTS.cleanupIntervalMs);
+});
+
+test('enabled configuration rejects blank and known placeholder token secrets', () => {
+  for (const tokenSecret of [
+    '',
+    ' '.repeat(40),
+    'a'.repeat(31),
+    'replace_with_at_least_32_random_bytes',
+  ]) {
+    const config = readAccountDeletionConfig(validEnabledEnvironment({
+      ACCOUNT_DELETION_TOKEN_SECRET: tokenSecret,
+    }));
+    const errors = validateAccountDeletionConfig(config, { production: true });
+    assert.ok(errors.some(message => message.includes('TOKEN_SECRET')));
+    assert.doesNotMatch(errors.join(' '), new RegExp(tokenSecret || 'never-match-this'));
+  }
+
+  const valid = readAccountDeletionConfig(validEnabledEnvironment());
+  assert.deepEqual(validateAccountDeletionConfig(valid, { production: true }), []);
+  const noFallback = readAccountDeletionConfig(validEnabledEnvironment({
+    ACCOUNT_DELETION_TOKEN_SECRET: '',
+    JWT_SECRET: 'jwt-secret-that-must-not-be-reused-32-bytes',
+  }));
+  assert.equal(noFallback.tokenSecret, '');
 });
 
 test('request response is generic for existing and missing accounts and observes minimum delay', async () => {
@@ -126,6 +166,51 @@ test('confirmation rejects cross-site browser requests', () => {
   }
 });
 
+test('same-origin guard permits the configured origin and non-browser clients', () => {
+  const middleware = requireSameOrigin('https://api.example.com');
+  for (const headers of [
+    { Origin: 'https://api.example.com' },
+    {},
+  ]) {
+    const res = responseRecorder();
+    let next = false;
+    middleware({ get: name => headers[name] }, res, () => { next = true; });
+    assert.equal(res.statusCode, 200);
+    assert.equal(next, true);
+  }
+});
+
+test('request guards reject cross-site browser signals before consuming the rate-limit bucket', () => {
+  let controllerCalls = 0;
+  const guards = createRequestGuards({
+    sameOrigin: requireSameOrigin('https://api.example.com'),
+    requestLimiter: createRateLimit({
+      max: 1,
+      keyGenerator: () => '203.0.113.10',
+    }),
+  });
+
+  function run(headers) {
+    const res = responseRecorder();
+    const req = { get: name => headers[name] };
+    function invoke(index) {
+      if (index === guards.length) {
+        controllerCalls += 1;
+        return;
+      }
+      guards[index](req, res, () => invoke(index + 1));
+    }
+    invoke(0);
+    return res;
+  }
+
+  assert.equal(run({ Origin: 'https://evil.example' }).statusCode, 403);
+  assert.equal(run({ 'Sec-Fetch-Site': 'cross-site' }).statusCode, 403);
+  assert.equal(run({ Origin: 'https://api.example.com' }).statusCode, 200);
+  assert.equal(run({ Origin: 'https://api.example.com' }).statusCode, 429);
+  assert.equal(controllerCalls, 1);
+});
+
 test('uses Railway X-Real-IP only in Railway and ignores forged forwarding chains', () => {
   const railwayRequest = {
     headers: {
@@ -164,6 +249,7 @@ test('public pages implement a two-step form with mail fallback and no GET mutat
   const confirmPage = fs.readFileSync(path.join(root, 'public', 'account-deletion', 'confirm.html'), 'utf8');
   const app = fs.readFileSync(path.join(root, 'src', 'app.js'), 'utf8');
   const route = fs.readFileSync(path.join(root, 'src', 'routes', 'accountDeletion.js'), 'utf8');
+  const envExample = fs.readFileSync(path.join(root, '.env.example'), 'utf8');
   assert.match(requestPage, /action="\/account-deletion\/requests"/);
   assert.match(requestPage, /mailto:culturepath\.support@gmail\.com/);
   assert.match(requestPage, /navigator\.clipboard/);
@@ -178,4 +264,7 @@ test('public pages implement a two-step form with mail fallback and no GET mutat
   assert.match(route, /body\('confirmation'\)\.equals\('DELETE'\)/);
   assert.match(route, /const requestLimiter = createRateLimit/);
   assert.match(route, /const confirmLimiter = createRateLimit/);
+  assert.match(route, /\.\.\.createRequestGuards\(\{ sameOrigin, requestLimiter \}\)/);
+  assert.match(envExample, /^ACCOUNT_DELETION_TOKEN_SECRET=$/m);
+  assert.doesNotMatch(envExample, /ACCOUNT_DELETION_TOKEN_SECRET=replace_/);
 });

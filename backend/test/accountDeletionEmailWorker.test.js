@@ -3,7 +3,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
-  cleanupExpiredAccountDeletionRequests,
   claimDeliveryJobs,
   deliverJob,
   retryDelayMs,
@@ -12,7 +11,6 @@ const {
   startAccountDeletionEmailWorker,
 } = require('../src/services/accountDeletionEmailWorker');
 const { deriveToken } = require('../src/services/accountDeletionRequestService');
-const { main: cleanupMain } = require('../scripts/cleanupAccountDeletionRequests');
 
 const config = Object.freeze({
   tokenSecret: 'test-only-account-deletion-secret-32-bytes',
@@ -171,44 +169,20 @@ test('marks the final failed delivery terminal and clears its nonce', async () =
   assert.match(updates[0].sql, /token_nonce = IF/);
 });
 
-test('cleanup removes only rows whose 24-hour window has elapsed', async () => {
-  const queries = [];
-  const result = await cleanupExpiredAccountDeletionRequests({
-    pool: { query: async (sql, params) => { queries.push({ sql, params }); return [{ affectedRows: 3 }]; } },
-    clock: () => Date.UTC(2026, 8, 2),
-  });
-  assert.deepEqual(result, { deletedCount: 3 });
-  assert.equal(queries[0].params[0].getTime(), Date.UTC(2026, 8, 1));
-  assert.match(queries[0].sql, /send_window_started_at <=/);
-});
-
-test('cleanup CLI reports only the count and always closes its injected pool', async () => {
-  let closed = false;
-  const logs = [];
-  const result = await cleanupMain({
-    pool: {
-      query: async () => [{ affectedRows: 2 }],
-      end: async () => { closed = true; },
-    },
-    clock: () => Date.UTC(2026, 8, 2),
-    logger: { log: value => logs.push(value), error: value => logs.push(value) },
-  });
-  assert.equal(result.deletedCount, 2);
-  assert.equal(closed, true);
-  assert.deepEqual(logs, ['Account deletion request cleanup removed 2 row(s).']);
-});
-
 test('worker starts immediately, avoids overlapping ticks, and can stop cleanly', async () => {
-  let releaseCleanup;
-  const cleanupBlocked = new Promise(resolve => { releaseCleanup = resolve; });
-  let cleanupCalls = 0;
+  let releaseClaim;
+  const claimBlocked = new Promise(resolve => { releaseClaim = resolve; });
+  let claimCalls = 0;
   let intervalCallback;
   let cleared = false;
   const worker = startAccountDeletionEmailWorker({
     config,
     pool: {
-      async query() { cleanupCalls += 1; await cleanupBlocked; return [{ affectedRows: 0 }]; },
-      async getConnection() { throw new Error('claim should wait for cleanup'); },
+      async getConnection() {
+        claimCalls += 1;
+        await claimBlocked;
+        return claimPool([]).getConnection();
+      },
     },
     mailer: { async sendDeletionConfirmation() {} },
     logger: { error() {} },
@@ -216,8 +190,8 @@ test('worker starts immediately, avoids overlapping ticks, and can stop cleanly'
     clearIntervalFn() { cleared = true; },
   });
   intervalCallback();
-  assert.equal(cleanupCalls, 1);
-  releaseCleanup();
+  assert.equal(claimCalls, 1);
+  releaseClaim();
   await worker.stop();
   assert.equal(cleared, true);
 });

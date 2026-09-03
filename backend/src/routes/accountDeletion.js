@@ -35,6 +35,10 @@ function requireSameOrigin(publicBaseUrl) {
   };
 }
 
+function createRequestGuards({ sameOrigin, requestLimiter }) {
+  return [sameOrigin, requestLimiter];
+}
+
 function createAccountDeletionRouter(options = {}) {
   const config = options.config || readAccountDeletionConfig();
   const errors = validateAccountDeletionConfig(config, options);
@@ -67,7 +71,7 @@ function createAccountDeletionRouter(options = {}) {
   router.use(express.urlencoded({ extended: false, limit: '10kb' }));
   router.post(
     '/requests',
-    requestLimiter,
+    ...createRequestGuards({ sameOrigin, requestLimiter }),
     [
       body('email').isEmail().isLength({ max: 254 }),
       body('locale').optional().isIn(['ko', 'en', 'ja', 'zh']),
@@ -92,5 +96,6 @@ function createAccountDeletionRouter(options = {}) {
 
 module.exports = {
   createAccountDeletionRouter,
+  createRequestGuards,
   requireSameOrigin,
 };

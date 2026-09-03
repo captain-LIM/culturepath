@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('node:path');
 const swaggerUi = require('swagger-ui-express');
 const openApiDocument = require('./docs/openapi');
+const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const culturesRoutes = require('./routes/cultures');
@@ -17,10 +18,8 @@ const {
   readAccountDeletionConfig,
   validateAccountDeletionConfig,
 } = require('./config/accountDeletion');
-const { createAccountDeletionMailer } = require('./services/accountDeletionEmailService');
-const {
-  startAccountDeletionEmailWorker,
-} = require('./services/accountDeletionEmailWorker');
+const { startAccountDeletionJobs } = require('./services/accountDeletionJobs');
+const { createGracefulShutdown } = require('./utils/gracefulShutdown');
 
 const app = express();
 const accountDeletionConfig = readAccountDeletionConfig();
@@ -87,17 +86,25 @@ const server = app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);
 });
 
-const accountDeletionWorker = accountDeletionConfig.enabled
-  ? startAccountDeletionEmailWorker({
-    config: accountDeletionConfig,
-    mailer: createAccountDeletionMailer(accountDeletionConfig),
-  })
-  : null;
+const {
+  emailWorker: accountDeletionWorker,
+  cleanupScheduler: accountDeletionCleanupScheduler,
+} = startAccountDeletionJobs({
+  config: accountDeletionConfig,
+  pool,
+});
 
-async function shutdown() {
-  await accountDeletionWorker?.stop();
-  server.close();
+const shutdown = createGracefulShutdown({
+  server,
+  backgroundJobs: [accountDeletionWorker, accountDeletionCleanupScheduler],
+  pool,
+});
+
+function handleSignal(signal) {
+  void shutdown(signal).catch(() => {
+    process.exitCode = 1;
+  });
 }
 
-process.once('SIGTERM', shutdown);
-process.once('SIGINT', shutdown);
+process.once('SIGTERM', handleSignal);
+process.once('SIGINT', handleSignal);

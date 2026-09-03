@@ -424,7 +424,7 @@ module.exports = Object.freeze({
       post: {
         tags: ['Account deletion'],
         summary: '계정 삭제 확인 메일 요청',
-        description: '계정 존재 여부를 노출하지 않는 동일한 202 응답을 메일 아웃박스 기록 직후 반환합니다. SMTP 발송은 백그라운드 워커가 처리하며 이메일 확인 전에는 계정이 삭제되지 않습니다. 비밀번호, Google 토큰 또는 앱 인증 토큰은 받지 않습니다.',
+        description: '계정 존재 여부를 노출하지 않는 동일한 202 응답을 메일 아웃박스 기록 직후 반환합니다. 브라우저 요청은 공개 페이지와 같은 origin에서만 허용합니다. SMTP 발송은 백그라운드 워커가 처리하며 이메일 확인 전에는 계정이 삭제되지 않습니다. 비밀번호, Google 토큰 또는 앱 인증 토큰은 받지 않습니다.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/AccountDeletionRequest' } } },
@@ -432,6 +432,7 @@ module.exports = Object.freeze({
         responses: {
           202: { description: '메일 아웃박스 요청 접수(계정 존재 여부와 실제 메일 발송 여부를 공개하지 않음)' },
           400: { description: '입력 형식 오류' },
+          403: { description: '교차 사이트 브라우저 요청 거부' },
           429: { description: '계정 삭제 메일 요청 전용 IP 제한 초과' },
           503: { description: '기능 비활성화 또는 일시적 서비스 불가' },
         },

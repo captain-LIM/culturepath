@@ -3,8 +3,8 @@
 const pool = require('../src/config/db');
 const {
   cleanupExpiredAccountDeletionRequests,
-  safeErrorCode,
-} = require('../src/services/accountDeletionEmailWorker');
+} = require('../src/services/accountDeletionCleanupService');
+const { safeErrorCode } = require('../src/utils/safeErrorCode');
 
 async function main(options = {}) {
   const database = options.pool || pool;

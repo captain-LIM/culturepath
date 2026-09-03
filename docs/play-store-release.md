@@ -80,14 +80,15 @@
 - ✅ 외부 삭제 폼용 `20260902_add_account_deletion_requests.sql`과 영속 메일 아웃박스용 forward migration `20260903_add_account_deletion_outbox.sql`은 기존과 같은 Railway Pre-deploy Command에서 파일명 순서대로 자동 적용됨. 배포 순서는 **두 마이그레이션 성공 → 새 백엔드 시작**이며 `--strict` 실패 시 배포를 중단해야 함. 기존 마이그레이션 파일은 수정하지 않음.
 - ✅ 공모전 운영 SMTP는 `culturepath.support@gmail.com`의 Gmail SMTP로 확정. 개인정보처리방침의 Google LLC 위탁 업무에 계정 삭제 확인 메일 발송을 반영.
 - ⬜ 해당 Google 계정의 2단계 인증과 전용 앱 비밀번호를 설정하고 Railway 비밀 변수에 직접 등록. 앱 비밀번호를 저장소·PR·채팅에 공유하지 않음.
-- ⬜ Railway에 `ACCOUNT_DELETION_PUBLIC_BASE_URL`, SMTP 환경 변수와 SMTP 자격증명과 별개인 32바이트 이상의 `ACCOUNT_DELETION_TOKEN_SECRET`을 입력하되, 최초 배포는 `ACCOUNT_DELETION_WEB_FORM_ENABLED=false`로 유지. 이 비밀값을 바꾸면 대기 중인 메일 발송 작업은 재시도에 실패하므로 운영 중 임의 교체하지 않음.
+- ⬜ Railway에 `ACCOUNT_DELETION_PUBLIC_BASE_URL`, SMTP 환경 변수와 SMTP 자격증명과 별개인 명령으로 생성한 32바이트 이상의 실제 `ACCOUNT_DELETION_TOKEN_SECRET`을 입력하되, 예시 placeholder는 사용하지 않고 최초 배포는 `ACCOUNT_DELETION_WEB_FORM_ENABLED=false`로 유지. 이 비밀값을 바꾸면 대기 중인 메일 발송 작업은 재시도에 실패하므로 운영 중 임의 교체하지 않음.
 - ✅ HTTP 요청은 SMTP 완료를 기다리지 않고 DB 아웃박스 기록 직후 동일한 202 응답을 반환. 앱 프로세스의 워커가 `FOR UPDATE SKIP LOCKED`와 임대 시간으로 작업을 선점하고 제한된 재시도를 수행함. 발송 성공 또는 최종 실패 시 토큰 재생성용 무작위 값을 삭제함.
-- ✅ 요청 API와 확인 API는 별도 IP 제한 버킷을 사용. Railway 환경에서만 Railway Edge가 설정하는 단일 `X-Real-IP`를 사용하고, 일반 환경의 임의 `X-Forwarded-For`와 `X-Real-IP`는 신뢰하지 않음.
+- ✅ 요청 API와 확인 API는 별도 IP 제한 버킷을 사용하며, 두 POST 모두 configured public URL과 다른 브라우저 origin을 limiter보다 먼저 거부. CORS는 서버 봇 차단 수단이 아니므로 IP·계정별 제한과 honeypot을 함께 유지함. Railway 환경에서만 Railway Edge가 설정하는 단일 `X-Real-IP`를 사용하고, 일반 환경의 임의 `X-Forwarded-For`와 `X-Real-IP`는 신뢰하지 않음.
 - ⚠️ IP 제한 저장소는 프로세스 메모리이므로 공모전 운영은 backend replica 1개를 전제로 함. Railway replica가 2개 이상이면 기능 플래그를 켜기 전에 Redis/DB 기반 중앙 limiter로 교체.
-- ✅ 만료 요청은 앱 워커가 주기적으로 정리하며, 별도 운영 보강용 `npm run account-deletion:cleanup`도 제공. 프로세스가 장기간 중지되면 정리도 지연되므로 Railway Cron을 추가하면 같은 명령을 사용하고 중복 실행은 허용함.
+- ✅ 만료 요청 cleanup scheduler는 메일 워커와 분리되어 기능 플래그가 false여도 시작 직후와 기본 5분 간격으로 실행됨. 별도 운영 보강용 `npm run account-deletion:cleanup`도 제공하며, Railway Cron을 추가하면 같은 명령을 사용하고 중복 실행은 허용함.
+- ✅ SIGTERM/SIGINT에서는 신규 HTTP 연결과 새 background tick을 먼저 차단하고 진행 중 요청·메일·cleanup을 기다린 뒤 MySQL pool을 종료함. Railway `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`는 SMTP 소켓 유휴 제한을 고려해 최소 60초로 설정했는지 확인.
 - ⬜ 운영 DB에서 아웃박스 컬럼·`idx_account_deletion_delivery` 인덱스 생성 및 `/account-deletion` 보안 헤더를 확인. 서로 다른 실제 IP의 요청이 독립 제한되는지, 위조한 `X-Forwarded-For`가 제한을 우회하지 못하는지 확인한 뒤 테스트 계정으로 요청→메일 수신→최종 삭제를 검증.
 - ⚠️ SMTP는 성공했지만 성공 상태 DB 갱신 전에 프로세스가 종료되면 임대 만료 후 같은 메일이 한 번 더 발송될 수 있음. SMTP 소켓 유휴 제한(45초)과 워커 임대(기본 60초)를 운영 지연에 맞게 함께 관리하고 중복 발송 로그를 모니터링.
-- ⬜ 위 검증과 모니터링 준비가 끝난 뒤에만 `ACCOUNT_DELETION_WEB_FORM_ENABLED=true`로 전환. 실패 시 false로 되돌리면 앱 내 탈퇴와 `mailto:` 보조 경로는 계속 사용 가능.
+- ⬜ 위 검증과 모니터링 준비가 끝난 뒤에만 `ACCOUNT_DELETION_WEB_FORM_ENABLED=true`로 전환. 실패 시 false로 되돌리면 앱 내 탈퇴와 `mailto:` 보조 경로는 계속 사용 가능하며 만료 요청 cleanup은 계속 실행됨.
 
 - ⬜ 개인 개발자 계정(2023-11 이후 생성)이면 **비공개 테스트 12명 이상 · 14일 연속** 후 프로덕션 액세스 신청 가능 — 일정에 선반영.
 - ⬜ 내부 테스트 → 비공개 테스트 → 프로덕션 트랙 순서로 올리며 검증.
