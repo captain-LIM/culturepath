@@ -8,6 +8,17 @@ const tls = require('node:tls');
 // 기본 테스트는 실제 서비스 키와 네트워크를 절대 사용하지 않는다.
 const blockedEnvironmentVariables = [
   'TOUR_API_KEY',
+  'TOUR_API_ENG_KEY',
+  'TOUR_API_JPN_KEY',
+  'TOUR_API_CHS_KEY',
+  'NCP_TOUR_GATEWAY_ENABLED',
+  'NCP_TOUR_GATEWAY_BASE_URL',
+  'NCP_TOUR_GATEWAY_API_KEY',
+  'NCP_TOUR_GATEWAY_SERVICES',
+  'NCP_TOUR_TEST_URL',
+  'NCP_TOUR_TEST_API_KEY',
+  'NCP_ADMIN_ACCESS_KEY',
+  'NCP_ADMIN_SECRET_KEY',
   'OPENROUTER_API_KEY',
   'ANTHROPIC_API_KEY',
   'QDRANT_API_KEY',

@@ -14,6 +14,8 @@
     "rag:evaluate": "node scripts/evaluateRag.js",
     "rag:index": "node scripts/indexPlaces.js",
     "translations:prewarm": "node scripts/prewarmTranslations.js",
+    "ncp:gateway": "node scripts/ncpGateway.js",
+    "ncp:smoke": "node scripts/smokeNcpTourGateway.js",
     "test": "node --import ./test-support/setup.js --test",
     "test:watch": "node --import ./test-support/setup.js --test --watch"
   },

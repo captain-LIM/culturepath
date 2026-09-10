@@ -1,7 +1,8 @@
 'use strict';
 
 const { getExternalApiConfig } = require('../config/externalApis');
-const { ExternalApiError } = require('../utils/externalApiError');
+const { ExternalApiError, publicDataErrorContext } = require('../utils/externalApiError');
+const { resolvePublicDataTransport } = require('../config/publicDataTransport');
 const {
   normalizePublicDataResponse,
 } = require('../utils/normalizePublicDataResponse');
@@ -49,9 +50,11 @@ function createPublicDataClient(options) {
     retryDelayMs = 200,
     fetchImpl = globalThis.fetch,
     logger = console,
+    gateway,
   } = options || {};
 
   const normalizedKey = normalizeServiceKey(apiKey);
+  const transport = resolvePublicDataTransport(serviceName, baseUrl, gateway);
   const retryLimit = Math.min(
     1,
     Math.max(0, Number.isInteger(Number(maxRetries)) ? Number(maxRetries) : 1),
@@ -73,17 +76,18 @@ function createPublicDataClient(options) {
 
   let normalizedBaseUrl;
   try {
-    normalizedBaseUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
-  } catch (cause) {
+    const target = transport.name === 'ncp-gateway' ? transport.baseUrl : baseUrl;
+    normalizedBaseUrl = new URL(target.endsWith('/') ? target : `${target}/`);
+  } catch {
     throw new ExternalApiError('공공데이터 API Base URL이 올바르지 않습니다.', {
       code: 'CONFIG_ERROR',
       service: serviceName,
-      cause,
     });
   }
 
   function buildUrl(operation, params, pageNo, numOfRows) {
-    if (!OPERATION_PATTERN.test(operation)) {
+    if (!OPERATION_PATTERN.test(operation) ||
+        (transport.name === 'ncp-gateway' && !transport.operations.includes(operation))) {
       throw new ExternalApiError('공공데이터 API 작업명이 올바르지 않습니다.', {
         code: 'VALIDATION_ERROR',
         service: serviceName,
@@ -121,17 +125,31 @@ function createPublicDataClient(options) {
   }
 
   async function execute(operation, url) {
+    const started = Date.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const response = await fetchImpl(url, {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers: { Accept: 'application/json', ...(transport.name === 'ncp-gateway'
+          ? { 'x-ncp-apigw-api-key': transport.apiKey } : {}) },
+        redirect: 'error',
         signal: controller.signal,
       });
 
       if (!response.ok) {
+        let gatewayErrorCode = null;
+        if (transport.name === 'ncp-gateway') {
+          // Do not retain provider bodies or their messages in exceptions.
+          try {
+            const code = String(JSON.parse(await response.text())?.error?.errorCode ?? '');
+            if (['100', '200', '210', '230', '300', '400', '410', '420', '430', '440',
+              '500', '510', '520', '530', '900'].includes(code)) gatewayErrorCode = code;
+          } catch {
+            if (controller.signal.aborted) throw new Error('Response timeout');
+          }
+        }
         throw new ExternalApiError(
           `공공데이터 HTTP 오류(${response.status})가 발생했습니다.`,
           {
@@ -139,7 +157,10 @@ function createPublicDataClient(options) {
             service: serviceName,
             operation,
             status: response.status,
-            retryable: isRetryableStatus(response.status),
+            retryable: isRetryableStatus(response.status) &&
+              !['100', '200', '210', '230', '300', '400', '430', '440'].includes(gatewayErrorCode),
+            gatewayErrorCode,
+            errorLayer: gatewayErrorCode ? 'gateway' : 'unknown',
           },
         );
       }
@@ -148,12 +169,11 @@ function createPublicDataClient(options) {
       let payload;
       try {
         payload = JSON.parse(responseText);
-      } catch (cause) {
+      } catch {
         throw new ExternalApiError('공공데이터 JSON 응답을 해석하지 못했습니다.', {
           code: 'INVALID_RESPONSE',
           service: serviceName,
           operation,
-          cause,
         });
       }
 
@@ -163,6 +183,9 @@ function createPublicDataClient(options) {
       });
     } catch (error) {
       if (error instanceof ExternalApiError) {
+        error.transport = transport.name;
+        error.elapsedMs = Date.now() - started;
+        error.errorLayer ||= error.code === 'BUSINESS_ERROR' ? 'upstream' : 'unknown';
         throw error;
       }
 
@@ -176,6 +199,9 @@ function createPublicDataClient(options) {
           service: serviceName,
           operation,
           retryable: true,
+          transport: transport.name,
+          errorLayer: 'client',
+          elapsedMs: Date.now() - started,
         },
       );
     } finally {
@@ -204,6 +230,7 @@ function createPublicDataClient(options) {
         }
 
         logger?.warn?.('공공데이터 요청을 재시도합니다.', {
+          ...publicDataErrorContext(error),
           service: serviceName,
           operation,
           attempt: attempt + 1,
@@ -232,6 +259,7 @@ function createConfiguredPublicDataClient(serviceKey, options = {}) {
     serviceName: service.name,
     baseUrl: service.baseUrl,
     apiKey: service.apiKey || config.apiKey,
+    gateway: config.gateway,
     mobileOs: config.mobileOs,
     mobileApp: config.mobileApp,
     timeoutMs: config.timeoutMs,

@@ -92,15 +92,14 @@ function normalizePublicDataResponse(payload, context = {}) {
   const isSuccess = resultCode === '0000' || resultCode === '0';
 
   if (!isSuccess) {
+    const safeResultCode = /^\d{1,4}$/.test(resultCode) ? resultCode : null;
     throw new ExternalApiError(
-      `공공데이터 업무 오류(${resultCode || 'UNKNOWN'}): ${
-        resultMsg || '알 수 없는 오류'
-      }`,
+      `공공데이터 업무 오류(${safeResultCode || 'UNKNOWN'})가 발생했습니다.`,
       {
         code: 'BUSINESS_ERROR',
         service: context.service,
         operation: context.operation,
-        resultCode: resultCode || null,
+        resultCode: safeResultCode,
       },
     );
   }
