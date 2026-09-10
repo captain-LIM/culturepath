@@ -1,8 +1,8 @@
 # R18 운영 배포·실기기·Google Play 출시 준비 가이드
 
-> **문서 상태:** 실행 전 현행 계획
+> **문서 상태:** G1 일부 완료, G2 실행 전 현행 계획
 >
-> **기준일:** 2026-08-28
+> **기준일:** 2026-09-10
 >
 > **대상:** CulturePath 팀 공동 작업
 >
@@ -30,9 +30,10 @@ G3로 진행한다.
 
 ### 완료된 기반
 
-- Backend 자동 테스트 332개 통과
+- Backend 자동 테스트 485개 통과
 - Flutter analyze·test·Android release CI 통과
-- TourAPI 실제 호출과 MySQL 장소·검색 캐시 저장 검증 완료
+- NCP KorService2 production 중계와 Railway 환경 변수 적용 완료
+- Railway strict migration, HTTPS `/health`, TourAPI 검색·상세 cache refresh 검증 완료
 - Qdrant는 제출 전 활성 경로에서 사용하지 않음
 - AI 챗봇은 MySQL→TourAPI 후보 resolver와 OpenRouter 설명 계층을 사용
 - AI 코스 다듬기는 현재 코스의 기존 장소만 삭제·Day 이동·명시적 순서 변경
@@ -51,7 +52,7 @@ G3로 진행한다.
 | 개인정보처리방침 | 앱 내부 진입점과 운영 URL 미확인 | 공개 HTTPS 문서와 앱 내부 링크 제공 | BLOCKER |
 | Release Backend 주소 | `API_BASE_URL` 주입 필요 | 실제 HTTPS URL로 release AAB 생성 | BLOCKER |
 | Google Maps release 키 | 로컬 `maps.apiKey` 주입 구조 | 최종 package ID와 release SHA 인증서로 키 제한 | BLOCKER |
-| 운영 DB migration | 로컬 검증과 운영 적용은 별개 | 운영 DB에 전체 migration 적용·재실행·복구 확인 | BLOCKER |
+| 운영 DB migration | strict migration 기준 적용할 항목 없음 확인 | 백업과 별도 환경 복구 절차 확인 | BLOCKER |
 | 실기기 QA | 웹·CI 중심 검증 완료 | release 설정으로 Android 실기기 핵심 흐름 검증 | BLOCKER |
 
 디자인 추가 개선, 공개 코스 사용 횟수 UI 표시, Qdrant 재도입은 출시 필수 조건이 아니다.
@@ -126,12 +127,17 @@ DB 비밀번호와 전체 접속 문자열은 문서, Git, CI 로그, 채팅에 
 - 충분히 긴 무작위 `JWT_SECRET`
 - 운영 MySQL의 `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 - TourAPI 국문·영문·일문·중문 키 중 실제 사용하는 키
+- 국문 TourAPI용 `NCP_TOUR_GATEWAY_ENABLED`, base URL, API Key, services
 - OpenRouter 키, 모델, timeout, 출력 토큰 한도
 - 장소·DataLab 캐시 TTL과 stale 허용 시간
 - AI rate limit, 세션 TTL, 최대 세션 수
 
 현재 활성 AI 경로는 Qdrant와 embedding을 사용하지 않는다. 운영 배포를 위해 Qdrant를
 새로 만들거나 `OPENROUTER_EMBEDDING_*`을 설정할 필요는 없다.
+
+국문 관광정보는 NCP `tourrelay/prod`를 사용한다. 상세한 운영값과 롤백은
+[NCP TourAPI 중계 운영 가이드](./ncp-tour-gateway.md)를 따른다. NCP 관리 API 키는
+Railway에 주입하지 않는다.
 
 ### 운영 점검
 
@@ -154,11 +160,14 @@ Play 심사 계정이 접속할 시간에는 서버가 실제로 깨어 있고 D
 
 ### TourAPI
 
-- 문화·지역 조합 한 건 조회
+- [x] 문화·지역 조합 한 건 조회
 - 공식 분류 코드가 있는 문화 한 건과 모호 문화 한 건
-- 장소 상세 및 이미지 한 건
-- MySQL cache miss → TourAPI → cache upsert
-- 동일 요청의 cache hit
+- [x] 장소 상세 및 이미지 한 건
+- [x] MySQL cache miss → NCP Gateway → TourAPI → cache upsert
+- [x] 동일 요청의 cache hit
+
+2026-09-10 검색과 상세의 `REFRESHED`, 후속 `HIT`, NCP production 집계 증가를 확인했다.
+공식 분류와 모호 문화의 별도 표본 비교는 회귀 점검 항목으로 남는다.
 
 ### OpenRouter
 
@@ -366,9 +375,9 @@ versionCode를 올리고 같은 핵심 흐름을 다시 검증한다.
 ### G1 운영 통합
 
 - [ ] 운영 MySQL 최소권한 연결
-- [ ] 전체 migration 적용·재실행 확인
-- [ ] HTTPS Backend `/health` 확인
-- [ ] TourAPI cache miss·hit 확인
+- [x] 전체 migration 적용 상태 확인(strict migration: 적용 항목 없음)
+- [x] HTTPS Backend `/health` 확인
+- [x] TourAPI cache miss·hit 확인
 - [ ] OpenRouter chat·transform `mock=false` 확인
 - [ ] 외부 API·DB 장애 처리 확인
 - [ ] 비밀값·민감 로그 점검

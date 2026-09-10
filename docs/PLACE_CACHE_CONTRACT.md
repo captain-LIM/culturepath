@@ -111,10 +111,15 @@ PLACE_CACHE_DB_FAILURE_COOLDOWN_SECONDS=30
 - 목록 갱신 시 상세 JSON 보존
 - 설정 검증, 컨트롤러 헤더, Swagger 계약
 
-이번 PR 당시 자동 검증은 Docker, 실제 MySQL과 live TourAPI를 사용하지 않았다. 이후 별도 수동 검증에서 로컬 MySQL 8.4.11의 `schema.sql`, 당시 migration 2개와 재실행, 최소 권한 Backend 연결, 실제 TourAPI 기반 두 캐시 저장이 성공했다. 2026-08-13에는 별도로 코스 좌표 migration 적용·재실행도 성공했다. 따라서 아래 항목 중 배포 환경과 운영 부하에 관한 검증은 여전히 남는다.
+이번 PR 당시 자동 검증은 Docker, 실제 MySQL과 live TourAPI를 사용하지 않았다. 이후 로컬
+MySQL 8.4.11에서 `schema.sql`, migration 재실행, 최소 권한 Backend 연결과 실제 TourAPI
+기반 캐시 저장을 검증했다. 2026-09-10에는 Railway production의 strict migration에서
+적용할 migration이 없음을 확인했고, NCP Gateway를 통한 검색·상세 요청이 각각
+`X-Cache-Status: REFRESHED`로 운영 MySQL에 갱신됐다. 같은 요청의 캐시 조회도 정상 동작했다.
 
-- staging/production MySQL 8에 `backend/schema.sql`과 기존 DB migration이 정상 적용되는지
-- JSON·`DATETIME(3)` 저장과 조회, upsert SQL, 트랜잭션 rollback이 배포 환경의 실제 드라이버와 일치하는지
+따라서 production 연결과 기본 저장·조회는 검증 완료다. 아래 운영 부하·장기 관리 항목은
+여전히 남는다.
+
 - 인덱스 사용과 데이터 증가 시 조회 성능
 - 여러 서버 인스턴스에서 동시에 같은 키가 갱신될 때 허용 가능한 외부 호출량인지
 - 만료 데이터 정리 작업과 운영 모니터링 정책

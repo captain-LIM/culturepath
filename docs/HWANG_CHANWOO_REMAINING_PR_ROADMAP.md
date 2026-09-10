@@ -1,11 +1,11 @@
 # [황찬우 전용] 현행 잔여 작업과 PR 로드맵
 
-> **기준 시점:** 2026-08-28
+> **기준 시점:** 2026-09-10
 >
-> **현재 기준:** `main` (PR #25까지 반영)
+> **현재 기준:** `main` (PR #30까지 반영)
 >
-> **최신 결정:** 하단 5탭과 R17 AI 구조 전환을 병합했고, 다음 필수 단계는 제한된
-> OpenRouter 실환경 검증과 R18 배포·실기기 준비
+> **최신 결정:** NCP KorService2 production 중계와 Railway 전환을 완료했다. 다음 필수
+> 단계는 npm 개발 의존성 취약점 정리, OpenRouter 실환경 검증과 R18 실기기·출시 준비다.
 > **용도:** 새 세션이 가장 먼저 읽는 황찬우 담당 현행 문서
 
 R17의 통합 대화 화면, 구조화 세션, LLM 의도 해석, 지역 특성 태그, 코스 초안과
@@ -24,10 +24,12 @@ R17의 통합 대화 화면, 구조화 세션, LLM 의도 해석, 지역 특성 
 - R16.3 공개 코스 장소 사용 횟수 집계와 Backend 응답 계약 완료
 - R16.4 공식 분류 코드 우선 문화 장소 검색과 조건부 지역 목록 fallback 완료(PR #25)
 - R17 MySQL→TourAPI 여행 챗봇과 기존 장소 전용 코스 다듬기 완료(PR #24)
+- NCP API Gateway 기반 KorService2 production 중계와 Railway 적용 완료(PR #30)
 - Flutter 하단 내비게이션 `홈·탐색·만들기·AI·내정보` 5탭 적용 완료
-- 현재 `main` Backend 332개 테스트와 Flutter analyze·test·Android release CI 통과
-- 로컬 MySQL 8.4.11 연결·R16.3까지 migration·실데이터 캐시 검증 완료. R17의
-  `20260827_add_course_revision.sql` 적용·재실행은 남음
+- 현재 `main` Backend 485개 테스트 통과
+- 로컬 MySQL 8.4.11 연결·migration·실데이터 캐시 검증 완료
+- Railway strict migration에서 적용할 항목 없음, HTTPS health와 장소 검색·상세의
+  `REFRESHED` 및 후속 `HIT` 검증 완료
 - Qdrant 연결과 OpenRouter BGE-M3 1건·1024차원 응답 확인은 과거 기술 검증으로 완료
 
 R16.1 TourAPI 제한 표본에서는 14개 문화×지역 조합 중 비어 있지 않은 결과가
@@ -43,9 +45,10 @@ R16.1 TourAPI 제한 표본에서는 14개 문화×지역 조합 중 비어 있�
 
 | 우선순위 | PR | 상태 | 핵심 결과 |
 | --- | --- | --- | --- |
-| 1 | R17 제한 실환경 검증 | 코드·CI 완료, 수동 검증 대기 | `20260827` migration, 실제 OpenRouter chat/transform, MySQL→TourAPI 통합 확인 |
-| 2 | 장소 사용 횟수 UI | 선택 작업 | `공개 코스 N개에 담김` 표시, 정렬 변경은 별도 판단 |
-| 3 | R18 배포·실기기·Google Play 준비 | 필수 마지막 통합 | 운영 Backend/DB/비밀값, Android release, 장애·비용 검증 |
+| 1 | npm High 취약점 정리 | 원인 분석 완료, 수정 대기 | `brace-expansion >=5.0.9`, production-only 설치와 감사 0건 확인 |
+| 2 | R17 제한 실환경 검증 | 코드·CI 완료, 일부 수동 검증 대기 | 실제 OpenRouter chat/transform `mock=false` 확인 |
+| 3 | 장소 사용 횟수 UI | 선택 작업 | `공개 코스 N개에 담김` 표시, 정렬 변경은 별도 판단 |
+| 4 | R18 실기기·Google Play 준비 | 필수 마지막 통합 | Android release, 계정 삭제·정책, 실기기와 장애·비용 검증 |
 
 R17 실환경 검증에서 결함이 없으면 별도 코드 PR을 만들 필요가 없다. 결함이 확인될 때만
 원인별 수정 PR을 만들고, 그 외에는 결과를 R18 배포 runbook에 기록한다. 카카오·네이버
@@ -91,7 +94,8 @@ R17 실환경 검증에서 결함이 없으면 별도 코드 PR을 만들 필요
 - Qdrant·BGE-M3 없이 챗봇의 탐색 흐름이 동작한다.
 - 긴 대화도 서버의 20개·8,000자 제한 안에서 최신 이력만 전송한다.
 - OpenRouter rate limit, timeout, 비용 상한과 장애 상태가 문서·테스트에 반영된다.
-- 기존 DB에는 `20260827_add_course_revision.sql`을 적용하고 재실행까지 검증한다.
+- 기존 DB migration 적용 상태를 strict migration으로 확인한다. 2026-09-10 기준 적용할
+  항목이 없음을 확인했다.
 
 ## 4. R17 — 기존 장소 전용 코스 다듬기(구현·CI 완료)
 
@@ -122,10 +126,10 @@ R17 실환경 검증에서 결함이 없으면 별도 코드 PR을 만들 필요
 
 ### Backend와 데이터
 
-- 로컬과 분리된 staging/production MySQL 및 최소권한 계정
+- 운영 MySQL 계정의 최소권한과 백업·복구 절차 확인
 - `schema.sql`과 모든 migration의 신규 구축·기존 DB 재실행·복구 runbook
-- HTTPS Backend, CORS, 환경변수와 비밀값 관리
-- TourAPI 캐시 TTL·stale·fail-open과 신규 후보 resolver 운영 점검
+- HTTPS Backend, CORS, 환경변수와 비밀값 관리 지속 점검
+- NCP TourAPI Gateway 사용량·quota와 캐시 TTL·stale·fail-open 운영 점검
 - OpenRouter 예산 한도, rate limit, timeout과 장애 안내
 - release 환경에서 의도하지 않은 mock 모드 차단
 
