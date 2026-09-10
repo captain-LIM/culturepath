@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const { getDataLabCacheConfig } = require('../config/dataLabCache');
 const dataLabCacheRepository = require('../repositories/dataLabCacheRepository');
 const dataLabService = require('./dataLabService');
-const { ExternalApiError } = require('../utils/externalApiError');
+const { ExternalApiError, publicDataErrorContext } = require('../utils/externalApiError');
 
 const CACHE_STATUS = Object.freeze({
   BYPASS: 'BYPASS',
@@ -153,7 +153,7 @@ function createCachedDataLabService(options = {}) {
         if (staleUsable && canUseStale(error)) {
           logger?.warn?.('DataLab 장애로 오래된 지역 방문자 캐시를 반환합니다.', {
             cacheOperation: operation,
-            errorName: error?.name || 'Error',
+            ...publicDataErrorContext(error),
           });
           return { ...cached.response, cacheStatus: CACHE_STATUS.STALE };
         }

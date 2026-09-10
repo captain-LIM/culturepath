@@ -1,4 +1,7 @@
 require('dotenv').config();
+const { getExternalApiConfig } = require('./config/externalApis');
+const { validateConfiguredTransports } = require('./config/publicDataTransport');
+validateConfiguredTransports(getExternalApiConfig());
 const express = require('express');
 const cors = require('cors');
 const path = require('node:path');

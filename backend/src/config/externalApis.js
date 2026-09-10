@@ -1,6 +1,7 @@
 'use strict';
 
 require('dotenv').config({ quiet: true });
+const { getPublicDataTransportConfig } = require('./publicDataTransport');
 
 const DEFAULTS = Object.freeze({
   mobileOs: 'ETC',
@@ -29,6 +30,7 @@ function parsePositiveInteger(value, fallback) {
 
 function getExternalApiConfig(env = process.env) {
   return {
+    gateway: getPublicDataTransportConfig(env),
     apiKey: env.TOUR_API_KEY?.trim() || '',
     mobileOs: env.PUBLIC_DATA_MOBILE_OS?.trim() || DEFAULTS.mobileOs,
     mobileApp: env.PUBLIC_DATA_MOBILE_APP?.trim() || DEFAULTS.mobileApp,

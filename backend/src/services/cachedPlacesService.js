@@ -9,7 +9,7 @@ const {
   normalizeAreaBasedPlaceOptions,
   normalizeKeywordPlaceOptions,
 } = tourApiService;
-const { ExternalApiError } = require('../utils/externalApiError');
+const { ExternalApiError, publicDataErrorContext } = require('../utils/externalApiError');
 
 const CACHE_STATUS = Object.freeze({
   BYPASS: 'BYPASS',
@@ -608,7 +608,7 @@ function createCachedPlacesService(options = {}) {
         if (isStaleUsable(cached, failedAt) && canUseStale(error)) {
           logger?.warn?.('TourAPI 장애로 오래된 장소 검색 캐시를 반환합니다.', {
             cacheOperation: operation,
-            errorName: error.name,
+            ...publicDataErrorContext(error),
           });
           return {
             items: cached.items,
@@ -674,7 +674,7 @@ function createCachedPlacesService(options = {}) {
         if (isStaleUsable(cached, failedAt) && canUseStale(error)) {
           logger?.warn?.('TourAPI 장애로 오래된 장소 상세 캐시를 반환합니다.', {
             cacheOperation: 'placeDetail',
-            errorName: error.name,
+            ...publicDataErrorContext(error),
           });
           return { item: cached.item, cacheStatus: CACHE_STATUS.STALE };
         }
@@ -830,14 +830,14 @@ function createCachedPlacesService(options = {}) {
         if (isStaleUsable(cached, failedAt) && canUseStale(error)) {
           logger?.warn?.('TourAPI 장애로 오래된 장소 번역 상세 캐시를 반환합니다.', {
             cacheOperation,
-            errorName: error.name,
+            ...publicDataErrorContext(error),
           });
           return { item: cached.item, cacheStatus: CACHE_STATUS.STALE };
         }
         // 번역 상세 조회 실패는 전체 요청을 실패시키지 않는다. 국문 정보로 대체한다.
         logger?.warn?.('번역 장소 상세 조회에 실패해 국문 정보로 대체합니다.', {
           cacheOperation,
-          errorName: error?.name || 'Error',
+          ...publicDataErrorContext(error),
         });
         return { item: null, cacheStatus: CACHE_STATUS.BYPASS };
       }
