@@ -113,6 +113,63 @@ void main() {
     expect(retries, 1);
   });
 
+  testWidgets('renders assistant Markdown without exposing formatting markers',
+      (tester) async {
+    await tester.pumpWidget(
+      _localized(
+        ChatBubble(
+          message: ChatMessage(
+            role: 'assistant',
+            content: '**강조 안내**\n\n- 첫 번째 장소\n- 두 번째 장소',
+            timestamp: DateTime(2026),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('ai-assistant-markdown')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('**'), findsNothing);
+    expect(find.text('강조 안내'), findsOneWidget);
+    expect(find.text('첫 번째 장소'), findsOneWidget);
+    final emphasized = tester.widget<RichText>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('ai-assistant-markdown')),
+            matching: find.byType(RichText),
+          )
+          .first,
+    );
+    expect(
+      emphasized.text.toPlainText(),
+      contains('강조 안내'),
+    );
+  });
+
+  testWidgets('keeps user messages as literal text', (tester) async {
+    await tester.pumpWidget(
+      _localized(
+        ChatBubble(
+          message: ChatMessage(
+            role: 'user',
+            content: '**그대로 보낼 질문**',
+            timestamp: DateTime(2026),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('**그대로 보낼 질문**'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('ai-assistant-markdown')),
+      findsNothing,
+    );
+  });
+
   testWidgets('shows a 44px course draft action without applying it automatically',
       (tester) async {
     var opened = false;

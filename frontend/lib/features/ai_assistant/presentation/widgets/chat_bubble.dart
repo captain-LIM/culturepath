@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../course_builder/data/course_model.dart';
 import '../../data/chat_model.dart';
@@ -67,14 +68,16 @@ class ChatBubble extends StatelessWidget {
                     ),
                     child: message.isLoading
                         ? const _LoadingDots()
-                        : Text(
-                            message.content,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: _isUser ? Colors.white : AppColors.textDark,
-                              height: 1.5,
-                            ),
-                          ),
+                        : _isUser
+                            ? Text(
+                                message.content,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  height: 1.5,
+                                ),
+                              )
+                            : _AssistantMarkdown(message.content),
                   ),
                 ),
               ),
@@ -110,6 +113,59 @@ class ChatBubble extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _AssistantMarkdown extends StatelessWidget {
+  final String content;
+
+  const _AssistantMarkdown(this.content);
+
+  @override
+  Widget build(BuildContext context) {
+    const bodyStyle = TextStyle(
+      fontSize: 14,
+      color: AppColors.textDark,
+      height: 1.5,
+    );
+    return MarkdownBody(
+      key: const ValueKey('ai-assistant-markdown'),
+      data: content,
+      softLineBreak: true,
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: bodyStyle,
+        pPadding: EdgeInsets.zero,
+        strong: bodyStyle.copyWith(fontWeight: FontWeight.w700),
+        em: bodyStyle.copyWith(fontStyle: FontStyle.italic),
+        del: bodyStyle.copyWith(decoration: TextDecoration.lineThrough),
+        a: bodyStyle.copyWith(
+          color: AppColors.accent,
+          decoration: TextDecoration.underline,
+        ),
+        h1: bodyStyle.copyWith(fontSize: 18, fontWeight: FontWeight.w800),
+        h2: bodyStyle.copyWith(fontSize: 17, fontWeight: FontWeight.w800),
+        h3: bodyStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+        code: bodyStyle.copyWith(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          backgroundColor: const Color(0xFFF1F2F0),
+        ),
+        codeblockPadding: const EdgeInsets.all(10),
+        codeblockDecoration: BoxDecoration(
+          color: const Color(0xFFF1F2F0),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        blockquotePadding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+        blockquoteDecoration: const BoxDecoration(
+          color: Color(0xFFF7F4EF),
+          border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        ),
+        listBullet: bodyStyle.copyWith(color: AppColors.accent),
+        blockSpacing: 8,
+      ),
+      // AI가 만든 Markdown이 외부 이미지를 자동 요청하지 않도록 대체 문구만 표시한다.
+      imageBuilder: (uri, title, alt) => Text(alt ?? '', style: bodyStyle),
     );
   }
 }
