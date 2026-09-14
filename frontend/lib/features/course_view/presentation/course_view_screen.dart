@@ -14,6 +14,23 @@ import 'widgets/fork_badge.dart';
 import 'widgets/course_track_map_preview.dart';
 import 'widgets/course_track_view.dart';
 
+const _defaultCourseSharePage =
+    'https://culturepath-backend-production.up.railway.app/course-share';
+
+String courseShareUrl(int courseId) {
+  const configured = String.fromEnvironment(
+    'COURSE_SHARE_PAGE_URL',
+    defaultValue: _defaultCourseSharePage,
+  );
+  final base = Uri.parse(configured);
+  return base
+      .replace(queryParameters: {...base.queryParameters, 'id': '$courseId'})
+      .toString();
+}
+
+bool canShareCourseLink(CourseItem course, int? guestCourseIndex) =>
+    course.id != null && guestCourseIndex == null && course.isPublic;
+
 final courseDetailProvider = FutureProvider.autoDispose.family<CourseItem, int>(
   (ref, id) => CourseRepository().getCourse(id),
 );
@@ -25,12 +42,14 @@ class CourseViewScreen extends ConsumerStatefulWidget {
   final CourseItem course;
   final bool isOwner;
   final int? guestCourseIndex;
+  final Future<void> Function(String text, String subject)? shareInvoker;
 
   const CourseViewScreen({
     super.key,
     required this.course,
     this.isOwner = false,
     this.guestCourseIndex,
+    this.shareInvoker,
   });
 
   @override
@@ -86,7 +105,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (mounted) _navigateToEdit(forked);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('fork_failed'.tr(namedArgs: {'error': e.toString()}))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('fork_failed'.tr(namedArgs: {'error': e.toString()})),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _forking = false);
@@ -94,29 +117,57 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   void _navigateToEdit(CourseItem forked) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => CourseBuilderScreen(initialCourse: forked),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CourseBuilderScreen(initialCourse: forked),
+      ),
+    );
   }
 
   Future<void> _shareCourse() async {
+    final course = _course;
+    final isServerCourse = course.id != null && widget.guestCourseIndex == null;
+    if (isServerCourse && !course.isPublic) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('share_public_required'.tr())));
+      return;
+    }
     try {
-      final course = _course;
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final buffer = StringBuffer()
         ..writeln('📍 ${course.title}')
-        ..writeln('share_course_summary'.tr(namedArgs: {'days': '$activeDays', 'count': '${course.totalPlaces}'}));
+        ..writeln(
+          'share_course_summary'.tr(
+            namedArgs: {
+              'days': '$activeDays',
+              'count': '${course.totalPlaces}',
+            },
+          ),
+        );
       if (course.description.isNotEmpty) {
         buffer
           ..writeln()
           ..writeln(course.description);
       }
-      if (course.id != null && widget.guestCourseIndex == null) {
+      if (canShareCourseLink(course, widget.guestCourseIndex)) {
         buffer
           ..writeln()
-          ..write('share_view_in_app'.tr(namedArgs: {'app': 'app_name'.tr(), 'url': 'culturepath://app/courses/${course.id}'}));
+          ..write(
+            'share_view_in_app'.tr(
+              namedArgs: {
+                'app': 'app_name'.tr(),
+                'url': courseShareUrl(course.id!),
+              },
+            ),
+          );
       }
-      await Share.share(buffer.toString().trim(), subject: course.title);
+      final text = buffer.toString().trim();
+      if (widget.shareInvoker != null) {
+        await widget.shareInvoker!(text, course.title);
+      } else {
+        await Share.share(text, subject: course.title);
+      }
     } catch (e) {
       debugPrint('Share error: $e');
       // 네이티브 공유 실패 시 클립보드 폴백
@@ -124,12 +175,30 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       final activeDays = course.tracks.where((t) => t.places.isNotEmpty).length;
       final fallback = StringBuffer()
         ..writeln('📍 ${course.title}')
-        ..writeln('share_course_summary'.tr(namedArgs: {'days': '$activeDays', 'count': '${course.totalPlaces}'}));
+        ..writeln(
+          'share_course_summary'.tr(
+            namedArgs: {
+              'days': '$activeDays',
+              'count': '${course.totalPlaces}',
+            },
+          ),
+        );
       if (course.description.isNotEmpty) {
-        fallback..writeln()..writeln(course.description);
+        fallback
+          ..writeln()
+          ..writeln(course.description);
       }
-      if (course.id != null && widget.guestCourseIndex == null) {
-        fallback..writeln()..write('share_view_in_app'.tr(namedArgs: {'app': 'app_name'.tr(), 'url': 'culturepath://app/courses/${course.id}'}));
+      if (canShareCourseLink(course, widget.guestCourseIndex)) {
+        fallback
+          ..writeln()
+          ..write(
+            'share_view_in_app'.tr(
+              namedArgs: {
+                'app': 'app_name'.tr(),
+                'url': courseShareUrl(course.id!),
+              },
+            ),
+          );
       }
       await Clipboard.setData(ClipboardData(text: fallback.toString().trim()));
       if (mounted) {
@@ -144,12 +213,14 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   }
 
   Future<void> _handleEdit() async {
-    final saved = await Navigator.of(context).push<CourseItem>(MaterialPageRoute(
-      builder: (_) => CourseBuilderScreen(
-        initialCourse: _course,
-        guestCourseIndex: widget.guestCourseIndex,
+    final saved = await Navigator.of(context).push<CourseItem>(
+      MaterialPageRoute(
+        builder: (_) => CourseBuilderScreen(
+          initialCourse: _course,
+          guestCourseIndex: widget.guestCourseIndex,
+        ),
       ),
-    ));
+    );
     if (mounted && saved != null) {
       ref.invalidate(myCoursesProvider);
       Navigator.of(context).pop();
@@ -163,8 +234,14 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         title: Text('delete_course'.tr()),
         content: Text('delete_confirm'.tr(namedArgs: {'title': _course.title})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('cancel'.tr())),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('delete'.tr())),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('delete'.tr()),
+          ),
         ],
       ),
     );
@@ -184,23 +261,25 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('delete_failed'.tr())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('delete_failed'.tr())));
       }
     }
   }
 
   Future<void> _handleAiEdit() async {
     if (_course.id == null || widget.guestCourseIndex != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('save_before_ai'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('save_before_ai'.tr())));
       return;
     }
     if (!await CourseRepository().isLoggedIn()) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('login_required_ai'.tr())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('login_required_ai'.tr())));
       }
       return;
     }
@@ -230,9 +309,9 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
         aiCourse = await CourseRepository().forkCourse(_course.id!);
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('fork_failed_simple'.tr())),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('fork_failed_simple'.tr())));
         }
         return;
       } finally {
@@ -298,7 +377,9 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           content: Text('completion_saved'.tr()),
           backgroundColor: AppColors.accentGold,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -308,7 +389,10 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
   Widget build(BuildContext context) {
     final courseId = _course.id;
     if (shouldRefreshCourseDetail(_course, widget.guestCourseIndex)) {
-      ref.listen<AsyncValue<CourseItem>>(courseDetailProvider(courseId!), (previous, next) {
+      ref.listen<AsyncValue<CourseItem>>(courseDetailProvider(courseId!), (
+        previous,
+        next,
+      ) {
         next.whenData((updated) {
           if (mounted) setState(() => _course = updated);
         });
@@ -336,6 +420,7 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               onPressed: _handleEdit,
             ),
           PopupMenuButton<String>(
+            key: const ValueKey('course-actions-menu'),
             onSelected: (value) {
               if (value == 'share') _shareCourse();
               if (value == 'ai') _handleAiEdit();
@@ -345,7 +430,10 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               PopupMenuItem(value: 'share', child: Text('share_course'.tr())),
               PopupMenuItem(value: 'ai', child: Text('ai_course_edit'.tr())),
               if (widget.isOwner || course.isOwner)
-                PopupMenuItem(value: 'delete', child: Text('delete_course'.tr())),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('delete_course'.tr()),
+                ),
             ],
           ),
         ],
@@ -356,9 +444,17 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
           indicatorColor: AppColors.accent,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.muted,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
           tabs: course.tracks
-              .map((t) => Tab(text: 'Day ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})'))
+              .map(
+                (t) => Tab(
+                  text:
+                      'Day ${t.trackNumber} (${'place_count'.tr(namedArgs: {'n': t.places.length.toString()})})',
+                ),
+              )
               .toList(),
         ),
       ),
@@ -370,7 +466,11 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
                 course.description,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.5),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
               ),
             ),
           if (course.authorId != null)
@@ -394,29 +494,34 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
               0,
             ),
             child: OutlinedButton.icon(
-              onPressed: _completed ||
+              onPressed:
+                  _completed ||
                       course.id == null ||
                       widget.guestCourseIndex != null
                   ? null
                   : _handleComplete,
               icon: Icon(_completed ? Icons.check_circle : Icons.flag_outlined),
-              label: Text(_completed ? 'completed_badge'.tr() : 'complete_course'.tr()),
+              label: Text(
+                _completed ? 'completed_badge'.tr() : 'complete_course'.tr(),
+              ),
             ),
           ),
           Expanded(
             child: TabBarView(
               controller: _tabCtrl,
               children: course.tracks
-                  .map((t) => SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CourseTrackMapPreview(course: course, track: t),
-                            CourseTrackView(track: t),
-                          ],
-                        ),
-                      ))
+                  .map(
+                    (t) => SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          CourseTrackMapPreview(course: course, track: t),
+                          CourseTrackView(track: t),
+                        ],
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -425,16 +530,26 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
       floatingActionButton: widget.isOwner || course.isOwner
           ? null
           : FloatingActionButton.extended(
-        onPressed: _forking ? null : _handleFork,
-        backgroundColor: AppColors.accent,
-        icon: _forking
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.call_split, color: Colors.white),
-        label: Text(
-          _forking ? 'forking'.tr() : 'fork_course'.tr(),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+              onPressed: _forking ? null : _handleFork,
+              backgroundColor: AppColors.accent,
+              icon: _forking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.call_split, color: Colors.white),
+              label: Text(
+                _forking ? 'forking'.tr() : 'fork_course'.tr(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
     );
   }
 }

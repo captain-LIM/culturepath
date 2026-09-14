@@ -56,3 +56,24 @@ test('publishes complete privacy and terms pages at stable HTTPS app paths', () 
   }
   assert.match(terms, /앱 안의 신고 기능/);
 });
+
+test('publishes a safe course share page that opens installed apps', () => {
+  const appSource = fs.readFileSync(
+    path.join(backendRoot, 'src', 'app.js'),
+    'utf8',
+  );
+  const sharePage = fs.readFileSync(
+    path.join(backendRoot, 'public', 'course-share', 'index.html'),
+    'utf8',
+  );
+
+  assert.match(appSource, /app\.get\('\/course-share'/);
+  assert.match(appSource, /Content-Security-Policy/);
+  assert.match(sharePage, /culturepath:\/\/app\/courses\/\$\{id\}/);
+  assert.match(
+    sharePage,
+    /play\.google\.com\/store\/apps\/details\?id=com\.culturepath\.frontend/,
+  );
+  assert.match(sharePage, /\^\[1-9\]\[0-9\]\*\$/);
+  assert.doesNotMatch(sharePage, /innerHTML|document\.write/);
+});
