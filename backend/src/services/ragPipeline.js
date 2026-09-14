@@ -5,6 +5,13 @@ const {
   COURSE_TRANSFORM_SCHEMA,
   normalizeTransformOutput,
 } = require('./courseTransformContract');
+const {
+  aiText,
+  formatAiMessage,
+  localizedConditionName,
+  normalizeAiLang,
+  withResponseLanguage,
+} = require('./aiLocale');
 
 const BASE_SYSTEM_PROMPT = `당신은 CulturePath AI 여행 도우미입니다.
 Backend가 검증한 참고자료만 설명하고 자료에 없는 장소나 사실을 만들지 마세요.`;
@@ -21,18 +28,6 @@ verifiedEditPlan은 별도 의도 해석 단계가 확정한 계획입니다. �
 const MAX_REFERENCE_DOCS = 10;
 const MAX_REFERENCE_CONTENT_LENGTH = 1500;
 const MAX_REFERENCE_FIELD_LENGTH = 200;
-
-const UNVERIFIED_CONDITION_LABELS = Object.freeze({
-  indoor: '실내·우천',
-  'low-mobility': '이동 편의',
-  family: '동행자 적합성',
-  pet: '반려동물 동반',
-  dietary: '식이 조건',
-  quiet: '혼잡도',
-  weather: '날씨',
-  companions: '동행자 적합성',
-  mobility: '이동 편의',
-});
 
 function boundedText(value, maxLength) {
   return String(value || '')
@@ -105,17 +100,17 @@ function collectUnverifiedConditions(requestOrRouteInfo, constraints = {}) {
   return [...new Set(detected)];
 }
 
-function unchangedPolicyPreview(course, conditions, mock) {
+function unchangedPolicyPreview(course, conditions, mock, lang = 'ko') {
   const labels = [...new Set(conditions.map(condition =>
-    UNVERIFIED_CONDITION_LABELS[condition] || condition,
+    localizedConditionName(condition, lang),
   ))];
-  const summary = '요청의 핵심 조건을 검증할 수 없어 원본 코스를 유지했습니다.';
+  const summary = aiText('policySummary', lang);
   return {
     course: clone(course),
     explanation: summary,
     summary,
     sources: [],
-    warnings: [`현재 장소 데이터로 ${labels.join(', ')} 조건을 검증할 수 없습니다.`],
+    warnings: [formatAiMessage('policyWarning', lang, { labels: labels.join(', ') })],
     usage: { model: 'policy', inputTokens: 0, outputTokens: 0 },
     mock,
   };
@@ -144,20 +139,20 @@ function parseJsonObject(content) {
   return parsed;
 }
 
-function mockTransform(course, request, editPlan) {
+function mockTransform(course, request, editPlan, lang = 'ko') {
   const modified = clone(course);
   const targetIds = new Set(Array.isArray(editPlan?.targetContentIds)
     ? editPlan.targetContentIds.map(String)
     : []);
   if (!['remove', 'move_day', 'reorder'].includes(editPlan?.operation) ||
       targetIds.size === 0) {
-    const summary = 'Mock 모드에서 안전하게 해석할 수 없어 원본 코스를 유지했습니다.';
+    const summary = aiText('mockUnsafeSummary', lang);
     return {
       course: clone(course),
       explanation: summary,
       summary,
       sources: [],
-      warnings: ['바꿀 장소와 변경 방법을 구체적으로 지정해 주세요.'],
+      warnings: [aiText('mockUnsafeWarning', lang)],
       usage: { model: 'mock', inputTokens: 0, outputTokens: 0 },
       mock: true,
     };
@@ -193,7 +188,7 @@ function mockTransform(course, request, editPlan) {
   try {
     normalized = normalizeTransformOutput({
       status: 'changed',
-      summary: '검증된 Mock 변경안입니다.',
+      summary: aiText('mockChanged', lang),
       title: course.title,
       description: course.description || '',
       tracks: modified.tracks.map(track => ({
@@ -201,15 +196,15 @@ function mockTransform(course, request, editPlan) {
         contentIds: track.places.map(place => String(place.contentId)),
       })),
       warnings: [],
-    }, course, currentPlaceMap(course), { editPlan });
+    }, course, currentPlaceMap(course), { editPlan }, lang);
   } catch (_) {
-    const summary = 'Mock 모드에서 요청한 변경을 안전하게 적용할 수 없어 원본 코스를 유지했습니다.';
+    const summary = aiText('mockFailedSummary', lang);
     return {
       course: clone(course),
       explanation: summary,
       summary,
       sources: [],
-      warnings: ['현재 코스 구성과 편집 요청을 다시 확인해 주세요.'],
+      warnings: [aiText('mockFailedWarning', lang)],
       usage: { model: 'mock', inputTokens: 0, outputTokens: 0 },
       mock: true,
     };
@@ -227,12 +222,13 @@ function mockTransform(course, request, editPlan) {
 
 async function editCourse(course, request, constraints = {}, options = {}) {
   const env = options.env || process.env;
+  const lang = normalizeAiLang(options.lang);
   const mock = llmService.isMockMode(env);
   const unverifiedConditions = collectUnverifiedConditions(request, constraints);
   if (unverifiedConditions.length > 0) {
-    return unchangedPolicyPreview(course, unverifiedConditions, mock);
+    return unchangedPolicyPreview(course, unverifiedConditions, mock, lang);
   }
-  if (mock) return mockTransform(course, request, constraints.editPlan);
+  if (mock) return mockTransform(course, request, constraints.editPlan, lang);
 
   const trustedPlaces = currentPlaceMap(course);
   const promptPayload = {
@@ -259,7 +255,7 @@ async function editCourse(course, request, constraints = {}, options = {}) {
     userRequest: boundedText(request, 500),
   };
   const response = await llmService.generate(
-    COURSE_TRANSFORM_SYSTEM_PROMPT,
+    withResponseLanguage(COURSE_TRANSFORM_SYSTEM_PROMPT, lang),
     [{ role: 'user', content: JSON.stringify(promptPayload) }],
     {
       ...options,
@@ -272,6 +268,7 @@ async function editCourse(course, request, constraints = {}, options = {}) {
     course,
     trustedPlaces,
     constraints,
+    lang,
   );
   const finalIds = new Set(normalized.course.tracks.flatMap(track =>
     track.places.map(place => String(place.contentId)),

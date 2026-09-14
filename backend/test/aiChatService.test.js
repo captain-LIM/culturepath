@@ -81,10 +81,97 @@ test('returns only Backend candidate cards and reuses the structured session', a
   assert.equal(second.suggestedCourse.tracks[0].places[0].contentId, '100');
 });
 
+test('uses the current request language on every turn of the same session', async () => {
+  const seenLanguages = [];
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: {
+      async parse(_messages, _state, options) {
+        seenLanguages.push(options.lang);
+        return intent('clarify', {
+          regions: [], cultures: [], needsClarification: true, clarificationQuestion: null,
+        });
+      },
+    },
+    llmService: { isMockMode: () => true },
+  });
+  const first = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: 'Help me choose.' }],
+    entryContext: { type: 'general', courseId: null },
+    env: { USE_MOCK_AI: 'true' },
+    lang: 'en',
+  });
+  const second = await service.chat({
+    userId: 7,
+    sessionId: first.sessionId,
+    messages: [{ role: 'user', content: '選んでください' }],
+    entryContext: { type: 'general', courseId: null },
+    env: { USE_MOCK_AI: 'true' },
+    lang: 'ja',
+  });
+
+  assert.deepEqual(seenLanguages, ['en', 'ja']);
+  assert.match(first.content, /^Please/);
+  assert.match(second.content, /教えてください/);
+});
+
+test('refuses multilingual rating requests without calling intent or generation', async () => {
+  let called = false;
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: { async parse() { called = true; throw new Error('not expected'); } },
+    llmService: {
+      isMockMode: () => true,
+      async generate() { called = true; throw new Error('not expected'); },
+    },
+  });
+  const cases = [
+    ['en', 'Show me the highest-rated places', /rating data/i],
+    ['ja', '高評価の場所を教えて', /評価データ/],
+    ['zh', '推荐评分最高的地点', /评分数据/],
+  ];
+  for (const [lang, content, expected] of cases) {
+    const result = await service.chat({
+      userId: 7,
+      messages: [{ role: 'user', content }],
+      entryContext: { type: 'general', courseId: null },
+      env: { USE_MOCK_AI: 'true' },
+      lang,
+    });
+    assert.equal(result.action, 'unsupported');
+    assert.match(result.content, expected);
+  }
+  assert.equal(called, false);
+});
+
+test('localizes generated draft metadata while preserving official place names', async () => {
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: { async parse() { return intent('create_course_draft'); } },
+    candidateResolver: {
+      async resolve() { return { items: [source()], cacheStatus: 'HIT', partial: false }; },
+    },
+    llmService: { isMockMode: () => true },
+  });
+  const response = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: 'Create a literature course in Tongyeong' }],
+    entryContext: { type: 'general', courseId: null },
+    env: { USE_MOCK_AI: 'true' },
+    lang: 'en',
+  });
+
+  assert.equal(response.suggestedCourse.title, 'Tongyeong Literature Course');
+  assert.match(response.suggestedCourse.description, /^A draft/);
+  assert.equal(response.suggestedCourse.tracks[0].places[0].title, '박경리기념관');
+});
+
 test('caps a plain recommendation to a browsable number and explains each one', async () => {
   const sessionStore = createAiSessionStore();
   const items = ['100', '200', '300', '400', '500'].map(id => source(id));
   let explainedCandidateCount = null;
+  let explanationSystemPrompt = null;
   const intents = [intent('discover_places'), intent('create_course_draft', { dayCount: 1 })];
   const service = createAiChatService({
     sessionStore,
@@ -95,7 +182,8 @@ test('caps a plain recommendation to a browsable number and explains each one', 
     },
     llmService: {
       isMockMode: () => false,
-      async generate(_systemPrompt, messages) {
+      async generate(systemPrompt, messages) {
+        explanationSystemPrompt = systemPrompt;
         explainedCandidateCount = JSON.parse(messages[0].content).referenceCandidates.length;
         return { content: '설명', usage: null };
       },
@@ -106,12 +194,15 @@ test('caps a plain recommendation to a browsable number and explains each one', 
     userId: 7,
     messages: [{ role: 'user', content: '영화 관광지 추천해줘' }],
     entryContext: { type: 'general', courseId: null },
+    lang: 'en',
   });
 
   // 후보가 5곳이어도 화면엔 한 번에 훑을 수 있는 3곳까지만 보여준다.
   assert.deepEqual(response.sources.map(item => item.contentId), ['100', '200', '300']);
   // LLM에도 잘린 3곳만 넘겨, 보여주지 않는 후보를 본문에서 언급하지 않는다.
   assert.equal(explainedCandidateCount, 3);
+  assert.match(explanationSystemPrompt, /user-visible natural-language sentence in English/);
+  assert.doesNotMatch(explanationSystemPrompt, /답변은 한국어/);
 
   const followUp = await service.chat({
     userId: 7,

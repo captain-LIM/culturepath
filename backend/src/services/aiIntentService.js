@@ -8,6 +8,7 @@ const {
   culturesForTags,
   extractPreferenceTags,
 } = require('../config/aiRegionProfiles');
+const { aiText, normalizeAiLang, withResponseLanguage } = require('./aiLocale');
 
 const ACTIONS = Object.freeze([
   'clarify',
@@ -299,7 +300,8 @@ function extractDeterministicCourseEdit(text, state = {}) {
   };
 }
 
-function deterministicIntent(messages, state = {}) {
+function deterministicIntent(messages, state = {}, lang = 'ko') {
+  const responseLang = normalizeAiLang(lang);
   const lastUser = [...messages].reverse().find(message => message.role === 'user')?.content || '';
   const foundRegions = extractRegions(lastUser);
   const foundCultures = extractCultures(lastUser);
@@ -340,9 +342,9 @@ function deterministicIntent(messages, state = {}) {
     clarificationQuestion: needsClarification
       ? action === 'edit_course'
         ? courseEdit.hasMultipleOperations
-          ? '안전한 확인을 위해 삭제·Day 이동·순서 변경 중 한 가지씩 요청해 주세요.'
-          : '바꿀 장소와 삭제·이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.'
-        : '원하는 지역이나 문화 주제를 조금 더 알려주세요.'
+          ? aiText('editOneOperation', responseLang)
+          : aiText('editSpecific', responseLang)
+        : aiText('genericClarification', responseLang)
       : null,
   };
 }
@@ -359,7 +361,7 @@ function parseJsonObject(content) {
   return value;
 }
 
-function normalizeIntent(value, state = {}, fallback = {}) {
+function normalizeIntent(value, state = {}, fallback = {}, lang = 'ko') {
   const allowedRegions = new Set(Object.keys(REGION_DEFINITIONS));
   const allowedCultures = new Set(CULTURE_CATEGORIES);
   const allowedSources = new Set((state.recentSources || []).map(item => String(item.contentId)));
@@ -420,7 +422,7 @@ function normalizeIntent(value, state = {}, fallback = {}) {
     needsClarification,
     clarificationQuestion: needsClarification
       ? String(value?.clarificationQuestion || fallback.clarificationQuestion ||
-        '요청 대상을 조금 더 구체적으로 알려주세요.').slice(0, 300)
+        aiText('specificClarification', lang)).slice(0, 300)
       : null,
   };
 }
@@ -429,7 +431,8 @@ function createAiIntentService(options = {}) {
   const generator = options.llmService || llmService;
 
   async function parse(messages, state = {}, requestOptions = {}) {
-    const fallback = deterministicIntent(messages, state);
+    const lang = normalizeAiLang(requestOptions.lang);
+    const fallback = deterministicIntent(messages, state, lang);
     const lastUser = [...messages].reverse()
       .find(message => message.role === 'user')?.content || '';
     const courseEdit = extractDeterministicCourseEdit(lastUser, state);
@@ -438,7 +441,7 @@ function createAiIntentService(options = {}) {
     if (generator.isMockMode(env)) return fallback;
 
     const response = await generator.generate(
-      INTENT_SYSTEM_PROMPT,
+      withResponseLanguage(INTENT_SYSTEM_PROMPT, lang),
       [{
         role: 'user',
         content: JSON.stringify({
@@ -464,7 +467,7 @@ function createAiIntentService(options = {}) {
       },
     );
     const parsed = parseJsonObject(response.content);
-    const normalized = normalizeIntent(parsed, state, fallback);
+    const normalized = normalizeIntent(parsed, state, fallback, lang);
 
     // 모델이 이번 메시지의 지역·문화를 놓치고 needsClarification으로 응답하는
     // 경우가 실제로 발생한다(예: "전주에서 전통주 관광지 추천해줘"에 지역을

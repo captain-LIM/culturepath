@@ -143,6 +143,8 @@ test('documents strict culture filtering for region spots', () => {
 test('documents the authenticated structured AI transform contract', () => {
   const transform = openApiDocument.paths['/ai/transform'].post;
   assert.deepEqual(transform.security, [{ bearerAuth: [] }]);
+  assert.ok(transform.parameters.some(parameter =>
+    parameter.$ref === '#/components/parameters/AcceptLanguage'));
   assert.equal(
     transform.requestBody.content['application/json'].schema.$ref,
     '#/components/schemas/CourseTransformRequest',
@@ -179,6 +181,12 @@ test('documents the authenticated structured AI transform contract', () => {
 
   const chat = openApiDocument.paths['/ai/chat'].post;
   assert.deepEqual(chat.security, [{ bearerAuth: [] }]);
+  assert.ok(chat.parameters.some(parameter =>
+    parameter.$ref === '#/components/parameters/AcceptLanguage'));
+  assert.deepEqual(
+    openApiDocument.components.parameters.AcceptLanguage.schema.enum,
+    ['ko', 'en', 'ja', 'zh'],
+  );
   assert.equal(
     chat.requestBody.content['application/json'].schema.$ref,
     '#/components/schemas/AiChatRequest',

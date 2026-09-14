@@ -183,8 +183,9 @@ module.exports = Object.freeze({
         tags: ['AI'],
         summary: '현재 코스의 기존 장소를 자연어로 편집',
         description:
-          '서버에서 다시 조회한 현재 코스의 기존 장소만 사용해 삭제·Day 이동·명시적 순서 변경 미리보기를 반환합니다. 신규 장소 검색·추가와 거리 기반 최적화는 하지 않으며, OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 합니다. 응답은 사용자 확인 전 저장되지 않습니다.',
+          '서버에서 다시 조회한 현재 코스의 기존 장소만 사용해 삭제·Day 이동·명시적 순서 변경 미리보기를 반환합니다. 신규 장소 검색·추가와 거리 기반 최적화는 하지 않으며, OpenRouter 출력은 엄격한 JSON Schema와 서버 검증을 모두 통과해야 합니다. 응답은 사용자 확인 전 저장되지 않습니다. 사용자 표시 문구는 Accept-Language(ko, en, ja, zh)를 따릅니다.',
         security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }],
         requestBody: {
           required: true,
           content: {
@@ -246,8 +247,9 @@ module.exports = Object.freeze({
         tags: ['AI'],
         summary: 'MySQL·TourAPI 검증 후보 기반 AI 여행 상담',
         description:
-          '짧은 수명의 사용자 세션에서 지역·문화·선호 문맥을 유지합니다. LLM은 strict 의도 해석과 검증 후보 설명만 담당하고, 장소 검색과 클릭 가능한 sources 구성은 Backend가 수행합니다.',
+          '짧은 수명의 사용자 세션에서 지역·문화·선호 문맥을 유지합니다. LLM은 strict 의도 해석과 검증 후보 설명만 담당하고, 장소 검색과 클릭 가능한 sources 구성은 Backend가 수행합니다. 매 요청의 Accept-Language(ko, en, ja, zh)가 해당 턴의 응답 언어를 결정하며 이전 대화 언어보다 우선합니다.',
         security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }],
         requestBody: {
           required: true,
           content: {
@@ -390,6 +392,7 @@ module.exports = Object.freeze({
         description: '`POST /ai/transform`의 이전 Flutter 빌드 호환 별칭입니다.',
         deprecated: true,
         security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/AcceptLanguage' }],
         requestBody: {
           required: true,
           content: {
@@ -642,6 +645,13 @@ module.exports = Object.freeze({
       },
     },
     parameters: {
+      AcceptLanguage: {
+        name: 'Accept-Language',
+        in: 'header',
+        required: false,
+        description: '사용자에게 표시할 AI 응답 언어. 미지원 또는 누락 시 한국어를 사용합니다.',
+        schema: { type: 'string', enum: ['ko', 'en', 'ja', 'zh'], default: 'ko' },
+      },
       LDongRegnCd: {
         name: 'lDongRegnCd',
         in: 'query',

@@ -33,6 +33,35 @@ test('extracts exact region, culture, companion and day conditions without a mod
   assert.equal(intent.dayCount, 2);
 });
 
+test('localizes deterministic clarification and instructs the live intent model', async () => {
+  const clarification = deterministicIntent([
+    { role: 'user', content: '추천해줘' },
+  ], {}, 'en');
+  assert.match(clarification.clarificationQuestion, /^Please/);
+
+  let systemPrompt;
+  const service = createAiIntentService({
+    llmService: {
+      isMockMode: () => false,
+      async generate(prompt) {
+        systemPrompt = prompt;
+        return { content: JSON.stringify({
+          action: 'clarify', regions: [], cultures: [], preferenceTags: [], companions: [],
+          dayCount: null, referencedSourceIds: [], referencedCoursePlaceIds: [],
+          courseEditOperation: 'none', courseEditDestinationDay: null,
+          courseEditDestinationPosition: 'none', needsClarification: true,
+          clarificationQuestion: 'Please choose a region.',
+        }) };
+      },
+    },
+  });
+  const result = await service.parse(
+    [{ role: 'user', content: 'Could you recommend somewhere?' }], {}, { lang: 'en' },
+  );
+  assert.match(systemPrompt, /user-visible natural-language sentence in English/);
+  assert.equal(result.clarificationQuestion, 'Please choose a region.');
+});
+
 test('uses the previous region when a follow-up asks for another culture', () => {
   const intent = deterministicIntent([
     { role: 'user', content: '해당 지역 다른 카테고리도 추천해줘' },
