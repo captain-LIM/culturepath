@@ -17,14 +17,20 @@ import 'widgets/course_track_view.dart';
 const _defaultCourseSharePage =
     'https://culturepath-backend-production.up.railway.app/course-share';
 
-String courseShareUrl(int courseId) {
+String courseShareUrl(int courseId, {String? lang}) {
   const configured = String.fromEnvironment(
     'COURSE_SHARE_PAGE_URL',
     defaultValue: _defaultCourseSharePage,
   );
   final base = Uri.parse(configured);
   return base
-      .replace(queryParameters: {...base.queryParameters, 'id': '$courseId'})
+      .replace(
+        queryParameters: {
+          ...base.queryParameters,
+          'id': '$courseId',
+          if (lang != null && lang.isNotEmpty) 'lang': lang,
+        },
+      )
       .toString();
 }
 
@@ -157,7 +163,10 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
             'share_view_in_app'.tr(
               namedArgs: {
                 'app': 'app_name'.tr(),
-                'url': courseShareUrl(course.id!),
+                'url': courseShareUrl(
+                  course.id!,
+                  lang: context.locale.languageCode,
+                ),
               },
             ),
           );
@@ -195,7 +204,10 @@ class _CourseViewScreenState extends ConsumerState<CourseViewScreen>
             'share_view_in_app'.tr(
               namedArgs: {
                 'app': 'app_name'.tr(),
-                'url': courseShareUrl(course.id!),
+                'url': courseShareUrl(
+                  course.id!,
+                  lang: context.locale.languageCode,
+                ),
               },
             ),
           );

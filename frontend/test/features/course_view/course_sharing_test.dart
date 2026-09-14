@@ -99,6 +99,8 @@ void main() {
   test('공개된 서버 코스만 공유 링크를 만들 수 있다', () {
     expect(courseShareUrl(42), contains('/course-share?id=42'));
     expect(courseShareUrl(42), startsWith('https://'));
+    expect(courseShareUrl(42, lang: 'ja'), contains('lang=ja'));
+    expect(courseShareUrl(42), isNot(contains('lang=')));
     expect(canShareCourseLink(_course(), null), isTrue);
     expect(canShareCourseLink(_course(isPublic: false), null), isFalse);
     expect(canShareCourseLink(_course(), 0), isFalse);
@@ -128,6 +130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sharedText, contains('/course-share?id=42'));
+    expect(sharedText, contains('lang=ko'));
     expect(sharedText, isNot(contains('culturepath://')));
   });
 

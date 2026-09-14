@@ -72,7 +72,7 @@ test('publishes a safe course share page that opens installed apps', () => {
   assert.match(sharePage, /culturepath:\/\/app\/courses\/\$\{id\}/);
   assert.match(
     sharePage,
-    /play\.google\.com\/store\/apps\/details\?id=com\.culturepath\.frontend/,
+    /m\.onestore\.co\.kr\/v2\/ko-kr\/app\/0001008786/,
   );
   assert.match(sharePage, /\^\[1-9\]\[0-9\]\*\$/);
   assert.doesNotMatch(sharePage, /innerHTML|document\.write/);
