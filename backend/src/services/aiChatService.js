@@ -28,6 +28,7 @@ Backend가 검증한 referenceCandidates만 추천 근거로 사용하세요.
 Backend가 준 후보 순서를 임의로 바꾸지 말고, 후보가 부족하면 그 한계를 자연스럽게 알려주세요.
 referenceCandidates 각각에 대해 왜 추천하는지 1~2문장씩 개별적으로 설명하세요. 후보를 나열만 하거나
 전체를 뭉뚱그려 한 문장으로 요약하지 마세요.
+sessionContext와 referenceCandidates의 원문 JSON, 필드명, 코드 블록을 답변에 복사하거나 노출하지 마세요.
 답변은 간결하게 작성하고 내부 모델명·토큰·오류 코드를 노출하지 마세요.`;
 
 const RATING_REQUEST_PATTERNS = Object.freeze([
@@ -40,6 +41,16 @@ const RATING_REQUEST_PATTERNS = Object.freeze([
 function isRatingRequest(value) {
   const text = String(value || '');
   return RATING_REQUEST_PATTERNS.some(pattern => pattern.test(text));
+}
+
+function isInternalContextLeak(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  const startsAsJson = /^(?:```(?:json)?\s*)?[{[]/i.test(text);
+  const containsInternalField = /["'`]?(?:session[_\s]?context|sesstionContext|referenceCandidates|preferenceTags|recentSourceIds|contentId|regions|cultures|companions|dayCount)["'`]?\s*:/i
+    .test(text);
+  const containsInternalTag = /<\/?(?:sessionContext|referenceCandidates)>/i.test(text);
+  return startsAsJson || containsInternalField || containsInternalTag;
 }
 
 // 한 번에 관광지를 추천할 때 사용자가 실제로 훑어볼 수 있는 개수. resolve()
@@ -129,6 +140,19 @@ function regionSuggestions(state, lang = 'ko') {
   }));
 }
 
+function candidateGuidanceContent(state, candidates, lang) {
+  if (candidates.length === 0) return aiText('noCandidates', lang);
+  const regionName = localizedRegionName(REGION_DEFINITIONS[state.regions?.[0]], lang);
+  const culture = localizedCultureName(
+    state.cultures?.[0], CULTURE_CATEGORIES, lang,
+  ) || { ko: '문화', en: 'culture', ja: '文化', zh: '文化' }[normalizeAiLang(lang)];
+  return formatAiMessage('mockCandidates', lang, {
+    region: regionName,
+    cultures: culture,
+    names: candidates.map(candidate => candidate.title).join(', '),
+  });
+}
+
 function deterministicGuidance(intent, state, messages = [], lang = 'ko') {
   const lastUser = [...messages].reverse().find(message => message.role === 'user')?.content || '';
   if (isRatingRequest(lastUser)) {
@@ -199,17 +223,8 @@ function createAiChatService(options = {}) {
     const env = requestOptions.env || process.env;
     const lang = normalizeAiLang(requestOptions.lang);
     if (generator.isMockMode(env)) {
-      const regionName = localizedRegionName(REGION_DEFINITIONS[state.regions?.[0]], lang);
-      const culture = localizedCultureName(
-        state.cultures?.[0], CULTURE_CATEGORIES, lang,
-      ) || { ko: '문화', en: 'culture', ja: '文化', zh: '文化' }[lang];
-      const names = candidates.map(candidate => candidate.title).join(', ');
       return {
-        content: candidates.length > 0
-          ? formatAiMessage('mockCandidates', lang, {
-            region: regionName, cultures: culture, names,
-          })
-          : aiText('noCandidates', lang),
+        content: candidateGuidanceContent(state, candidates, lang),
         mock: true,
         usage: null,
       };
@@ -242,7 +257,19 @@ function createAiChatService(options = {}) {
       ],
       { ...requestOptions, temperature: 0.2 },
     );
-    return { content: response.content.trim(), mock: false, usage: response.usage || null };
+    const content = response.content.trim();
+    if (isInternalContextLeak(content)) {
+      logger?.warn?.('AI 응답에서 내부 컨텍스트 형식을 감지해 안전 안내로 대체합니다.', {
+        lang,
+        candidateCount: candidates.length,
+      });
+      return {
+        content: candidateGuidanceContent(state, candidates, lang),
+        mock: false,
+        usage: response.usage || null,
+      };
+    }
+    return { content, mock: false, usage: response.usage || null };
   }
 
   async function chat({ userId, messages, sessionId, entryContext, env, lang } = {}) {
@@ -535,6 +562,7 @@ module.exports = {
   createAiChatService,
   createCourseDraft,
   deterministicGuidance,
+  isInternalContextLeak,
   isRatingRequest,
   defaultService,
   publicSource,
