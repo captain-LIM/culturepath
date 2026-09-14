@@ -2,7 +2,10 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createAiChatService } = require('../src/services/aiChatService');
+const {
+  createAiChatService,
+  isInternalContextLeak,
+} = require('../src/services/aiChatService');
 const { createAiSessionStore } = require('../src/services/aiSessionStore');
 
 function source(contentId = '100') {
@@ -165,6 +168,54 @@ test('localizes generated draft metadata while preserving official place names',
   assert.equal(response.suggestedCourse.title, 'Tongyeong Literature Course');
   assert.match(response.suggestedCourse.description, /^A draft/);
   assert.equal(response.suggestedCourse.tracks[0].places[0].title, '박경리기념관');
+});
+
+test('replaces echoed internal context JSON without another model call', async () => {
+  let generateCalls = 0;
+  let warningMetadata;
+  const service = createAiChatService({
+    sessionStore: createAiSessionStore(),
+    intentService: { async parse() { return intent('discover_places'); } },
+    candidateResolver: {
+      async resolve() { return { items: [source()], cacheStatus: 'HIT', partial: false }; },
+    },
+    llmService: {
+      isMockMode: () => false,
+      async generate() {
+        generateCalls += 1;
+        return {
+          content: '{"sesstionContext":{"regions":["tongyeong"]},"referenceCandidates":[]}',
+          usage: { inputTokens: 10, outputTokens: 5 },
+        };
+      },
+    },
+    logger: {
+      warn(_message, metadata) { warningMetadata = metadata; },
+    },
+  });
+
+  const response = await service.chat({
+    userId: 7,
+    messages: [{ role: 'user', content: 'Recommend a literary place.' }],
+    entryContext: { type: 'general', courseId: null },
+    env: { USE_MOCK_AI: 'false' },
+    lang: 'en',
+  });
+
+  assert.equal(generateCalls, 1);
+  assert.doesNotMatch(response.content, /sesstionContext|referenceCandidates/);
+  assert.match(response.content, /verified places/i);
+  assert.match(response.content, /박경리기념관/);
+  assert.deepEqual(warningMetadata, { lang: 'en', candidateCount: 1 });
+  assert.deepEqual(response.usage, { inputTokens: 10, outputTokens: 5 });
+});
+
+test('recognizes JSON, internal context fields, and context tags as unsafe output', () => {
+  assert.equal(isInternalContextLeak('{"sessionContext":{}}'), true);
+  assert.equal(isInternalContextLeak('prefix "referenceCandidates": [] suffix'), true);
+  assert.equal(isInternalContextLeak('Data follows: "contentId": "100"'), true);
+  assert.equal(isInternalContextLeak('<sessionContext>secret</sessionContext>'), true);
+  assert.equal(isInternalContextLeak('Here are three verified places.'), false);
 });
 
 test('caps a plain recommendation to a browsable number and explains each one', async () => {
