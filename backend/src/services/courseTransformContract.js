@@ -1,5 +1,7 @@
 'use strict';
 
+const { formatAiMessage } = require('./aiLocale');
+
 const COURSE_TRANSFORM_SCHEMA = Object.freeze({
   type: 'object',
   additionalProperties: false,
@@ -69,7 +71,7 @@ function equalIds(left, right) {
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
-function validatePlannedEdit(original, changedCourse, editPlan) {
+function validatePlannedEdit(original, changedCourse, editPlan, lang = 'ko') {
   const operation = editPlan?.operation;
   const targetIds = [...new Set(Array.isArray(editPlan?.targetContentIds)
     ? editPlan.targetContentIds.map(String)
@@ -107,7 +109,7 @@ function validatePlannedEdit(original, changedCourse, editPlan) {
         throw new Error('AI가 삭제 외의 Day 또는 순서를 변경했습니다.');
       }
     }
-    return `${targetTitles}을(를) 코스에서 제외한 변경안입니다.`;
+    return formatAiMessage('removedSummary', lang, { titles: targetTitles });
   }
 
   if (removedIds.length > 0 || changedIds.length !== originalIds.length) {
@@ -138,7 +140,9 @@ function validatePlannedEdit(original, changedCourse, editPlan) {
     if (!movedAcrossDay) {
       throw new Error('AI Day 이동 결과가 요청한 이동과 일치하지 않습니다.');
     }
-    return `${targetTitles}을(를) Day ${destinationDay}로 옮긴 변경안입니다.`;
+    return formatAiMessage('movedSummary', lang, {
+      titles: targetTitles, day: destinationDay,
+    });
   }
 
   const originalDays = new Set(targetIds.map(id =>
@@ -165,10 +169,10 @@ function validatePlannedEdit(original, changedCourse, editPlan) {
   if (!['first', 'last'].includes(position) || !equalIds(positionedIds, targetIds)) {
     throw new Error('AI가 지정한 장소를 요청한 순서 위치로 옮기지 않았습니다.');
   }
-  return `${targetTitles}을(를) ${position === 'first' ? '첫 번째' : '마지막'} 순서로 옮긴 변경안입니다.`;
+  return formatAiMessage('reorderedSummary', lang, { titles: targetTitles, position });
 }
 
-function normalizeTransformOutput(parsed, original, trustedPlaces, constraints = {}) {
+function normalizeTransformOutput(parsed, original, trustedPlaces, constraints = {}, lang = 'ko') {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('AI 코스 변경안이 JSON 객체가 아닙니다.');
   }
@@ -246,7 +250,7 @@ function normalizeTransformOutput(parsed, original, trustedPlaces, constraints =
     throw new Error('AI 코스 변경 상태가 실제 변경 내용과 일치하지 않습니다.');
   }
   const verifiedSummary = changed && constraints.editPlan
-    ? validatePlannedEdit(original, course, constraints.editPlan)
+    ? validatePlannedEdit(original, course, constraints.editPlan, lang)
     : parsed.summary.trim();
   if (parsed.status === 'unchanged' && parsed.warnings.length === 0) {
     throw new Error('변경하지 못한 AI 코스에는 경고 사유가 필요합니다.');

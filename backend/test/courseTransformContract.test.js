@@ -258,3 +258,24 @@ test('validates that only the named place moves to the requested order position'
   assert.equal(normalized.course.tracks[0].places[0].contentId, '200');
   assert.match(normalized.summary, /첫 번째/);
 });
+
+test('localizes the verified edit summary without trusting model wording', () => {
+  const normalized = normalizeTransformOutput({
+    status: 'changed',
+    summary: 'Do not trust this model summary.',
+    title: '원본 코스',
+    description: '원본 설명',
+    tracks: [{ trackNumber: 1, contentIds: ['100'] }],
+    warnings: [],
+  }, originalCourse(), trustedPlaces(), {
+    editPlan: {
+      operation: 'remove',
+      targetContentIds: ['200'],
+      destinationDay: null,
+      destinationPosition: 'none',
+    },
+  }, 'en');
+
+  assert.equal(normalized.summary, 'This version removes 두 번째 장소 from the course.');
+  assert.doesNotMatch(normalized.summary, /Do not trust/);
+});

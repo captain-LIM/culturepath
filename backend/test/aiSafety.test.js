@@ -283,3 +283,17 @@ test('applies the same unverified-condition fail-safe in mock mode', async () =>
   assert.deepEqual(result.usage, { model: 'policy', inputTokens: 0, outputTokens: 0 });
   assert.equal(result.mock, true);
 });
+
+test('localizes policy-blocked course summaries and warnings without model calls', async () => {
+  const result = await editCourse(course(), '비 오는 날 실내 코스로 바꿔줘', {}, {
+    env: { USE_MOCK_AI: 'false' },
+    lang: 'en',
+    client: {
+      async generate() { throw new Error('policy path must not call the model'); },
+    },
+  });
+
+  assert.match(result.summary, /^The original course was kept/);
+  assert.match(result.warnings[0], /indoor or rainy-day suitability/);
+  assert.equal(result.explanation, result.summary);
+});

@@ -8,6 +8,8 @@ const { loadCourseForTransform } = require('../services/aiCourseContextService')
 const { normalizedCourseShape } = require('../services/courseTransformContract');
 const { publicPlaceError } = require('../utils/publicPlaceError');
 const { createAiContentReport } = require('../services/aiContentReportService');
+const { resolveLang } = require('../utils/resolveLang');
+const { aiText } = require('../services/aiLocale');
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 2000;
@@ -127,6 +129,7 @@ function normalizeSessionId(value) {
 }
 
 async function transformCourse(req, res) {
+  const lang = resolveLang(req);
   const submittedCourse = req.body?.course;
   const courseId = req.body?.courseId ?? submittedCourse?.id;
   const request = req.body?.request ?? req.body?.userRequest;
@@ -160,11 +163,11 @@ async function transformCourse(req, res) {
         coursePlaceIds: coursePlaces.map(place => place.contentId),
         coursePlaces,
       },
+      { lang },
     );
     if (intent.action !== 'edit_course' || intent.needsClarification) {
       return res.status(400).json({
-        message: intent.clarificationQuestion ||
-          '바꿀 장소와 삭제·Day 이동·첫 번째·마지막 같은 변경 방법을 구체적으로 알려주세요.',
+        message: intent.clarificationQuestion || aiText('editSpecific', lang),
       });
     }
     const result = await ragPipeline.editCourse(course, request.trim(), {
@@ -175,7 +178,7 @@ async function transformCourse(req, res) {
         destinationDay: intent.courseEditDestinationDay,
         destinationPosition: intent.courseEditDestinationPosition,
       },
-    });
+    }, { lang });
     const changed = JSON.stringify(normalizedCourseShape(result.course)) !==
       JSON.stringify(normalizedCourseShape(course));
     console.info('AI 코스 변형 완료:', {
@@ -187,6 +190,7 @@ async function transformCourse(req, res) {
       outputTokens: result.usage?.outputTokens || 0,
       durationMs: Date.now() - startedAt,
       mock: Boolean(result.mock),
+      lang,
     });
     return res.json(result);
   } catch (error) {
@@ -200,6 +204,7 @@ async function transformCourse(req, res) {
 }
 
 async function chat(req, res) {
+  const lang = resolveLang(req);
   const messages = req.body?.messages;
   const validationError = validateMessages(messages);
   if (validationError) return res.status(400).json({ message: validationError });
@@ -219,6 +224,7 @@ async function chat(req, res) {
       messages,
       sessionId,
       entryContext,
+      lang,
     });
     console.info('AI 여행 대화 완료:', {
       action: result.action,
@@ -226,6 +232,7 @@ async function chat(req, res) {
       hasDraft: Boolean(result.suggestedCourse),
       durationMs: Date.now() - startedAt,
       mock: Boolean(result.mock),
+      lang,
     });
     return res.json(result);
   } catch (error) {
