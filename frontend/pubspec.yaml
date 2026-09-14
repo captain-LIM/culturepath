@@ -59,6 +59,9 @@ dependencies:
   # 공유
   share_plus: ^10.1.4
 
+  # AI 응답 마크다운 렌더링
+  flutter_markdown_plus: ^1.0.12
+
   # 지도
   google_maps_flutter: ^2.10.0
   permission_handler: 11.3.1

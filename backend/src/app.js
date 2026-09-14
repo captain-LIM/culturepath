@@ -54,6 +54,16 @@ function accountDeletionPageHeaders(_req, res, next) {
   next();
 }
 
+function courseSharePageHeaders(_req, res, next) {
+  res.set({
+    'Cache-Control': 'public, max-age=300',
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; navigate-to 'self' culturepath: https://play.google.com; frame-ancestors 'none'; base-uri 'none'",
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  next();
+}
+
 app.get('/account-deletion', accountDeletionPageHeaders, (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'account-deletion', 'index.html'));
 });
@@ -62,6 +72,9 @@ app.get('/account-deletion/confirm', accountDeletionPageHeaders, (_req, res) => 
 });
 app.use('/account-deletion', createAccountDeletionRouter({ config: accountDeletionConfig }));
 app.use(express.json());
+app.get('/course-share', courseSharePageHeaders, (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'course-share', 'index.html'));
+});
 app.get('/privacy-policy', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy', 'index.html'));
 });
